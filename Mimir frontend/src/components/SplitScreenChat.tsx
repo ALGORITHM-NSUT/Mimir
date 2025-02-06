@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Input } from "./ui/Input";
 import { Button } from "./ui/Button";
+import RightPanel from "./RightPanel";
+import { BiArrowFromRight, BiArrowFromLeft } from "react-icons/bi";
 
 export default function SplitScreenChat() {
   const [prompt, setPrompt] = useState("");
@@ -25,22 +27,34 @@ export default function SplitScreenChat() {
     setShowResponsePanel(true); // Show the right panel
   }
 
+  function toggleResponsePanel() {
+    if (showResponsePanel) {
+      setShowResponsePanel(false)
+    } else {
+      setShowResponsePanel(true)
+    }
+  }
+
   useEffect(() => {
     console.log(promptHistory);
   }, [promptHistory]);
 
   return (
-    <div className="flex flex-col items-center justify-center h-screen p-4 bg-gray-700">
-      <div className="relative flex w-10/12 h-full">
+    <div className="flex flex-col items-center justify-center w-full h-screen bg-orange-300">
+      <div className="relative flex w-full h-full">
         {/* Left Section: Moves when right panel appears */}
         <motion.div
           initial={{ width: "100%" }}
           animate={{ width: showResponsePanel ? "60%" : "100%" }} // Shrinks when right panel appears
           transition={{ duration: 0.5 }}
-          className="flex flex-col p-4 bg-gray-800 shadow-lg rounded-lg h-full overflow-auto"
+          className="flex flex-col p-4 bg-gray-600 shadow-lg h-full overflow-auto"
         >
-
-          <h2 className="text-xl font-bold text-white">Your Prompts</h2>
+          <div className="flex justify-between">
+            <h2 className="text-xl font-bold text-white">Your Prompts</h2>
+            <button onClick={toggleResponsePanel} className="text-white bg-gray-700 hover:bg-gray-600 rounded w-9 p-2">
+              {showResponsePanel ? (<BiArrowFromLeft size={20} />) : (<BiArrowFromRight size={20} />)}
+            </button>
+          </div>
 
           {/* Scrollable area for prompts */}
           <div className="mt-2 text-white flex-1 overflow-y-auto max-h-[70vh]">
@@ -70,24 +84,8 @@ export default function SplitScreenChat() {
         </motion.div>
         {/* Right Section: Appears when submitting */}
         {showResponsePanel && (
-          <motion.div
-            initial={{ width: "0%", opacity: 0 }}
-            animate={{ width: "40%", opacity: 1 }}
-            transition={{ duration: 0.5 }}
-            className="absolute right-0 top-0 h-full p-4 bg-gray-500 shadow-lg overflow-auto rounded-lg"
-          >
-            <h2 className="text-xl font-bold text-white">Response</h2>
-
-            {/* Scrollable response area */}
-            <div className="mt-2 text-white flex-1 overflow-y-auto max-h-[70vh]">
-              <p>Generating response...</p>
-              <p>Response content goes here...</p>
-              {/* Add more text to test scrolling */}
-              <p>Lorem ipsum dolor sit amet...</p>
-              <p>More content...</p>
-              <p>Even more content...</p>
-            </div>
-          </motion.div>
+          <RightPanel
+          />
         )}
       </div>
     </div>

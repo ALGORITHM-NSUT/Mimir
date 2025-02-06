@@ -68,3 +68,9 @@ button:focus-visible {
     background-color: #f9f9f9;
   }
 } */
+.container {
+  height: 100vh;
+  display: grid;
+  grid-template-columns: 0fr 1fr;
+  background-color: #343541;
+}
