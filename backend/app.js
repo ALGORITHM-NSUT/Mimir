@@ -1,19 +1,19 @@
-import express from "express"
+// import express from "express"
 
 
-const app = express()
+// const app = express()
 
 
-app.get("/", (req, res)=>{
-  res.json({
-    message: "Hello World"
-  })
-})
+// app.get("/", (req, res)=>{
+//   res.json({
+//     message: "Hello World"
+//   })
+// })
 
 
 
 
 
-app.listen(5000, ()=>{
-  console.log("Sever running")
-})
+// app.listen(5000, ()=>{
+//   console.log("Sever running")
+// })
