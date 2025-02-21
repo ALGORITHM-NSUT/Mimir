@@ -65,7 +65,7 @@ const GetStarted = () => {
             </Link>
           </form>
         </div>
-        {showScrollPrompt && <ScrollPrompt />}
+        {showScrollPrompt && <ScrollPrompt title={`Learn More`} />}
       </div>
 
       {/* Right Section: Placeholder for Image Carousel */}

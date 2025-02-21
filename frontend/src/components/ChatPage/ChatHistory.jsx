@@ -3,11 +3,14 @@ import ChatMessage from "./ChatMessage";
 
 const ChatHistory = ({ chatHistory }) => {
   return (
-    <div className="space-y-4 sm:px-12">
+    <div className="mx-4 mt-6 sm:mt-12">
       {chatHistory.map((chat, index) => (
-        <ChatMessage key={index} query={chat.query} response={chat.response} references={chat.references} />
+        <div key={index} className="mb-12"> 
+          <ChatMessage query={chat.query} response={chat.response} references={chat.references} />
+        </div>
       ))}
     </div>
+
   );
 };
 

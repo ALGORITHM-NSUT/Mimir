@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 
-const ScrollPrompt = () => {
+const ScrollPrompt = ({title}) => {
   useEffect(() => {
     const scrollPrompt = document.getElementById('scrollPrompt');
     const interval = setInterval(() => {
@@ -36,7 +36,7 @@ const ScrollPrompt = () => {
           />
         </svg>
       </div>
-      <p className='text-black'>Learn More</p>
+      <p className='text-black'>{title}</p>
     </div>
   );
 };
