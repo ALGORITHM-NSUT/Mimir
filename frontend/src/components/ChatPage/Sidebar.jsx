@@ -1,34 +1,71 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import axios from "axios";
+import { IoChatboxOutline } from "react-icons/io5";
+import { FaPlus } from "react-icons/fa";
 import { TbLayoutSidebarRightExpandFilled } from "react-icons/tb";
 
-const Sidebar = ({ isOpen, toggleSidebar }) => {
-  return (
-    <div
-    className={`fixed top-0 left-0 h-full w-64 bg-transparent backdrop-blur-3xl text-white p-4 transition-transform duration-500 z-50 transform shadow-lg ${
-      isOpen ? "translate-x-0 shadow-[10px_0px_20px_rgba(255,255,255,0.01)]" : "-translate-x-full shadow-none"
-    }`}
-    >
-      {/* Close Button */}
-      {isOpen && (
-        <button
-          onClick={toggleSidebar}
-          className="absolute top-4 right-4 p-2 bg-gray-700 rounded-lg hover:bg-gray-600"
-        >
-          <TbLayoutSidebarRightExpandFilled className="text-white text-2xl" />
-        </button>
-      )}
+const Sidebar = ({ isOpen, toggleSidebar, sidebarRef }) => {
+  const navigate = useNavigate();
+  const [chats, setChats] = useState([]);
 
-      {/* Sidebar Content */}
-      {isOpen && (
-        <nav className="mt-20">
-          <ul className="space-y-3">
-            <li className="hover:bg-gray-700 p-2 rounded">New Chat</li>
-            <li className="hover:bg-gray-700 p-2 rounded">Saved Chats</li>
-            <li className="hover:bg-gray-700 p-2 rounded">Settings</li>
+  useEffect(() => {
+    fetchChats();
+  }, []);
+
+  // Fetch previous chats from backend
+  const fetchChats = async () => {
+    try {
+      const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/chats`);
+      setChats(response.data.chats);
+    } catch (error) {
+      console.error("Error fetching chat history:", error);
+    }
+  };
+  
+
+  return (
+    <aside
+      className={`absolute left-0 top-0 w-64 h-full bg-transparent backdrop-blur-3xl text-white transform ${
+        isOpen ? "translate-x-0" : "-translate-x-full"
+      } transition-transform duration-300 z-50`}
+      ref={sidebarRef}
+    >
+      <div className="p-4 flex flex-col gap-4">
+        {/* Header with Close Button */}
+        <div className="flex justify-between items-center">
+          <h2 className="text-lg font-semibold">Chats</h2>
+          <button onClick={toggleSidebar} className="text-white hover:text-gray-400">
+            <TbLayoutSidebarRightExpandFilled className="text-2xl" />
+          </button>
+        </div>
+
+        {/* New Chat Button */}
+        <Link to="/new" className="flex items-center gap-2 p-3 bg-[#333] hover:bg-[#444] rounded-3xl">
+          <FaPlus />
+          <span>New Chat</span>
+        </Link>
+
+
+        {/* Previous Chats List */}
+        <div className="mt-4">
+          <h2 className="text-lg font-semibold mb-2">Previous Chats</h2>
+          <ul className="space-y-2">
+            {chats.slice().reverse().map((chat) => (
+              <li key={chat.chatId}>
+                <button
+                  onClick={() => navigate(`/chat/${chat.chatId}`)}
+                  className="flex items-center gap-2 p-2 w-full hover:bg-[#333] hover:rounded-3xl"
+                >
+                  <IoChatboxOutline />
+                  <span>{chat.title}</span>
+                </button>
+              </li>
+            ))}
           </ul>
-        </nav>
-      )}
-    </div>
+        </div>
+      </div>
+    </aside>
   );
 };
 

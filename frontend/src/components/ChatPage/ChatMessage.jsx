@@ -4,18 +4,24 @@ import References from "./References";
 
 const ChatMessage = ({ query, response, references }) => {
   return (
-    <div className="flex flex-col space-y-4">
-      {/* User Query - Right aligned capsule */}
+    <div className="space-y-4 w-full overflow-hidden">
       <div className="flex justify-end">
-        <div className="bg-[#2A2A2A] text-white px-4 py-2 rounded-2xl max-w-[75%]">
+        <div className="bg-[#2A2A2A] text-lg text-gray-300 px-4 py-3 rounded-3xl rounded-tr-none max-w-[80%] sm:max-w-[50%] break-words">
           {query}
         </div>
       </div>
 
-      {/* AI Response - Below the query */}
-      <div className="bg-[#2A2A2A] p-4 rounded-lg shadow-md max-w-[80%] flex sm:flex-row sm:justify-around">
-        <Response text={response} />
-        <References references={references} />
+      <div className="bg-[#2A2A2A] p-6 rounded-3xl rounded-tl-none shadow-lg border border-gray-700 flex flex-col sm:flex-row gap-6">
+        <div className="flex-1 min-w-0">
+          <Response text={response} />
+        </div>
+
+        <div className="hidden sm:block w-[2px] bg-gray-500"></div>
+        <div className="sm:hidden h-[2px] bg-gray-500 my-4"></div>
+
+        <div className="flex-1 min-w-0">
+          <References references={references} />
+        </div>
       </div>
     </div>
   );

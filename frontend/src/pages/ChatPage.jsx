@@ -1,58 +1,139 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
+import { Link, useNavigate, useParams } from "react-router-dom";
+import axios from "axios";
 import { TbLayoutSidebarLeftExpandFilled } from "react-icons/tb";
-import { FaUserCircle } from "react-icons/fa";
+import { FaPencilAlt, FaUserCircle } from "react-icons/fa";
 import Sidebar from "../components/ChatPage/Sidebar";
 import InputBox from "../components/ChatPage/InputBox";
 import ChatHistory from "../components/ChatPage/ChatHistory";
+import Header from "../components/ChatPage/Header"
+
 
 const ChatPage = () => {
+  const { chatId: urlChatId } = useParams();
+  const navigate = useNavigate();
+  const [chatId, setChatId] = useState(urlChatId || null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [chatHistory, setChatHistory] = useState([]);
-  const [isSent, setIsSent] = useState(false);
+  const isNewChat = !urlChatId;
+  const sidebarRef = useRef(null);
+  const chatContainerRef = useRef(null); // Ref for chat container
 
-  const toggleSidebar = () => {
-    setIsSidebarOpen(!isSidebarOpen);
-  };
+  useEffect(() => {
+    if (urlChatId) {
+      fetchChatHistory(urlChatId);
+    }
+  }, [urlChatId]);
 
-  const handleSendMessage = (message) => {
-    setIsSent(true);
-    const newMessage = {
-      query: message,
-      response: `This is a generated response for: "${message}"`,
-      references: [
-        { title: "Reference 1", url: "https://example.com/ref1" },
-        { title: "Reference 2", url: "https://example.com/ref2" },
-      ],
+  useEffect(() => {
+    if (chatId) {
+      fetchChatHistory(chatId);
+    }
+  }, [chatId]);
+
+  useEffect(() => {
+    const handleMouseMove = (e) => {
+      if (e.clientX <= 20) {
+        setIsSidebarOpen(true);
+      }
     };
-    setChatHistory((prevHistory) => [...prevHistory, newMessage]);
+
+    window.addEventListener("mousemove", handleMouseMove);
+    return () => window.removeEventListener("mousemove", handleMouseMove);
+  }, []);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (sidebarRef.current && !sidebarRef.current.contains(e.target)) {
+        setIsSidebarOpen(false);
+      }
+    };
+
+    if (isSidebarOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    } else {
+      document.removeEventListener("mousedown", handleClickOutside);
+    }
+
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [isSidebarOpen]);
+
+  const fetchChatHistory = async (chatId) => {
+    try {
+      const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/chat/${chatId}`);
+      setChatHistory(response.data.chatHistory || []);
+    } catch (error) {
+      console.error("Error fetching chat history:", error);
+    }
   };
+
+  const handleSendMessage = async (message) => {
+    try {
+      const response = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/chat`, {
+        chatId,
+        message,
+      });
+
+      const { chatId: newChatId, response: botResponse, references } = response.data;
+
+      if (!chatId) {
+        setChatId(newChatId);
+        navigate(`/chat/${newChatId}`);
+      }
+
+      setChatHistory((prevHistory) => [
+        ...prevHistory,
+        { query: message, response: botResponse, references: references || [] },
+      ]);
+    } catch (error) {
+      console.error("Error sending message:", error);
+      setChatHistory((prevHistory) => [
+        ...prevHistory,
+        { query: message, response: "Error fetching response. Try again.", references: [] },
+      ]);
+    }
+  };
+
+  // Scroll to bottom when chat history updates
+  useEffect(() => {
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollTo({
+        top: chatContainerRef.current.scrollHeight,
+        behavior: "smooth", // Smooth scrolling effect
+      });
+    }
+  }, [chatHistory]); // Runs every time a new message is added
 
   return (
-    <div className="relative flex h-screen bg-[#212121] text-white">
-      <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
+    <div className="relative flex h-screen w-full overflow-x-hidden bg-[#1b1c1d] text-white">
+      <Sidebar isOpen={isSidebarOpen} toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)} sidebarRef={sidebarRef} />
 
       <div className="flex-1 flex flex-col">
         {/* Header */}
-        <header className="w-full bg-[#2A2A2A] text-white py-4 px-6 flex justify-between items-center shadow-md">
-          <button onClick={toggleSidebar} className="text-white">
-            <TbLayoutSidebarLeftExpandFilled className="text-2xl" />
-          </button>
-          <img src="Mimir_logo.png" alt="Mimir Logo" className="h-8" />
-          <FaUserCircle className="text-2xl cursor-pointer" />
-        </header>
+        <Header toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)} />
 
         {/* Chat Section */}
-        <div className={`flex-1 overflow-auto p-4 transition-all duration-500 ${isSent ? "pt-4" : "flex items-center justify-center"}`}>
-          {!isSent && (
-            <div className="text-center text-5xl sm:text-[60px] font-semibold text-gray-400 animate-fadeIn">
-              Ask Mimir about <br /> University Notices and Circulars
+        <div
+          ref={chatContainerRef}
+          className="flex-1 overflow-auto px-10 max-h-[70vh] sm:max-h-[75vh] p-4 transition-all duration-500 ease-in-out delay-150"
+        >
+          {isNewChat && chatHistory.length === 0 ? (
+            <div className="flex flex-col justify-center items-center h-full">
+              <h1 className="text-center text-5xl sm:text-[60px] font-semibold bg-gradient-to-r from-violet-400 via-blue-400 to-pink-400 text-transparent bg-clip-text">
+                What can I help with?
+              </h1>
             </div>
+          ) : (
+            <ChatHistory chatHistory={chatHistory} />
           )}
-          <ChatHistory chatHistory={chatHistory} />
         </div>
 
         {/* Input Box */}
-        <div className={`transition-all duration-500 flex justify-center w-full ${isSent ? "absolute bottom-7 left-0 p-4 bg-[#212121]" : "items-center flex-1"}`}>
+        <div
+          className={`transition-all duration-500 ease-in-out delay-150 flex justify-center w-full absolute ${
+            isNewChat ? "bottom-56" : "bottom-7"
+          } left-0 p-4 `}
+        >
           <InputBox onSendMessage={handleSendMessage} />
         </div>
       </div>

@@ -1,10 +1,14 @@
 import React from "react";
+import ReactMarkdown from "react-markdown";
+import { FaMagic } from "react-icons/fa";
 
 const Response = ({ text }) => {
   return (
-    <div className="mt-2">
-      <h3 className="text-lg font-semibold text-gray-300">Response</h3>
-      <p className="text-gray-300">{text}</p>
+    <div className="mt-2 max-w-full w-full">
+      <FaMagic className="mb-4 text-purple-400 text-xl" />
+      <div className="text-gray-300 prose prose-invert break-words whitespace-pre-wrap overflow-hidden">
+        <ReactMarkdown>{text}</ReactMarkdown>
+      </div>
     </div>
   );
 };
