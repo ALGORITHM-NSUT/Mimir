@@ -2,6 +2,7 @@ import React from "react";
 import { Link } from "react-router-dom";
 import { TbLayoutSidebarLeftExpandFilled } from "react-icons/tb";
 import { FaPencilAlt, FaUserCircle } from "react-icons/fa";
+import ProfileMenu from "../Profile/ProfileMenu";
 
 const Header = ({ toggleSidebar }) => {
   return (
@@ -23,9 +24,7 @@ const Header = ({ toggleSidebar }) => {
       </span>
 
       {/* Right Section - Profile Icon */}
-      <div className="flex justify-end">
-        <FaUserCircle className="text-xl sm:text-2xl cursor-pointer" />
-      </div>
+      <ProfileMenu />
     </header>
   );
 };
