@@ -2,32 +2,57 @@ import express from "express";
 import cors from "cors";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import dotenv from "dotenv";
+import crypto from "crypto";
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 dotenv.config();
 
-
-// In-memory storage for chat history (replace with DB later)
+// Stores chat history
 const chatSessions = {}; 
 
-const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY); // Replace with your actual API key
+// Stores user-to-chat mappings
+const userChats = {};  
+
+// Stores shareable links
+const shareableLinks = {}; 
+
+const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
 const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
-app.post("/api/chat", async (req, res) => {
-  let { chatId, message } = req.body;
+app.get("/", (req,res)=>{
+  res.json({
+    message: "Welcome Saumil"
+  })
+})
 
-  if (!message) {
-    return res.status(400).json({ error: "Message is required" });
+
+app.post("/api/chat", async (req, res) => {
+  let { chatId, message, userId } = req.body;
+
+  if (!message || !userId) {
+    return res.status(400).json({ error: "Message and userId are required" });
   }
 
-  // If no chatId, create a new chat session
   if (!chatId) {
+    // New chat creation
     chatId = `chat-${Date.now()}`;
-    chatSessions[chatId] = { title: "", messages: [] }; 
-  } else if (!chatSessions[chatId]) {
-    chatSessions[chatId] = { title: "", messages: [] }; 
+    chatSessions[chatId] = { userId, title: "", messages: [] };
+
+    if (!userChats[userId]) {
+      userChats[userId] = [];
+    }
+    userChats[userId].push(chatId);
+  } else {
+    // Ensure chat exists
+    if (!chatSessions[chatId]) {
+      return res.status(404).json({ error: "Chat not found" });
+    }
+    // Ensure user owns the chat
+    if (chatSessions[chatId].userId !== userId) {
+      return res.status(403).json({ error: "Unauthorized access to this chat" });
+    }
   }
 
   try {
@@ -37,12 +62,10 @@ app.post("/api/chat", async (req, res) => {
     Also you can answer coding related questions.
     `;
 
-    const augmented_message = `
-      content: [
-      { role: "system", content: ${systemPrompt} },
-      { role: "user", content: ${message} },
-      ]
-    `;
+    const augmented_message = `[ 
+      { role: "system", content: "${systemPrompt}" }, 
+      { role: "user", content: "${message}" } 
+    ]`;
 
     const result = await model.generateContent(augmented_message);
     const responseText = result.response.text();
@@ -70,32 +93,94 @@ app.post("/api/chat", async (req, res) => {
 });
 
 
+app.get("/api/chats", async (req, res) => {
+  const { userId } = req.query;
 
-// Fetch a specific chat history
-app.get("/api/chat/:chatId", async (req, res) => {
-  const { chatId } = req.params;
-
-  if (!chatSessions[chatId]) {
-    return res.status(404).json({ error: "Chat not found" });
+  if (!userId || !userChats[userId]) {
+    return res.json({ chats: [] });
   }
 
-  res.json({
+  const chatList = userChats[userId].map(chatId => ({
     chatId,
-    chatHistory: chatSessions[chatId].messages,
-  });
-});
-
-// Fetch all previous chat sessions
-app.get("/api/chats", async (req, res) => {
-  const chatList = Object.keys(chatSessions).map((chatId) => ({
-    chatId,
-    title: chatSessions[chatId].title || "Untitled Chat",
+    title: chatSessions[chatId]?.title || "Untitled Chat",
   }));
 
   res.json({ chats: chatList });
 });
 
-// Start Server
+
+app.post("/api/chat/share", async (req, res) => {
+  const { chatId, userId } = req.body;
+
+  if (!chatId || !chatSessions[chatId]) {
+    return res.status(404).json({ error: "Chat not found" });
+  }
+
+  if (chatSessions[chatId].userId !== userId) {
+    return res.status(403).json({ error: "Unauthorized to share this chat" });
+  }
+
+  const userHex = Buffer.from(userId).toString("hex");
+  const chatHex = Buffer.from(chatId).toString("hex");
+
+  const shareToken = userHex + chatHex;
+  shareableLinks[shareToken] = { chatId };
+
+  const shareableLink = `${process.env.FRONTEND_URL}/chat/shared?token=${shareToken}`;
+
+  res.json({ message: "Chat is now shareable", shareableLink });
+});
+
+app.get("/api/chat/shared", async (req, res) => {
+  try {
+    const { token } = req.query;
+
+    if (!token) {
+      console.warn("Missing token in request.");
+      return res.status(400).json({ error: "Token is required." });
+    }
+
+    if (!shareableLinks[token]) {
+      console.warn(`Invalid or expired token: ${token}`);
+      return res.status(403).json({ error: "Invalid or expired share link." });
+    }
+
+    const { chatId } = shareableLinks[token];
+
+    if (!chatSessions[chatId]) {
+      console.warn(`Chat not found for token: ${token}, chatId: ${chatId}`);
+      return res.status(404).json({ error: "Chat not found." });
+    }
+
+    
+    res.json({
+      chatId,
+      chatHistory: chatSessions[chatId].messages,
+    });
+  } catch (error) {
+    console.error("Error fetching shared chat:", error);
+    res.status(500).json({ error: "Internal Server Error." });
+  }
+});
+
+
+
+app.get("/api/chat/:chatId", async (req, res) => {
+  const { chatId } = req.params;
+  const { userId } = req.query;
+
+  if (!chatSessions[chatId]) {
+    return res.status(404).json({ error: "Chat not found" });
+  }
+
+  if (chatSessions[chatId].userId !== userId) {
+    return res.status(403).json({ error: "Unauthorized access to this chat" });
+  }
+
+  res.json({ chatId, chatHistory: chatSessions[chatId].messages });
+});
+
+
 app.listen(5000, () => {
   console.log("Server running on port 5000");
 });
