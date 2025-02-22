@@ -1,29 +1,34 @@
-import React, { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import React, { useState, useEffect, useContext } from "react";
+import { Link, useNavigate, useLocation, useParams } from "react-router-dom";  // Added useLocation
 import axios from "axios";
 import { IoChatboxOutline } from "react-icons/io5";
 import { FaPlus } from "react-icons/fa";
 import { TbLayoutSidebarRightExpandFilled } from "react-icons/tb";
+import { UserContext } from "../../Context/UserContext.jsx";
 
 const Sidebar = ({ isOpen, toggleSidebar, sidebarRef }) => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const { chatId } = useParams();  // Get chat ID from URL
   const [chats, setChats] = useState([]);
+  const { userId } = useContext(UserContext);
 
   useEffect(() => {
-    fetchChats();
-  }, []);
+    console.log("Path changed:", location.pathname); // Debugging log
+    if (userId) {
+      fetchChats();
+    }
+  }, [chatId, userId]);  // Now triggers when user switches chats
 
-  // Fetch previous chats from backend
   const fetchChats = async () => {
     try {
-      const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/chats`);
+      setChats([]); // Clear previous state before fetching
+      const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/chats?userId=${userId}`);
       setChats(response.data.chats);
     } catch (error) {
       console.error("Error fetching chat history:", error);
     }
   };
-  
-
   return (
     <aside
       className={`absolute left-0 top-0 w-64 h-full bg-transparent backdrop-blur-3xl text-white transform ${
@@ -45,7 +50,6 @@ const Sidebar = ({ isOpen, toggleSidebar, sidebarRef }) => {
           <FaPlus />
           <span>New Chat</span>
         </Link>
-
 
         {/* Previous Chats List */}
         <div className="mt-4">
