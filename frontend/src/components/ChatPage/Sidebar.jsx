@@ -31,17 +31,17 @@ const Sidebar = ({ isOpen, toggleSidebar, sidebarRef }) => {
   };
   return (
     <aside
-      className={`absolute left-0 top-0 w-64 h-full bg-transparent backdrop-blur-3xl text-white transform ${
+      className={`fixed left-0 top-0 w-64 h-full bg-transparent backdrop-blur-3xl text-white transform ${
         isOpen ? "translate-x-0" : "-translate-x-full"
       } transition-transform duration-300 z-50`}
       ref={sidebarRef}
     >
       <div className="p-4 flex flex-col gap-4">
         {/* Header with Close Button */}
-        <div className="flex justify-between items-center">
+        <div className="flex justify-between items-center mb-8">
           <h2 className="text-lg font-semibold">Chats</h2>
           <button onClick={toggleSidebar} className="text-white hover:text-gray-400">
-            <TbLayoutSidebarRightExpandFilled className="text-2xl" />
+            <TbLayoutSidebarRightExpandFilled className="text-3xl" />
           </button>
         </div>
 

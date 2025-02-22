@@ -100,22 +100,24 @@ const ChatPage = () => {
   };
 
   return (
-    <div className="flex h-screen w-full overflow-hidden bg-[#1b1c1d] text-white text-[16px]">
+    <div className="relative min-h-screen w-full bg-[#1b1c1d] text-white text-[16px] flex flex-col">
       <Sidebar
         isOpen={isSidebarOpen}
         toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
         sidebarRef={sidebarRef}
       />
 
-      <div className="flex-1 flex flex-col relative">
+      <div className="flex flex-col flex-grow">
+        {/* Header Section */}
         <Header toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)} />
 
+        {/* Chat History Section */}
         <div
           ref={chatContainerRef}
-          className="flex-1 flex flex-col px-4 max-h-[70vh] sm:px-10 overflow-y-auto pb-28 sm:pb-32"
+          className="flex-grow flex sm:max-h-[90vh] max-h-[85vh] flex-col px-4 sm:px-10 overflow-y-auto pb-24 sm:pb-28"
         >
           {isNewChat && chatHistory.length === 0 ? (
-            <div className="flex flex-col justify-center items-center flex-grow">
+            <div className="flex flex-col justify-center items-center mb-20 flex-grow">
               <h1 className="text-center text-3xl sm:text-5xl font-semibold bg-gradient-to-r from-violet-400 via-blue-400 to-pink-400 text-transparent bg-clip-text">
                 What can I help with?
               </h1>
@@ -124,16 +126,19 @@ const ChatPage = () => {
             <ChatHistory chatHistory={chatHistory} />
           )}
         </div>
+      </div>
 
-        <div
-          className={`transition-all duration-500 ease-in-out delay-150 flex justify-center w-full absolute ${
-            isNewChat ? "bottom-56" : "bottom-7"
-          } left-0 p-4 `}
-        >
-          <InputBox onSendMessage={handleSendMessage} />
-        </div>
+      {/* Fixed Input Box */}
+      <div
+        className={`fixed w-full p-4 h-32 bg-[#1b1c1d] flex items-center justify-center transition-all duration-500 ${
+          isNewChat ? "bottom-48" : "bottom-0" 
+        }`}
+      >
+        <InputBox onSendMessage={handleSendMessage} />
       </div>
     </div>
+
+
   );
 };
 
