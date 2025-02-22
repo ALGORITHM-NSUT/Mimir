@@ -33,22 +33,19 @@ const SharedChatPage = () => {
 
   return (
     <div className="flex flex-col items-center min-h-screen bg-[#1b1c1d] text-white">
-      <header className="w-full text-white py-4 px-6 flex items-center justify-center shadow-md bg-[#1b1c1d]">
+      <header className="w-full text-white py-4 px-6 flex items-center justify-center shadow-md bg-transparent backdrop-blur-3xl sticky z-10 top-0">
         <span className="text-xl sm:text-2xl font-semibold bg-gradient-to-r from-blue-400 to-pink-400 text-transparent bg-clip-text text-center">
           Mimir
         </span>
       </header>
 
 
-      <div className="w-full max-w-3xl p-4">
-        {error ? (
-          <p className="text-red-500 text-center">{error}</p>
-        ) : chatHistory.length > 0 ? (
+        <div
+          className="flex-grow flex flex-col px-4 sm:px-10 overflow-y-auto pb-24 sm:pb-28"
+        >
           <ChatHistory chatHistory={chatHistory} />
-        ) : (
-          <p className="text-center text-gray-400">No messages in this chat.</p>
-        )}
-      </div>
+            
+        </div>
     </div>
   );
 };

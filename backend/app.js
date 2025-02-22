@@ -58,8 +58,8 @@ app.post("/api/chat", async (req, res) => {
   try {
     const systemPrompt = `
     You are Mimir, a RAG-based model that helps users query notices, circulars, rules, and regulations from Netaji Subhas University of Technology (NSUT), Delhi.
-    Provide clear, accurate, and concise responses based on the retrieved data. The final response should be just natural language text.
-    Also you can answer coding related questions.
+    Provide clear, accurate, and concise responses based on the retrieved data. The final response should be md file.
+    Also you can answer coding related questions. if the response contains a table, make sure to give it in the best possible way that can be rendered as markdown file. do not confuse other text as code 
     `;
 
     const augmented_message = `[ 

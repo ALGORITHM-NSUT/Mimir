@@ -6,6 +6,7 @@ import InputBox from "../components/ChatPage/InputBox";
 import ChatHistory from "../components/ChatPage/ChatHistory";
 import Header from "../components/ChatPage/Header";
 import { UserContext } from "../Context/UserContext";
+import ChatLoader from "../components/Utility/ChatLoader";
 
 const ChatPage = () => {
   const { chatId: urlChatId } = useParams();
@@ -18,6 +19,7 @@ const ChatPage = () => {
   const sidebarRef = useRef(null);
   const chatContainerRef = useRef(null);
   const { userId } = useContext(UserContext);
+  const [isLoading, setisLoading] = useState(false);  
 
   useEffect(() => {
     if (urlChatId) {
@@ -69,6 +71,7 @@ const ChatPage = () => {
   };
 
   const handleSendMessage = async (message) => {
+    setisLoading(true)
     try {
       const response = await axios.post(
         `${import.meta.env.VITE_BACKEND_URL}/api/chat`,
@@ -96,6 +99,8 @@ const ChatPage = () => {
           references: [],
         },
       ]);
+    }finally{
+      setisLoading(false)
     }
   };
 
@@ -106,6 +111,7 @@ const ChatPage = () => {
         toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
         sidebarRef={sidebarRef}
       />
+
 
       <div className="flex flex-col flex-grow">
         {/* Header Section */}
@@ -118,12 +124,14 @@ const ChatPage = () => {
         >
           {isNewChat && chatHistory.length === 0 ? (
             <div className="flex flex-col justify-center items-center mb-20 flex-grow">
-              <h1 className="text-center text-3xl sm:text-5xl font-semibold bg-gradient-to-r from-violet-400 via-blue-400 to-pink-400 text-transparent bg-clip-text">
+              <h1 className="text-center text-5xl sm:text-5xl lg:text-5xl font-semibold bg-gradient-to-r from-violet-400 via-blue-400 to-pink-400 text-transparent bg-clip-text">
                 What can I help with?
               </h1>
             </div>
           ) : (
-            <ChatHistory chatHistory={chatHistory} />
+            <>
+              <ChatHistory chatHistory={chatHistory} />
+            </>
           )}
         </div>
       </div>

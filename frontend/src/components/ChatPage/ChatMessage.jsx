@@ -11,15 +11,12 @@ const ChatMessage = ({ query, response, references }) => {
         </div>
       </div>
 
-      <div className="bg-[#2A2A2A] p-6 rounded-3xl rounded-tl-none shadow-[0px_5px_5px_rgba(0,0,0,0.3)] flex flex-col sm:flex-row gap-6">
+      <div className="bg-[#2A2A2A] p-6 rounded-3xl rounded-tl-none shadow-[0px_5px_5px_rgba(0,0,0,0.3)] flex flex-col gap-6">
         <div className="flex-1 min-w-0">
           <Response text={response} />
         </div>
 
-        <div className="hidden sm:block w-[2px] bg-gray-500"></div>
-        <div className="sm:hidden h-[2px] bg-gray-500 my-4"></div>
-
-        <div className="flex-1 min-w-0">
+        <div className="flex-1 min-w-0 bg-[#1b1c1d75] shadow-md rounded-2xl py-10 px-6 w-fit">
           <References references={references} />
         </div>
       </div>

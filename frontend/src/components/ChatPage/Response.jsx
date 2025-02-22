@@ -11,7 +11,7 @@ const Response = ({ text }) => {
           components={{
             code({ node, inline, className, children, ...props }) {
               return !inline ? (
-                <pre className="p-3 bg-gray-900 text-white rounded-md overflow-x-auto">
+                <pre className="p-3 bg-[#1b1c1d] text-white rounded-md overflow-x-auto">
                   <code {...props} className="whitespace-pre-wrap break-words">
                     {children}
                   </code>
