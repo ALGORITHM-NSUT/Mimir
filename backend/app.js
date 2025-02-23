@@ -10,23 +10,22 @@ app.use(express.json());
 dotenv.config();
 
 // Stores chat history
-const chatSessions = {}; 
+const chatSessions = {};
 
 // Stores user-to-chat mappings
-const userChats = {};  
+const userChats = {};
 
 // Stores shareable links
-const shareableLinks = {}; 
+const shareableLinks = {};
 
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
 const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
-app.get("/", (req,res)=>{
+app.get("/", (req, res) => {
   res.json({
-    message: "Welcome Saumil"
-  })
-})
-
+    message: "Welcome Saumil",
+  });
+});
 
 app.post("/api/chat", async (req, res) => {
   let { chatId, message, userId } = req.body;
@@ -51,7 +50,9 @@ app.post("/api/chat", async (req, res) => {
     }
     // Ensure user owns the chat
     if (chatSessions[chatId].userId !== userId) {
-      return res.status(403).json({ error: "Unauthorized access to this chat" });
+      return res
+        .status(403)
+        .json({ error: "Unauthorized access to this chat" });
     }
   }
 
@@ -59,7 +60,7 @@ app.post("/api/chat", async (req, res) => {
     const systemPrompt = `
     You are Mimir, a RAG-based model that helps users query notices, circulars, rules, and regulations from Netaji Subhas University of Technology (NSUT), Delhi.
     Provide clear, accurate, and concise responses based on the retrieved data. The final response should be md file.
-    Also you can answer coding related questions. if the response contains a table, make sure to give it in the best possible way that can be rendered as markdown file. do not confuse other text as code 
+    Also you can answer coding related questions. 
     `;
 
     const augmented_message = `[ 
@@ -80,18 +81,22 @@ app.post("/api/chat", async (req, res) => {
     };
 
     if (chatSessions[chatId].messages.length === 0) {
-      chatSessions[chatId].title = message.length > 20 ? message.substring(0, 20) + "..." : message;
+      chatSessions[chatId].title =
+        message.length > 20 ? message.substring(0, 20) + "..." : message;
     }
 
     chatSessions[chatId].messages.push(responseObject);
 
-    res.json({ chatId, response: responseText, references: responseObject.references });
+    res.json({
+      chatId,
+      response: responseText,
+      references: responseObject.references,
+    });
   } catch (error) {
     console.error("Error generating AI response:", error);
     res.status(500).json({ error: "Failed to generate AI response" });
   }
 });
-
 
 app.get("/api/chats", async (req, res) => {
   const { userId } = req.query;
@@ -100,14 +105,13 @@ app.get("/api/chats", async (req, res) => {
     return res.json({ chats: [] });
   }
 
-  const chatList = userChats[userId].map(chatId => ({
+  const chatList = userChats[userId].map((chatId) => ({
     chatId,
     title: chatSessions[chatId]?.title || "Untitled Chat",
   }));
 
   res.json({ chats: chatList });
 });
-
 
 app.post("/api/chat/share", async (req, res) => {
   const { chatId, userId } = req.body;
@@ -152,7 +156,6 @@ app.get("/api/chat/shared", async (req, res) => {
       return res.status(404).json({ error: "Chat not found." });
     }
 
-    
     res.json({
       chatId,
       chatHistory: chatSessions[chatId].messages,
@@ -162,8 +165,6 @@ app.get("/api/chat/shared", async (req, res) => {
     res.status(500).json({ error: "Internal Server Error." });
   }
 });
-
-
 
 app.get("/api/chat/:chatId", async (req, res) => {
   const { chatId } = req.params;
@@ -179,7 +180,6 @@ app.get("/api/chat/:chatId", async (req, res) => {
 
   res.json({ chatId, chatHistory: chatSessions[chatId].messages });
 });
-
 
 app.listen(5000, () => {
   console.log("Server running on port 5000");
