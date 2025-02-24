@@ -6,10 +6,12 @@ const Response = ({ text }) => {
   return (
     <div className="mt-2 max-w-full w-full">
       <FaMagic className="mb-4 text-purple-400 text-[16px]" />
-      <div className="text-gray-300 prose prose-invert break-words whitespace-pre-wrap overflow-hidden w-full max-w-full">
-        <ReactMarkdown>
-          {text}
-        </ReactMarkdown>
+      <div className="text-gray-300 text-sm md:text-base font-sans antialiased leading-relaxed break-words whitespace-pre-wrap overflow-hidden w-full max-w-full">
+        <div className="prose prose-invert max-w-none">
+          <ReactMarkdown>
+            {text}
+          </ReactMarkdown>
+        </div>
       </div>
     </div>
   );
