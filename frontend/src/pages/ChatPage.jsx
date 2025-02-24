@@ -18,8 +18,10 @@ const ChatPage = () => {
   const isNewChat = !urlChatId;
   const sidebarRef = useRef(null);
   const chatContainerRef = useRef(null);
-  const { userId } = useContext(UserContext);
+  const { user } = useContext(UserContext);
+  const userId = user.userId
   const [isLoading, setisLoading] = useState(false);  
+
 
   useEffect(() => {
     if (urlChatId) {

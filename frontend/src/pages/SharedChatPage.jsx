@@ -32,7 +32,7 @@ const SharedChatPage = () => {
   }, [token]);
 
   return (
-    <div className="flex flex-col items-center min-h-screen bg-[#1b1c1d] text-white">
+    <div className="relative min-h-screen w-full bg-[#1b1c1d] text-white text-[16px] flex flex-col">
       <header className="w-full text-white py-4 px-6 flex items-center justify-center shadow-md bg-transparent backdrop-blur-3xl sticky z-10 top-0">
         <span className="text-xl sm:text-2xl font-semibold bg-gradient-to-r from-blue-400 to-pink-400 text-transparent bg-clip-text text-center">
           Mimir
@@ -40,12 +40,15 @@ const SharedChatPage = () => {
       </header>
 
 
-        <div
-          className="flex-grow flex flex-col px-4 sm:px-10 overflow-y-auto pb-24 sm:pb-28"
-        >
-          <ChatHistory chatHistory={chatHistory} />
-            
-        </div>
+      <div
+        className="flex-grow flex sm:max-h-[90vh] max-h-[85vh] flex-col px-4 sm:px-10 overflow-y-auto pb-24 sm:pb-28"
+      >
+        
+        <ChatHistory chatHistory={chatHistory} />
+
+      </div>
+
+
     </div>
   );
 };

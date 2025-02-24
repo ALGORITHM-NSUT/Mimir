@@ -7,23 +7,30 @@ import { UserContext, UserProvider } from "./Context/UserContext";
 import SharedChatPage from "./pages/SharedChatPage";
 
 const ProtectedRoute = ({ children }) => {
-  const { userId } = useContext(UserContext);
-  return userId ? children : <Navigate to="/" />;
+  const { user } = useContext(UserContext);
+  return user?.userId ? children : <Navigate to="/" />;
 };
 
 const App = () => {
   return (
     <UserProvider>
       <Router>
-        <Routes>
-          <Route path="/" element={<LandingPage />} />
-          <Route path="/new" element={<ProtectedRoute><ChatPage key="newChat" /></ProtectedRoute>} />
-          <Route path="/chat/:chatId" element={<ProtectedRoute><ChatPage /></ProtectedRoute>} />
-          <Route path="/chat/shared" element={<SharedChatPage />} />
-
-        </Routes>
+        <AppRoutes />
       </Router>
     </UserProvider>
+  );
+};
+
+const AppRoutes = () => {
+  const { user } = useContext(UserContext);
+
+  return (
+    <Routes>
+      <Route path="/" element={user?.userId ? <Navigate to="/new" /> : <LandingPage />} />
+      <Route path="/new" element={<ProtectedRoute><ChatPage key="newChat" /></ProtectedRoute>} />
+      <Route path="/chat/:chatId" element={<ProtectedRoute><ChatPage /></ProtectedRoute>} />
+      <Route path="/chat/shared" element={<SharedChatPage />} />
+    </Routes>
   );
 };
 

@@ -1,26 +1,70 @@
-# Logs
-logs
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*.so
+*.dll
+
+# Virtual Environment
+venv/
+env/
+ENV/
+.venv/
+
+# Editor Configs
+.vscode/
+.idea/
+*.sublime-workspace
+
+# Logs & Debug Files
+logs/
 *.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-lerna-debug.log*
+*.out
 
-node_modules
-dist
-dist-ssr
-*.local
-.env
-
-
-# Editor directories and files
-.vscode/*
-!.vscode/extensions.json
-.idea
+# System files
 .DS_Store
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
+Thumbs.db
+
+# Python environment
+*.env
+*.venv
+*.envrc
+
+# Ignore local environment variables
+.env
+.env.local
+.env.*.local
+
+# Ignore SQLite database files
+*.sqlite3
+*.db
+
+# Ignore FastAPI-specific files
+instance/
+config.yaml
+secrets.toml
+alembic/versions/  # If using Alembic for DB migrations
+
+# Ignore Docker
+docker-compose.override.yml
+.dockerignore
+
+# Ignore compiled files
+*.egg-info/
+dist/
+build/
+
+# Ignore Jupyter notebooks
+.ipynb_checkpoints/
+
+# Ignore coverage and test artifacts
+htmlcov/
+.coverage
+*.cover
+.cache
+nosetests.xml
+coverage.xml
+*.pytest_cache/
+
+# Ignore static/media files
+staticfiles/
+media/

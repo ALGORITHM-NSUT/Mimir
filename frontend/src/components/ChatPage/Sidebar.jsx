@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useContext } from "react";
-import { Link, useNavigate, useLocation, useParams } from "react-router-dom";  // Added useLocation
+import { Link, useNavigate, useLocation, useParams } from "react-router-dom";
 import axios from "axios";
 import { IoChatboxOutline } from "react-icons/io5";
 import { FaPlus } from "react-icons/fa";
@@ -9,26 +9,37 @@ import { UserContext } from "../../Context/UserContext.jsx";
 const Sidebar = ({ isOpen, toggleSidebar, sidebarRef }) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { chatId } = useParams();  // Get chat ID from URL
-  const [chats, setChats] = useState([]);
-  const { userId } = useContext(UserContext);
+  const { chatId } = useParams();
+  const { user } = useContext(UserContext);
+  const userId = user?.userId;
+
+
+  const navigateToChat = (chatId) => {
+    setTimeout(() => navigate(`/chat/${chatId}`), 150); 
+  };
+
+  const [chats, setChats] = useState(() => {
+    const cachedChats = sessionStorage.getItem("chats");
+    return cachedChats ? JSON.parse(cachedChats) : [];
+  });
 
   useEffect(() => {
-    console.log("Path changed:", location.pathname); // Debugging log
     if (userId) {
       fetchChats();
     }
-  }, [chatId, userId]);  // Now triggers when user switches chats
+  }, [chatId, userId]);
 
   const fetchChats = async () => {
     try {
-      setChats([]); // Clear previous state before fetching
-      const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/chats?userId=${userId}`);
+      const response = await axios.get(
+        `${import.meta.env.VITE_BACKEND_URL}/api/chat/all?userId=${userId}`
+      );
       setChats(response.data.chats);
     } catch (error) {
       console.error("Error fetching chat history:", error);
     }
   };
+
   return (
     <aside
       className={`fixed left-0 top-0 w-64 h-full bg-transparent backdrop-blur-3xl text-white transform ${
@@ -56,13 +67,15 @@ const Sidebar = ({ isOpen, toggleSidebar, sidebarRef }) => {
           <h2 className="text-lg font-semibold mb-2">Previous Chats</h2>
           <ul className="space-y-2">
             {chats.slice().reverse().map((chat) => (
-              <li key={chat.chatId}>
+              <li key={chat.chatId} className="truncate">
                 <button
-                  onClick={() => navigate(`/chat/${chat.chatId}`)}
-                  className="flex items-center gap-2 p-2 w-full hover:bg-[#333] hover:rounded-3xl"
+                  onClick={() => navigateToChat(chat.chatId)}
+                  className={`flex items-center gap-2 p-2 min-w-full transition-all duration-300 ease-in-out hover:bg-[#333] hover:rounded-3xl`}
                 >
                   <IoChatboxOutline />
-                  <span>{chat.title}</span>
+                  <span className="truncate max-w-[200px] overflow-hidden whitespace-nowrap text-ellipsis">
+                    {chat.title}
+                  </span>
                 </button>
               </li>
             ))}
