@@ -78,7 +78,7 @@ async def get_chat(chatId: str, userId: str):
 
     return {"chatId": chatId, "chatHistory": chat_history}
 
-def generate_chatShare_link(data: dict):
+async def generate_chatShare_link(data: dict):
     chatId = data["chatId"]
     userId = data["userId"]
 

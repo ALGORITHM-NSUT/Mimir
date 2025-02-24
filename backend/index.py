@@ -8,7 +8,7 @@ app = FastAPI()
 setup_cors(app)
 
 @app.get("/", tags=["Health Check"])
-def health_check():
+async def health_check():
   return {
     "message" : "Working Fine"
   }
