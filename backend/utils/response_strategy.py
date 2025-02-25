@@ -1,6 +1,7 @@
 import os
 import google.generativeai as genai
 from dotenv import load_dotenv
+import asyncio
 
 # The return should be {"response": response_text, "references": references}
 
@@ -50,7 +51,7 @@ async def response_strategy(message: str):
     '''
 
     try:
-        response = model.generate_content(augmented_message)
+        response = await asyncio.to_thread(model.generate_content, augmented_message    )
         response_text = response.text
 
         references = [

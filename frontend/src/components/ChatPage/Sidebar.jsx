@@ -65,7 +65,7 @@ const Sidebar = ({ isOpen, toggleSidebar, sidebarRef }) => {
         {/* Previous Chats List */}
         <div className="mt-4">
           <h2 className="text-lg font-semibold mb-2">Previous Chats</h2>
-          <ul className="space-y-2">
+          <ul className="space-y-2 overflow-y-auto max-h-[60vh]">
             {chats.slice().reverse().map((chat) => (
               <li key={chat.chatId} className="truncate">
                 <button
