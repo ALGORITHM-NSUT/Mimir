@@ -5,11 +5,15 @@ import ChatPage from "./pages/ChatPage";
 import "./index.css";
 import { UserContext, UserProvider } from "./Context/UserContext";
 import SharedChatPage from "./pages/SharedChatPage";
+import axios from "axios";
 
 const ProtectedRoute = ({ children }) => {
   const { user } = useContext(UserContext);
   return user?.userId ? children : <Navigate to="/" />;
 };
+
+axios.defaults.headers.common["ngrok-skip-browser-warning"] = "true";
+
 
 const App = () => {
   return (

@@ -18,10 +18,7 @@ const Sidebar = ({ isOpen, toggleSidebar, sidebarRef }) => {
     setTimeout(() => navigate(`/chat/${chatId}`), 150); 
   };
 
-  const [chats, setChats] = useState(() => {
-    const cachedChats = sessionStorage.getItem("chats");
-    return cachedChats ? JSON.parse(cachedChats) : [];
-  });
+  const [chats, setChats] = useState([])
 
   useEffect(() => {
     if (userId) {
@@ -66,14 +63,14 @@ const Sidebar = ({ isOpen, toggleSidebar, sidebarRef }) => {
         <div className="mt-4">
           <h2 className="text-lg font-semibold mb-2">Previous Chats</h2>
           <ul className="space-y-2 overflow-y-auto max-h-[60vh]">
-            {chats.slice().reverse().map((chat) => (
-              <li key={chat.chatId} className="truncate">
+            {chats?.slice().reverse().map((chat) => (
+              <li key={chat.chatId} className="w-full ">
                 <button
                   onClick={() => navigateToChat(chat.chatId)}
-                  className={`flex items-center gap-2 p-2 min-w-full transition-all duration-300 ease-in-out hover:bg-[#333] hover:rounded-3xl`}
+                  className={`flex items-center gap-2 p-2 w-full transition-all duration-300 ease-in-out hover:bg-[#333] hover:rounded-3xl`}
                 >
                   <IoChatboxOutline />
-                  <span className="truncate max-w-[200px] overflow-hidden whitespace-nowrap text-ellipsis">
+                  <span className="truncate max-w-[200px] block">
                     {chat.title}
                   </span>
                 </button>
