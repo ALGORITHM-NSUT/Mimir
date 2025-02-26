@@ -7,6 +7,8 @@ import ChatHistory from "../components/ChatPage/ChatHistory";
 import Header from "../components/ChatPage/Header";
 import { UserContext } from "../Context/UserContext";
 import ChatLoader from "../components/Utility/ChatLoader";
+import Alert from "@mui/material/Alert";
+
 
 const ChatPage = () => {
   const { chatId: urlChatId } = useParams();
@@ -21,6 +23,19 @@ const ChatPage = () => {
   const { user } = useContext(UserContext);
   const userId = user.userId
   const [isLoading, setisLoading] = useState(false);  
+  const [alert, setAlert] = useState(null)
+
+
+
+  useEffect(()=>{
+      if(alert){
+        const timeout = setTimeout(()=>{
+          setAlert(null);
+        }, 2000);
+        return ()=>clearTimeout(timeout)
+      }
+    }, [alert])
+
 
 
   useEffect(() => {
@@ -77,7 +92,7 @@ const ChatPage = () => {
     try {
       const response = await axios.post(
         `${import.meta.env.VITE_BACKEND_URL}/api/chat`,
-        { chatId, message, userId }
+        { chatId, message, userId, chatHistory}
       );
 
       const { chatId: newChatId, response: botResponse, references } =
@@ -112,12 +127,16 @@ const ChatPage = () => {
         isOpen={isSidebarOpen}
         toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
         sidebarRef={sidebarRef}
+        setAlert={setAlert}
       />
 
 
       <div className="flex flex-col flex-grow">
         {/* Header Section */}
-        <Header toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)} />
+        <Header
+          toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}  
+          setAlert={setAlert}
+        />
 
         {/* Chat History Section */}
         <div
@@ -144,8 +163,16 @@ const ChatPage = () => {
           isNewChat ? "bottom-48" : "bottom-0" 
         }`}
       >
-        <InputBox onSendMessage={handleSendMessage} />
+        <InputBox 
+          onSendMessage={handleSendMessage}
+          setAlert={setAlert}
+        />
       </div>
+      {alert && (
+        <div className="fixed top-4 left-1/2 transform -translate-x-1/2 w-96 z-50">
+          <Alert severity={alert.type}>{alert.text}</Alert>
+        </div>
+      )}
     </div>
 
 

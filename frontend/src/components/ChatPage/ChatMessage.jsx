@@ -16,9 +16,9 @@ const ChatMessage = ({ query, response, references }) => {
           <Response text={response} />
         </div>
 
-        <div className="flex-1 min-w-0 bg-[#1b1c1d75] shadow-md rounded-2xl py-10 px-6 w-fit">
-          <References references={references} />
-        </div>
+     
+        <References references={references} />
+
       </div>
     </div>
   );

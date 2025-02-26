@@ -17,6 +17,7 @@ async def handle_chat_request(data: dict):
     chatId = data.get("chatId")
     message = data.get("message")
     userId = data.get("userId")
+    chatHistory = data.get("chatHistory")
 
     if not message or not userId:
         raise HTTPException(status_code=400, detail="Message and userId are required")
@@ -25,7 +26,7 @@ async def handle_chat_request(data: dict):
         chatId = f"chat-{secrets.token_hex(8)}"
 
     try:
-        full_response = await response_strategy(message)
+        full_response = await response_strategy(message, chatHistory)
         response_text = full_response["response"]
         references = full_response["references"]
 

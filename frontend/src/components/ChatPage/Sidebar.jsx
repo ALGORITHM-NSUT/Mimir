@@ -1,24 +1,24 @@
 import React, { useState, useEffect, useContext } from "react";
-import { Link, useNavigate, useLocation, useParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
 import { IoChatboxOutline } from "react-icons/io5";
 import { FaPlus } from "react-icons/fa";
 import { TbLayoutSidebarRightExpandFilled } from "react-icons/tb";
 import { UserContext } from "../../Context/UserContext.jsx";
 
-const Sidebar = ({ isOpen, toggleSidebar, sidebarRef }) => {
+const Sidebar = ({ isOpen, toggleSidebar, sidebarRef, setAlert }) => {
   const navigate = useNavigate();
-  const location = useLocation();
   const { chatId } = useParams();
+  const location = useLocation();
   const { user } = useContext(UserContext);
-  const userId = user?.userId;
+  const [chats, setChats] = useState([])
 
+  const userId = user?.userId;
 
   const navigateToChat = (chatId) => {
     setTimeout(() => navigate(`/chat/${chatId}`), 150); 
   };
 
-  const [chats, setChats] = useState([])
 
   useEffect(() => {
     if (userId) {
@@ -34,6 +34,13 @@ const Sidebar = ({ isOpen, toggleSidebar, sidebarRef }) => {
       setChats(response.data.chats);
     } catch (error) {
       console.error("Error fetching chat history:", error);
+    }
+  };
+
+  const handleNewChatClick = (e) => {
+    if (location.pathname === "/new") {
+      e.preventDefault(); 
+      setAlert({ type: "error", text: "Already on New Chat Page." });
     }
   };
 
@@ -54,7 +61,11 @@ const Sidebar = ({ isOpen, toggleSidebar, sidebarRef }) => {
         </div>
 
         {/* New Chat Button */}
-        <Link to="/new" className="flex items-center gap-2 p-3 bg-[#333] hover:bg-[#444] rounded-3xl">
+        <Link
+          to="/new"
+          onClick={handleNewChatClick}
+          className="flex items-center gap-2 p-3 bg-[#333] hover:bg-[#444] rounded-3xl"
+        >
           <FaPlus />
           <span>New Chat</span>
         </Link>
@@ -67,10 +78,10 @@ const Sidebar = ({ isOpen, toggleSidebar, sidebarRef }) => {
               <li key={chat.chatId} className="w-full ">
                 <button
                   onClick={() => navigateToChat(chat.chatId)}
-                  className={`flex items-center gap-2 p-2 w-full transition-all duration-300 ease-in-out hover:bg-[#333] hover:rounded-3xl`}
+                  className={`flex items-center gap-2 p-2 w-full transition-all duration-300 ease-in-out ${chat.chatId == chatId ? "bg-[#555] text-white rounded-3xl" : "hover:bg-[#333] hover:rounded-3xl"}`}
                 >
                   <IoChatboxOutline />
-                  <span className="truncate max-w-[200px] block">
+                  <span className="truncate w-[200px] text-left ">
                     {chat.title}
                   </span>
                 </button>
@@ -79,6 +90,7 @@ const Sidebar = ({ isOpen, toggleSidebar, sidebarRef }) => {
           </ul>
         </div>
       </div>
+      
     </aside>
   );
 };
