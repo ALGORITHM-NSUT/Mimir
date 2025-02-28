@@ -1,39 +1,20 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef } from "react";
 import { IoSend } from "react-icons/io5";
-import { FaMicrophone } from "react-icons/fa";
+import SpeechButton from "./SpeechButton"; // Importing SpeechButton
 
-const MAX_CHAR_LIMIT = 500; // Set your character limit
+const MAX_CHAR_LIMIT = 500;
 
-const InputBox = ({ onSendMessage, setAlert}) => {
+const InputBox = ({ onSendMessage, setAlert }) => {
   const [message, setMessage] = useState("");
   const [isListening, setIsListening] = useState(false);
   const textAreaRef = useRef(null);
-  const speechRef = useRef(null)
-
-
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (speechRef.current && !speechRef.current.contains(event.target)) {
-        setIsListening(false);
-      }
-    };
-
-    if (isListening) {
-      document.addEventListener("mousedown", handleClickOutside);
-    }
-
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, [isListening]);
-
 
   const handleSend = () => {
     if (message.trim()) {
       onSendMessage(message);
       setMessage(""); // Clear input after sending
       adjustTextAreaHeight();
-    }else{
+    } else {
       setAlert({ type: "error", text: "Please enter your query." });
     }
   };
@@ -55,23 +36,6 @@ const InputBox = ({ onSendMessage, setAlert}) => {
     }
   };
 
-
-  const handleSpeechToText = () => {
-    const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
-    recognition.lang = "us-en";
-    setIsListening(true);
-    recognition.start();
-    
-    recognition.onresult = (event) => {
-      const transcript = event.results[0][0].transcript;
-      handleChange({ target: { value: transcript } });
-    };
-    
-    recognition.onend = () => {
-      setIsListening(false);
-    };
-  };
-
   return (
     <div
       className="fixed bottom-0 inset-x-0 min-h-40 rounded-t-3xl sm:min-h-20 flex items-center py-2 px-4 bg-[#303030] shadow-md shadow-gray-700 sm:relative sm:rounded-2xl sm:w-1/2 max-w-full overflow-hidden"
@@ -86,16 +50,11 @@ const InputBox = ({ onSendMessage, setAlert}) => {
         onChange={handleChange}
         onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && (e.preventDefault(), handleSend())}
       />
-      
+
       {/* Speech-to-Text Button */}
-      <button
-        ref={speechRef}
-        className={`p-3 ml-2 text-gray-50 hover:text-gray-400 rounded-full bg-[#404040] hover:bg-[#505050] transition-all shadow-md ${isListening ? "animate-bounce shadow-blue-500 shadow-lg" : ""}`}
-        onClick={handleSpeechToText}
-      >
-        <FaMicrophone size={22} />
-      </button>
-      
+      <SpeechButton setMessage={setMessage} isListening={isListening} setIsListening={setIsListening} />
+
+
       {/* Send Button */}
       <button
         className="p-3 ml-2 text-gray-50 hover:text-gray-400 rounded-full bg-[#404040] hover:bg-[#505050] transition-all shadow-md"
