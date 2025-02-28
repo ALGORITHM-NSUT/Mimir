@@ -48,4 +48,23 @@ npm run dev
 ```
 
 ---
+## **Docker Setup**
 
+Ensure that you have Docker and Docker Compose installed on your system.
+
+a) Build the Docker Images
+```sh
+
+docker-compose build
+```
+
+
+b) Start the Containers
+```sh
+
+docker-compose up -d
+```
+c) Stop the Containers
+```sh
+docker-compose down
+```
