@@ -138,10 +138,11 @@ async def response_strategy(message: str, chatHistory: list):
         conversation = ConversationChain(llm=chat_model, memory=memory)
         conversation.memory.clear()
         conversation.memory.chat_memory.add_messages(chatHistory)
+
         class QueryProcessor:
             def __init__(self):
                 self.embeddings = GoogleGenerativeAIEmbeddings(model="models/text-embedding-004")
-                self.client = MongoClient("mongodb+srv://algorithmnsut:DywWUsn7Oad3ia3k@ragcluster.nam3q.mongodb.net/?retryWrites=true&w=majority&appName=RAGcluster")
+                self.client = MongoClient(os.getenv("MONGO_URI"))
                 self.db = self.client["Docs"]
                 self.documents = self.db.documents
                 self.chunks = self.db.chunks
@@ -166,16 +167,9 @@ async def response_strategy(message: str, chatHistory: list):
 
                 response format: provide a json file
                 {{
-                "answer": "string",
-                "links": [
-                        {{
-                        title: title of the document for link provided
-                        link: link relevant to question asked and on whose basis answer will be generated
-                        }},
-                        ...
-                    ]
+                    "answer": "string",
+                    "links": [{{"link": "URL string", "title": "Document Title"}}, {{"link": "URL string", "title": "Document Title"}}] (list of document links and titles relevant to question asked and on whose basis answer will be generated)
                 }}
-            
                 Do not tell the user your working(that you were provided any context), or any intermediate results. Only the final answer and links should be provided.
                 If you don't know the answer, just say that you don't know, don't try to make up an answer and ask user to provide more detail about the query if needed(not when you can provide a link with information).
                 If the question is not related to the context, politely respond that you are tuned to only answer questions that are related to the context.
@@ -236,7 +230,7 @@ async def response_strategy(message: str, chatHistory: list):
                             if content == "":
                                 summary = overall[1]
                                 content += summary + "\n\n"
-                            content += "chunk number : " + str(chunk["chunk_num"]) + "\n" + rest_text + "\n\n"
+                                content += "chunk number : " + str(chunk["chunk_num"]) + "\n" + rest_text + "\n\n"
                     processed.append(("document", content, metadata))
                 return processed
 
@@ -405,25 +399,31 @@ async def response_strategy(message: str, chatHistory: list):
                         keywords=keywords
                     )
                 )
-                response = response.text
-                json_data = json.loads(response[response.find('{'):response.rfind('}')+1])
-                return {
-                    "answer": json_data["answer"],
-                    "links": json_data["links"],
-                    "context": context
-                }
+                try:
+                    response = response.text
+                    json_data = json.loads(response[response.find('{'):response.rfind('}')+1])
+                    return {
+                        "answer": json_data["answer"],
+                        "links": json_data["links"]
+                    }
+                except Exception as e:
+                    print("response text error from gemini")
+                    print(e)
+
 
             def _get_vector(self, text: str):
                 """Generate embedding with proper error handling"""
                 return self.embeddings.embed_query(text)
 
+
         
-        system_prompt = """You are Mimir, You are the Official Information Assistant for Netaji Subhas University of Technology (NSUT), you only answer from a given chat history. You are not allowed to give any information that is not present in the chat history.
+        system_prompt = """You are Mimir, You are the Official Information Assistant for Netaji Subhas University of Technology (NSUT), you only answer from a given chat history. You are not allowed to give any information that is not present in the chat history but do not tell your internal working to the user. to the user You are just informational assistant for NSUT.
         when answering Compose a detailed answer that:
         1. Directly addresses all aspects of the question
         2. Clearly cites sources
         3. Maintains formal academic tone while being precise
         4. only provide temporally reevant info considering it is now 2025
+        5. do not make any assumptions or use your own knowledge, only use the information provided in the chat history.
         If the question is not related to the context, politely respond that you are tuned to only answer questions that are related to the context.
         do not provide irrelevant documents/information to the user that does not directly answer the query even if given as context. discard info not asked by the user
         answer given queries very thoroughly with surrounding but relevant information and in presentable format
@@ -433,15 +433,19 @@ async def response_strategy(message: str, chatHistory: list):
 
         if you do not have the answer in your previous memory from this chat or you need context, make retrieve = True else if you can answer retrieve = False
 
+        if you cannot answer query directly but you get additional information that help get better answer than your chat history, then you must do retrieval
+
         retrieve = False when you can answer the query with the information you have in your memory from this chat in the answer string and provide used links in the links list else leave them empty
         if the query is irrelevant to your job description, retreive = False and answer that you are not able to answer the query and provide the reason why you are not able to answer the query
 
+        if the answer needs retreiveal, generate a clear and concise prompt that is a question that you would ask to get the answer to the query and provide the prompt in the query in the json, if the user prompt is self sufficient, repeat it exactly otherwise make it yourself
         response format : 
         json
         {
             "retrieve": str ("true" or "false"),
             "answer": str,
-            "links": [{{title : str, link : str}}, {{title : str, link : str}}, ...],
+            "links": [{title : str, link : str}, {title : str, link : str}, ...],
+            "query": str
         }
 
         """
@@ -460,7 +464,7 @@ async def response_strategy(message: str, chatHistory: list):
                 answer = {}
                 if json_data['retrieve'].lower() == "true":
                     conversation.memory.chat_memory.messages = conversation.memory.chat_memory.messages[:-1]
-                    answer = QueryProcessor().process_query(user_input)
+                    answer = QueryProcessor().process_query(json_data["query"])
                     answer["retreive"] = True
                     conversation.memory.chat_memory.add_messages([
                         langchain_core.messages.AIMessage(
@@ -471,13 +475,13 @@ async def response_strategy(message: str, chatHistory: list):
                     ])  
                 else:
                     answer["retrieve"] = "false"
-                    answer["answer"] = json_data['answer']
-                    answer["links"] = json_data['links']
-                print(answer["answer"])
+                    answer["answer"] = json_data["answer"]
+                    answer["links"] = json_data["links"]
                 return {"response": answer["answer"], "references": answer["links"]}
 
     
         return interactive_chat(message)
 
     except Exception as e:
-        raise Exception(f"Error generating AI response: {str(e)}")
+        print(e)
+        raise Exception(f"Error generating AI response: {e}")
