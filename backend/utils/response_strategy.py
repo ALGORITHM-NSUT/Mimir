@@ -20,7 +20,7 @@ import time
 # Load API key from .env
 load_dotenv()
 GEMINI_API_KEY = os.getenv("GOOGLE_API_KEY")
-chat_model = ChatGroq(model_name="llama-3.3-70b-specdec")
+chat_model = ChatGroq(model_name="llama-3.3-70b-versatile")
 # Initialize Gemini Client & Chat Session
 client = genai.configure(api_key=GEMINI_API_KEY)
 model = genai.GenerativeModel("gemini-2.0-flash", system_instruction="""You are the Official Information Assistant for Netaji Subhas University of Technology (NSUT), with access to comprehensive institutional data across all systems and departments. Your knowledge base includes:
@@ -130,7 +130,9 @@ you may be tasked to:
 1.Analyze given context thoroughly to answer queries, answer given queries very thoroughly and in presentable format(provide detailed and lengthy answers)
 2.Generate subqueries based on given context, queries and your own knowldge
 3.Answer if current context is enough to answer a query
-4. always try to provide exact information instead of document summary""")
+4. always try to provide exact information instead of document summary
+5. Where ever possible provide information in tabular format and make sure to make sensible columns and rows.                            
+""")
 
 async def response_strategy(message: str, chatHistory: list):
     try:
@@ -138,11 +140,10 @@ async def response_strategy(message: str, chatHistory: list):
         conversation = ConversationChain(llm=chat_model, memory=memory)
         conversation.memory.clear()
         conversation.memory.chat_memory.add_messages(chatHistory)
-
         class QueryProcessor:
             def __init__(self):
                 self.embeddings = GoogleGenerativeAIEmbeddings(model="models/text-embedding-004")
-                self.client = MongoClient(os.getenv("MONGO_URI"))
+                self.client = MongoClient("mongodb+srv://algorithmnsut:DywWUsn7Oad3ia3k@ragcluster.nam3q.mongodb.net/?retryWrites=true&w=majority&appName=RAGcluster")
                 self.db = self.client["Docs"]
                 self.documents = self.db.documents
                 self.chunks = self.db.chunks
@@ -164,12 +165,20 @@ async def response_strategy(message: str, chatHistory: list):
                 10. document titles may be misleading do not pay attention to that, only the content given
                 11. do not provide summary of documents if exact information is available
                 12. do not provide information surrounding the exact answer even if it is available, only the exact answer
+                13. Where ever possible provide information in tabular format and make sure to make sensible columns and rows.
 
                 response format: provide a json file
                 {{
-                    "answer": "string",
-                    "links": [{{"link": "URL string", "title": "Document Title"}}, {{"link": "URL string", "title": "Document Title"}}] (list of document links and titles relevant to question asked and on whose basis answer will be generated)
+                "answer": "string",
+                "links": [
+                        {{
+                        title: title of the document for link provided
+                        link: link relevant to question asked and on whose basis answer will be generated
+                        }},
+                        ...
+                    ]
                 }}
+            
                 Do not tell the user your working(that you were provided any context), or any intermediate results. Only the final answer and links should be provided.
                 If you don't know the answer, just say that you don't know, don't try to make up an answer and ask user to provide more detail about the query if needed(not when you can provide a link with information).
                 If the question is not related to the context, politely respond that you are tuned to only answer questions that are related to the context.
@@ -230,7 +239,7 @@ async def response_strategy(message: str, chatHistory: list):
                             if content == "":
                                 summary = overall[1]
                                 content += summary + "\n\n"
-                                content += "chunk number : " + str(chunk["chunk_num"]) + "\n" + rest_text + "\n\n"
+                            content += "chunk number : " + str(chunk["chunk_num"]) + "\n" + rest_text + "\n\n"
                     processed.append(("document", content, metadata))
                 return processed
 
@@ -399,54 +408,106 @@ async def response_strategy(message: str, chatHistory: list):
                         keywords=keywords
                     )
                 )
-                try:
-                    response = response.text
-                    json_data = json.loads(response[response.find('{'):response.rfind('}')+1])
-                    return {
-                        "answer": json_data["answer"],
-                        "links": json_data["links"]
-                    }
-                except Exception as e:
-                    print("response text error from gemini")
-                    print(e)
-
+                response = response.text
+                json_data = json.loads(response[response.find('{'):response.rfind('}')+1])
+                return {
+                    "answer": json_data["answer"],
+                    "links": json_data["links"],
+                    "context": context
+                }
 
             def _get_vector(self, text: str):
                 """Generate embedding with proper error handling"""
                 return self.embeddings.embed_query(text)
 
-
         
-        system_prompt = """You are Mimir, You are the Official Information Assistant for Netaji Subhas University of Technology (NSUT), you only answer from a given chat history. You are not allowed to give any information that is not present in the chat history but do not tell your internal working to the user. to the user You are just informational assistant for NSUT.
-        when answering Compose a detailed answer that:
-        1. Directly addresses all aspects of the question
-        2. Clearly cites sources
-        3. Maintains formal academic tone while being precise
-        4. only provide temporally reevant info considering it is now 2025
-        5. do not make any assumptions or use your own knowledge, only use the information provided in the chat history.
-        If the question is not related to the context, politely respond that you are tuned to only answer questions that are related to the context.
-        do not provide irrelevant documents/information to the user that does not directly answer the query even if given as context. discard info not asked by the user
-        answer given queries very thoroughly with surrounding but relevant information and in presentable format
-        only output json format NOTHING ELSE
+        system_prompt = """
+               You are Mimir, the official Information Assistant for Netaji Subhas University of Technology (NSUT). Your responses must be based exclusively on the provided chat history. You are strictly prohibited from generating information beyond the given context.
 
-        do not answer if you do not have answer in your chat history given, do not use your own knowledge beyond what is given
+                Response Guidelines
+                Strict Context Adherence:
+                Use only the information from the chat history.
+                Do not generate responses based on external knowledge.
+                If the necessary information is missing, indicate that retrieval is required.
+                Answer Quality & Structure:
+                Provide detailed, well-structured responses that thoroughly address the query.
+                Maintain a formal academic tone while ensuring clarity and precision.
+                Where ever possible provide information in tabular format and make sure to make sensible columns and rows 
+                Clearly cite sources when applicable.
+                Include only temporally relevant information, considering the current year is 2025.
+                Context Filtering:
+                If a query is not related to NSUT, politely inform the user that you can only respond to NSUT-related questions.
+                Do not include irrelevant context—only provide information that directly answers the query.
+                Avoid sharing extraneous or unnecessary documents/information.
+                Query Refinement:
+                If the user’s query is unclear, incomplete, or ambiguous, generate a more precise query based on the chat history.
+                If no refinement is required, return the exact user query.
+                Retrieval Decision Logic:
+                retrieve = "false" → You have enough information in memory to answer.
+                retrieve = "true" → The information is missing, and retrieval is required.
+                retrieve = "false" with an explicit rejection → If the query is unrelated to NSUT, state that you cannot answer and explain why.
 
-        if you do not have the answer in your previous memory from this chat or you need context, make retrieve = True else if you can answer retrieve = False
 
-        if you cannot answer query directly but you get additional information that help get better answer than your chat history, then you must do retrieval
+                Response Format (Strictly JSON Output Only)
+                {
+                    "retrieve": "true" | "false",
+                    "query": "string",
+                    "answer": "string",
+                    "links": [
+                        {
+                            "title": "string",
+                            "link": "string"
+                        },
+                        {
+                            "title": "string",
+                            "link": "string"
+                        }
+                    ]
+                }
+                Explanation of Fields:
+                query → The exact user query, or a refined query if clarification is needed.
+                answer → The response to the query, formatted for clarity.
+                links → A list of relevant sources used in the answer (leave empty if none were used).
 
-        retrieve = False when you can answer the query with the information you have in your memory from this chat in the answer string and provide used links in the links list else leave them empty
-        if the query is irrelevant to your job description, retreive = False and answer that you are not able to answer the query and provide the reason why you are not able to answer the query
+                Examples
+                1. When an Answer is Available:
+                {
+                    "retrieve": "false",
+                    "query": "What is the admission process for NSUT in 2025?",
+                    "answer": "The admission process for NSUT in 2025 requires students to apply via JAC Delhi, with eligibility based on JEE Main scores. The official website for applications is provided below.",
+                    "links": [
+                        {
+                            "title": "JAC Delhi Admissions 2025",
+                            "link": "https://jacdelhi.nic.in"
+                        }
+                    ]
+                }
 
-        if the answer needs retreiveal, generate a clear and concise prompt that is a question that you would ask to get the answer to the query and provide the prompt in the query in the json, if the user prompt is self sufficient, repeat it exactly otherwise make it yourself
-        response format : 
-        json
-        {
-            "retrieve": str ("true" or "false"),
-            "answer": str,
-            "links": [{title : str, link : str}, {title : str, link : str}, ...],
-            "query": str
-        }
+                2. When Additional Retrieval is Needed:
+                {
+                    "retrieve": "true",
+                    "query": "Eligibility criteria for NSUT admission 2025",
+                    "answer": "",
+                    "links": []
+                }
+
+                3. When the User Query is Unclear, and Query Refinement is Needed:
+                User Query: "Tell me about admissions?"
+                Refined Query: "What are the eligibility criteria and admission process for NSUT in 2025?"
+                {
+                    "retrieve": "true",
+                    "query": "What are the eligibility criteria and admission process for NSUT in 2025?",
+                    "answer": "",
+                    "links": []
+                }
+
+                4. When the Question is Unrelated to NSUT:
+                {
+                    "retrieve": "false",
+                    "query": "What are the best tourist places in India?",
+                    "answer": "I am designed to assist with queries related to Netaji Subhas University of Technology (NSUT). Unfortunately, I cannot provide information on this topic.",
+                    "links": []
+                }
 
         """
 
@@ -475,13 +536,19 @@ async def response_strategy(message: str, chatHistory: list):
                     ])  
                 else:
                     answer["retrieve"] = "false"
-                    answer["answer"] = json_data["answer"]
-                    answer["links"] = json_data["links"]
+                    answer["answer"] = json_data['answer']
+                    answer["links"] = json_data['links']
+                print(answer["answer"])
                 return {"response": answer["answer"], "references": answer["links"]}
 
     
         return interactive_chat(message)
+        # references = [
+        #     {"title": "Distributed Database", "url": "https://www.instagram.com/"},
+        #     {"title": "Soft Computing", "url": "https://www.fallingfalling.com/"},
+        # ]
+
+        # return {"response": response_text, "references": references}
 
     except Exception as e:
-        print(e)
-        raise Exception(f"Error generating AI response: {e}")
+        raise Exception(f"Error generating AI response: {str(e)}")

@@ -22,12 +22,34 @@ async def handle_chat_request(data: dict):
     chats = []
     if chatHistory:
         for chat in chatHistory:
-            chats.append(langchain_core.messages.human.HumanMessage(chat["query"]))
-            
-            references = "\nLinks:\n" + " \n ".join(f"{ref['title']}: {ref['link']}" for ref in chat["references"]) if chat.get("references") else ""
+            try:
+                # Ensure "query" exists and is a string
+                query = chat.get("query")
+                if not isinstance(query, str):
+                    raise ValueError(f"Invalid query format in chat: {chat}")
 
-            response = chat["response"] + references
-            chats.append(langchain_core.messages.AIMessage(response))
+                chats.append(langchain_core.messages.human.HumanMessage(query))
+
+                # Handle missing or malformed references
+                references = ""
+                if "references" in chat and isinstance(chat["references"], list):
+                    references_list = [
+                        f"{ref.get('title', 'Untitled')}: {ref.get('link', '#')}"
+                        for ref in chat["references"]
+                        if isinstance(ref, dict) and "link" in ref and "title" in ref
+                    ]
+                    if references_list:
+                        references = "\nLinks:\n" + " \n ".join(references_list)
+
+                # Ensure "response" exists and is a string
+                response = chat.get("response")
+                if not isinstance(response, str):
+                    raise ValueError(f"Invalid response format in chat: {chat}")
+
+                chats.append(langchain_core.messages.AIMessage(response + references))
+
+            except Exception as e:
+                print(f"Error processing chat entry: {e}")
 
     if not chatId:
         chatId = f"chat-{secrets.token_hex(8)}"
