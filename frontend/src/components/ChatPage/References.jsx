@@ -15,7 +15,7 @@ const References = ({ references }) => {
             {references.map((ref, index) => (
               <a
                 key={index}
-                href={ref.url}
+                href={ref.link}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="block p-4 rounded-xl shadow-lg transition duration-300 
@@ -32,7 +32,7 @@ const References = ({ references }) => {
                       {ref.title}
                     </p>
                     <p className="text-gray-400 text-sm w-full overflow-hidden truncate">
-                      {ref.url}
+                      {ref.link}
                     </p>
                   </div>
                 </div>

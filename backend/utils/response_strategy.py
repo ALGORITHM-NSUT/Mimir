@@ -473,11 +473,11 @@ async def response_strategy(message: str, chatHistory: list):
                     answer["retrieve"] = "false"
                     answer["answer"] = json_data['answer']
                     answer["links"] = json_data['links']
-
-                return {"response": answer["answer"], "references": answer["link"]}
+                print(answer["answer"])
+                return {"response": answer["answer"], "references": answer["links"]}
 
     
-        interactive_chat(message)
+        return interactive_chat(message)
         # references = [
         #     {"title": "Distributed Database", "url": "https://www.instagram.com/"},
         #     {"title": "Soft Computing", "url": "https://www.fallingfalling.com/"},

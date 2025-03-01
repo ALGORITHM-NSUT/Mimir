@@ -20,19 +20,21 @@ async def handle_chat_request(data: dict):
     userId = data.get("userId")
     chatHistory = data.get("chatHistory")
     chats = []
-    for chat in chatHistory:
-        chats.append(langchain_core.messages.human.HumanMessage(chat["query"]))
-        
-        references = "\nLinks:\n" + " \n ".join(f"{ref['title']}: {ref['url']}" for ref in chat["references"]) if chat.get("references") else ""
+    if chatHistory:
+        for chat in chatHistory:
+            chats.append(langchain_core.messages.human.HumanMessage(chat["query"]))
+            
+            references = "\nLinks:\n" + " \n ".join(f"{ref['title']}: {ref['link']}" for ref in chat["references"]) if chat.get("references") else ""
 
-        response = chat["response"] + references
-        chats.append(langchain_core.messages.AIMessage(response))
+            response = chat["response"] + references
+            chats.append(langchain_core.messages.AIMessage(response))
 
     if not chatId:
         chatId = f"chat-{secrets.token_hex(8)}"
 
     try:
         full_response = await response_strategy(message, chats)
+        print(full_response)
         response_text = full_response["response"]
         references = full_response["references"]
 
