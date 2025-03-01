@@ -2,14 +2,14 @@ import React, { useState, useRef } from "react";
 import { IoSend } from "react-icons/io5";
 import SpeechButton from "./SpeechButton"; // Importing SpeechButton
 
-const MAX_CHAR_LIMIT = 500;
+const MAX_CHAR_LIMIT = 1500;
 
 const InputBox = ({ onSendMessage, setAlert }) => {
   const [message, setMessage] = useState("");
   const [isListening, setIsListening] = useState(false);
   const textAreaRef = useRef(null);
 
-  const handleSend = () => {
+  const handleSend = () => {  
     if (message.trim()) {
       onSendMessage(message);
       setMessage(""); // Clear input after sending

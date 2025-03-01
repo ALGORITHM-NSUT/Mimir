@@ -20,7 +20,7 @@ import time
 # Load API key from .env
 load_dotenv()
 GEMINI_API_KEY = os.getenv("GOOGLE_API_KEY")
-chat_model = ChatGroq(model_name="llama-3.3-70b-versatile")
+chat_model = ChatGroq(model_name="llama-3.3-70b-specdec")
 # Initialize Gemini Client & Chat Session
 client = genai.configure(api_key=GEMINI_API_KEY)
 model = genai.GenerativeModel("gemini-2.0-flash", system_instruction="""You are the Official Information Assistant for Netaji Subhas University of Technology (NSUT), with access to comprehensive institutional data across all systems and departments. Your knowledge base includes:
@@ -478,12 +478,6 @@ async def response_strategy(message: str, chatHistory: list):
 
     
         return interactive_chat(message)
-        # references = [
-        #     {"title": "Distributed Database", "url": "https://www.instagram.com/"},
-        #     {"title": "Soft Computing", "url": "https://www.fallingfalling.com/"},
-        # ]
-
-        # return {"response": response_text, "references": references}
 
     except Exception as e:
         raise Exception(f"Error generating AI response: {str(e)}")
