@@ -7,6 +7,7 @@ from utils.token_utils import generate_secure_token
 from utils.token_utils import verify_chat_share_token
 from utils.response_strategy import response_strategy
 import os
+import langchain_core
 
 
 messages_collection = db["messages"]
@@ -18,15 +19,20 @@ async def handle_chat_request(data: dict):
     message = data.get("message")
     userId = data.get("userId")
     chatHistory = data.get("chatHistory")
+    chats = []
+    for chat in chatHistory:
+        chats.append(langchain_core.messages.human.HumanMessage(chat["query"]))
+        
+        references = "\nLinks:\n" + " \n ".join(f"{ref['title']}: {ref['url']}" for ref in chat["references"]) if chat.get("references") else ""
 
-    if not message or not userId:
-        raise HTTPException(status_code=400, detail="Message and userId are required")
+        response = chat["response"] + references
+        chats.append(langchain_core.messages.AIMessage(response))
 
     if not chatId:
         chatId = f"chat-{secrets.token_hex(8)}"
 
     try:
-        full_response = await response_strategy(message, chatHistory)
+        full_response = await response_strategy(message, chats)
         response_text = full_response["response"]
         references = full_response["references"]
 
