@@ -141,7 +141,7 @@ async def response_strategy(message: str, chatHistory: list):
         class QueryProcessor:
             def __init__(self):
                 self.embeddings = GoogleGenerativeAIEmbeddings(model="models/text-embedding-004")
-                self.client = MongoClient("mongodb+srv://algorithmnsut:DywWUsn7Oad3ia3k@ragcluster.nam3q.mongodb.net/?retryWrites=true&w=majority&appName=RAGcluster")
+                self.client = MongoClient(os.getenv("MONGO_URI"))
                 self.db = self.client["Docs"]
                 self.documents = self.db.documents
                 self.chunks = self.db.chunks
