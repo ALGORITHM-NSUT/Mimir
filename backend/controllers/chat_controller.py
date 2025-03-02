@@ -1,4 +1,3 @@
-import secrets
 from datetime import datetime
 from fastapi import HTTPException
 from pymongo import ASCENDING
@@ -8,10 +7,35 @@ from utils.token_utils import verify_chat_share_token
 from utils.response_strategy import response_strategy
 import os
 import langchain_core
-
+import secrets
+from fastapi.encoders import jsonable_encoder
 
 messages_collection = db["messages"]
 user_chats_collection = db["user_chats"]
+
+
+async def prepare_chat_data(data: dict) -> dict:
+    chatId = data.get("chatId")
+    message = data.get("message")
+    userId = data.get("userId")
+
+    if not chatId:
+        chatId = f"chat-{secrets.token_hex(8)}"
+        data["chatId"] = chatId 
+
+    messageId = f"msg-{secrets.token_hex(8)}"
+    data["messageId"] = messageId
+
+    await user_chats_collection.update_one(
+        {"userId": userId, "chatId": chatId},
+        {
+            "$set": {"chatId": chatId, "userId": userId},  # Ensure chatId is stored
+            "$setOnInsert": {"title": message, "createdAt": datetime.utcnow()}
+        },
+        upsert=True
+    )
+
+    return data
 
 
 async def handle_chat_request(data: dict):
@@ -19,7 +43,14 @@ async def handle_chat_request(data: dict):
     message = data.get("message")
     userId = data.get("userId")
     chatHistory = data.get("chatHistory")
+    messageId = data.get("messageId")
     chats = []
+
+    if not userId:
+        raise HTTPException(status_code=400, detail="User ID is required")
+
+    print(data)
+
     if chatHistory:
         for chat in chatHistory:
             try:
@@ -51,18 +82,15 @@ async def handle_chat_request(data: dict):
             except Exception as e:
                 print(f"Error processing chat entry: {e}")
 
-    if not chatId:
-        chatId = f"chat-{secrets.token_hex(8)}"
-
     try:
         full_response = await response_strategy(message, chats)
-        print(full_response)
         response_text = full_response["response"]
         references = full_response["references"]
 
         message_data = {
             "chatId": chatId,
             "userId": userId,
+            "messageId": messageId,
             "query": message,
             "response": response_text,
             "references": references,
@@ -72,11 +100,7 @@ async def handle_chat_request(data: dict):
         inserted_message = await messages_collection.insert_one(message_data)
         message_id = str(inserted_message.inserted_id)
 
-        await user_chats_collection.update_one(
-            {"userId": userId, "chatId": chatId},
-            {"$setOnInsert": {"title": message}},
-            upsert=True
-        )
+        
 
         return {
             "chatId": chatId,
@@ -96,7 +120,9 @@ async def get_all_chats(userId: str):
 
     return {"chats": chat_list}
 
-async def get_chat(chatId: str, userId: str):
+async def get_chat(chatId: str, data: dict):
+    messageId = data.get("messageId")
+    userId = data.get("userId")
     chat_cursor = messages_collection.find(
         {"chatId": chatId, "userId": userId},
         {"_id": 0}
@@ -104,8 +130,12 @@ async def get_chat(chatId: str, userId: str):
 
     chat_history = await chat_cursor.to_list(None)
 
+    
+    is_message_there = user_chats_collection.find({"messageId": messageId})
+
     if not chat_history:
-        raise HTTPException(status_code=404, detail="Chat not found or unauthorized access")
+        if not is_message_there:
+            raise HTTPException(status_code=404, detail="Chat not found or unauthorized access")
 
     return {"chatId": chatId, "chatHistory": chat_history}
 
@@ -137,3 +167,17 @@ async def get_shared_chat(token: str):
         raise HTTPException(status_code=404, detail="Chat not found.")
 
     return {"chatId": chatId, "chatHistory": chat_history}
+
+
+async def get_response(userId: str, data: dict):
+    messageId = data.get("messageId")
+    message_data = await messages_collection.find_one(
+        {"messageId": messageId, "userId": userId},
+        {"_id": 0}
+    )
+    
+
+    if not message_data:
+        raise HTTPException(status_code=404, detail="Message not found.")
+    
+    return jsonable_encoder(message_data)

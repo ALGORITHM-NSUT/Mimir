@@ -8,12 +8,12 @@ router = APIRouter()
 @router.get("/proxy")
 async def proxy_request(url: str, request: Request):
     if not url.startswith("http://") and not url.startswith("https://"):
-        return {"error": "Invalid URL format"}  # Prevent errors
+        return {"error": "Invalid URL format"}  
 
     headers = {"Origin": request.headers.get("Origin", "https://www.imsnsit.org/imsnsit/notifications.php")}
 
     try:
         response = requests.get(url, headers=headers, allow_redirects=True)
-        return RedirectResponse(url)  # Redirect to original link
+        return RedirectResponse(url)  
     except requests.RequestException:
         return {"error": "Failed to fetch URL"}

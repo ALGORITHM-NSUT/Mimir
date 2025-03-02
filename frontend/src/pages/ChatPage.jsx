@@ -15,6 +15,7 @@ const ChatPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [chatId, setChatId] = useState(urlChatId || null);
+  const [messageId, setMessageId] = useState();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [chatHistory, setChatHistory] = useState([]);
   const isNewChat = !urlChatId;
@@ -78,8 +79,9 @@ const ChatPage = () => {
 
   const fetchChatHistory = async (chatId) => {
     try {
-      const response = await axios.get(
-        `${import.meta.env.VITE_BACKEND_URL}/api/chat/${chatId}?userId=${userId}`
+      const response = await axios.post(
+        `${import.meta.env.VITE_BACKEND_URL}/api/chat/${chatId}`,
+        {userId, messageId}
       );
       setChatHistory(response.data.chatHistory || []);
     } catch (error) {
@@ -89,24 +91,34 @@ const ChatPage = () => {
 
   const handleSendMessage = async (message) => {
     setisLoading(true)
+    setChatHistory((prevHistory) => {
+      const updatedHistory = [
+        ...prevHistory,
+        { query: message, response: "Processing...", references: [] },
+      ];
+      console.log("Updated Chat History (Before API Call):", updatedHistory);
+      return updatedHistory;
+    });
     try {
+
       const response = await axios.post(
         `${import.meta.env.VITE_BACKEND_URL}/api/chat`,
         { chatId, message, userId, chatHistory}
       );
 
-      const { chatId: newChatId, response: botResponse, references } =
+      const { chatId: newChatId, messageId} =
         response.data;
+
+      setMessageId(response.data.messageId)
 
       if (!chatId) {
         setChatId(newChatId);
         navigate(`/chat/${newChatId}`);
       }
 
-      setChatHistory((prevHistory) => [
-        ...prevHistory,
-        { query: message, response: botResponse, references: references || [] },
-      ]);
+      
+
+      pollForUpdatedResponse(userId, messageId)
     } catch (error) {
       setChatHistory((prevHistory) => [
         ...prevHistory,
@@ -120,6 +132,35 @@ const ChatPage = () => {
       setisLoading(false)
     }
   };
+  const pollForUpdatedResponse = (userId, messageId) => {
+    const interval = setInterval(async () => {
+      try {
+        const response = await axios.post(
+          `${import.meta.env.VITE_BACKEND_URL}/api/chat/response/${userId}`,
+          { messageId }
+        );
+  
+        console.log("Polling Response:", response.data); // Debugging
+  
+        const { message, response: botResponse, references } = response.data;
+  
+        if (response.data && response.data.response !== "Processing...") {
+          setChatHistory((prevHistory) =>
+            prevHistory.map((item) =>
+              item.query=== message
+                ? { ...item, response: botResponse, references: references || [] }
+                : item
+            )
+          );
+  
+          clearInterval(interval);
+        }
+      } catch (error) {
+        console.error("Error polling for response:", error);
+      }
+    }, 2000);
+  };
+  
 
   return (
     <div className="relative min-h-screen w-full bg-[#1b1c1d] text-white text-[16px] flex flex-col">
@@ -143,7 +184,7 @@ const ChatPage = () => {
           ref={chatContainerRef}
           className="flex-grow flex sm:max-h-[90vh] max-h-[85vh] flex-col px-4 sm:px-10 overflow-y-auto pb-24 sm:pb-28"
         >
-          {isNewChat && chatHistory.length === 0 ? (
+          {isNewChat? (
             <div className="flex flex-col justify-center items-center mb-20 flex-grow">
               <h1 className="text-center text-5xl sm:text-5xl lg:text-5xl font-semibold bg-gradient-to-r from-violet-400 via-blue-400 to-pink-400 text-transparent bg-clip-text">
                 What can I help with?

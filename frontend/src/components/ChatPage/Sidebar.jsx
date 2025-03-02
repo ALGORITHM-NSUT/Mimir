@@ -22,20 +22,40 @@ const Sidebar = ({ isOpen, toggleSidebar, sidebarRef, setAlert }) => {
 
   useEffect(() => {
     if (userId) {
-      fetchChats();
+      loadChats();
     }
   }, [chatId, userId]);
+
+  const loadChats = async () => {
+    const cachedChats = sessionStorage.getItem(`chats_${userId}`);
+
+    if (cachedChats) {
+      setChats(JSON.parse(cachedChats));
+    }
+
+    fetchChats();
+  };
 
   const fetchChats = async () => {
     try {
       const response = await axios.get(
         `${import.meta.env.VITE_BACKEND_URL}/api/chat/all?userId=${userId}`
       );
-      setChats(response.data.chats);
+
+      const newChats = response.data.chats;
+
+      const cachedChats = sessionStorage.getItem(`chats_${userId}`);
+      const parsedChats = cachedChats ? JSON.parse(cachedChats) : [];
+
+      if (JSON.stringify(newChats) !== JSON.stringify(parsedChats)) {
+        sessionStorage.setItem(`chats_${userId}`, JSON.stringify(newChats));
+        setChats(newChats);
+      }
     } catch (error) {
       console.error("Error fetching chat history:", error);
     }
   };
+
 
   const handleNewChatClick = (e) => {
     if (location.pathname === "/new") {
