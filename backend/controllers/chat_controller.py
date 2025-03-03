@@ -94,12 +94,11 @@ async def handle_chat_request(data: dict):
             "query": message,
             "response": response_text,
             "references": references,
-            "timestamp": datetime.utcnow()
+            "timestamp": datetime.utcnow(),
         }
 
         inserted_message = await messages_collection.insert_one(message_data)
         message_id = str(inserted_message.inserted_id)
-
         
 
         return {
@@ -137,7 +136,7 @@ async def get_chat(chatId: str, data: dict):
         if not is_message_there:
             raise HTTPException(status_code=404, detail="Chat not found or unauthorized access")
 
-    return {"chatId": chatId, "chatHistory": chat_history}
+    return {"chatId": chatId, "chatHistory": chat_history, "status": "resolved"}
 
 def generate_chatShare_link(data: dict):
     chatId = data["chatId"]
