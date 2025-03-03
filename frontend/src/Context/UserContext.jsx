@@ -3,23 +3,14 @@ import { createContext, useState, useEffect } from "react";
 const UserContext = createContext();
 
 const UserProvider = ({ children }) => {
-  const [userId, setUserId] = useState(localStorage.getItem("userId") || "Ram");
-
-  const login = (id) => {
-    localStorage.setItem("userId", id);
-    setUserId(id);
-  };
-
-  const logout = () => {
-    localStorage.removeItem("userId");
-    setUserId(null);
-  };
+  const [user, setUser] = useState({ userId: "12345", name: "John Doe" });
 
   return (
-    <UserContext.Provider value={{ userId, login, logout }}>
+    <UserContext.Provider value={{ user, setUser }}>
       {children}
     </UserContext.Provider>
   );
 };
+
 
 export { UserContext, UserProvider };

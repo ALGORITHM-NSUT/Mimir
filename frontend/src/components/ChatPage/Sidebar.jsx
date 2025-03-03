@@ -1,34 +1,69 @@
 import React, { useState, useEffect, useContext } from "react";
-import { Link, useNavigate, useLocation, useParams } from "react-router-dom";  // Added useLocation
+import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
 import { IoChatboxOutline } from "react-icons/io5";
 import { FaPlus } from "react-icons/fa";
 import { TbLayoutSidebarRightExpandFilled } from "react-icons/tb";
 import { UserContext } from "../../Context/UserContext.jsx";
 
-const Sidebar = ({ isOpen, toggleSidebar, sidebarRef }) => {
+const Sidebar = ({ isOpen, toggleSidebar, sidebarRef, setAlert }) => {
   const navigate = useNavigate();
+  const { chatId } = useParams();
   const location = useLocation();
-  const { chatId } = useParams();  // Get chat ID from URL
-  const [chats, setChats] = useState([]);
-  const { userId } = useContext(UserContext);
+  const { user } = useContext(UserContext);
+  const [chats, setChats] = useState([])
+
+  const userId = user?.userId;
+
+  const navigateToChat = (chatId) => {
+    setTimeout(() => navigate(`/chat/${chatId}`), 150); 
+  };
+
 
   useEffect(() => {
-    console.log("Path changed:", location.pathname); // Debugging log
     if (userId) {
-      fetchChats();
+      loadChats();
     }
-  }, [chatId, userId]);  // Now triggers when user switches chats
+  }, [chatId, userId]);
+
+  const loadChats = async () => {
+    const cachedChats = sessionStorage.getItem(`chats_${userId}`);
+
+    if (cachedChats) {
+      setChats(JSON.parse(cachedChats));
+    }
+
+    fetchChats();
+  };
 
   const fetchChats = async () => {
     try {
-      setChats([]); // Clear previous state before fetching
-      const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/chats?userId=${userId}`);
-      setChats(response.data.chats);
+      const response = await axios.get(
+        `${import.meta.env.VITE_BACKEND_URL}/api/chat/all?userId=${userId}`
+      );
+
+      const newChats = response.data.chats;
+
+      const cachedChats = sessionStorage.getItem(`chats_${userId}`);
+      const parsedChats = cachedChats ? JSON.parse(cachedChats) : [];
+
+      if (JSON.stringify(newChats) !== JSON.stringify(parsedChats)) {
+        sessionStorage.setItem(`chats_${userId}`, JSON.stringify(newChats));
+        setChats(newChats);
+      }
     } catch (error) {
       console.error("Error fetching chat history:", error);
     }
   };
+
+
+  const handleNewChatClick = (e) => {
+    if (location.pathname === "/new") {
+      e.preventDefault(); 
+      setAlert({ type: "error", text: "Already on New Chat Page." });
+    }
+  };
+
   return (
     <aside
       className={`fixed left-0 top-0 w-64 h-full bg-transparent backdrop-blur-3xl text-white transform ${
@@ -46,7 +81,11 @@ const Sidebar = ({ isOpen, toggleSidebar, sidebarRef }) => {
         </div>
 
         {/* New Chat Button */}
-        <Link to="/new" className="flex items-center gap-2 p-3 bg-[#333] hover:bg-[#444] rounded-3xl">
+        <Link
+          to="/new"
+          onClick={handleNewChatClick}
+          className="flex items-center gap-2 p-3 bg-[#333] hover:bg-[#444] rounded-3xl"
+        >
           <FaPlus />
           <span>New Chat</span>
         </Link>
@@ -54,21 +93,24 @@ const Sidebar = ({ isOpen, toggleSidebar, sidebarRef }) => {
         {/* Previous Chats List */}
         <div className="mt-4">
           <h2 className="text-lg font-semibold mb-2">Previous Chats</h2>
-          <ul className="space-y-2">
-            {chats.slice().reverse().map((chat) => (
-              <li key={chat.chatId}>
+          <ul className="space-y-2 overflow-y-auto max-h-[60vh]">
+            {chats?.slice().reverse().map((chat) => (
+              <li key={chat.chatId} className="w-full ">
                 <button
-                  onClick={() => navigate(`/chat/${chat.chatId}`)}
-                  className="flex items-center gap-2 p-2 w-full hover:bg-[#333] hover:rounded-3xl"
+                  onClick={() => navigateToChat(chat.chatId)}
+                  className={`flex items-center gap-2 p-2 w-full transition-all duration-300 ease-in-out ${chat.chatId == chatId ? "bg-[#555] text-white rounded-3xl" : "hover:bg-[#333] hover:rounded-3xl"}`}
                 >
                   <IoChatboxOutline />
-                  <span>{chat.title}</span>
+                  <span className="truncate w-[200px] text-left ">
+                    {chat.title}
+                  </span>
                 </button>
               </li>
             ))}
           </ul>
         </div>
       </div>
+      
     </aside>
   );
 };

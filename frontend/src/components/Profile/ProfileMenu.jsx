@@ -22,7 +22,8 @@ const ProfileMenu = () => {
   const menuRef = useRef(null);
   const modalRef = useRef(null);
   const { chatId } = useParams();
-  const { userId } = useContext(UserContext);
+  const { user } = useContext(UserContext);
+  const userId = user.userId
 
   // Toggle menu visibility
   const toggleMenu = () => setIsOpen((prev) => !prev);
@@ -51,7 +52,6 @@ const ProfileMenu = () => {
     return () => document.removeEventListener("mousedown", handleClickOutsideModal);
   }, [isModalOpen]);
 
-  // Close menu when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (menuRef.current && !menuRef.current.contains(event.target)) {
@@ -63,24 +63,34 @@ const ProfileMenu = () => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Handle "Share Chat" click
   const handleShareChat = async () => {
     console.log("Share Chat Clicked!");
-
+  
     if (!chatId) {
       setAlertMessage({ type: "error", text: "Please start a Conversation" });
       return;
     }
-
+  
+    const cachedLink = sessionStorage.getItem(`shareableLink_${chatId}`);
+    if (cachedLink) {
+      setShareableLink(cachedLink);
+      setIsModalOpen(true);
+      return;
+    }
+  
     try {
       const response = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/chat/share`, {
         chatId,
         userId,
       });
-
-      setShareableLink(response.data.shareableLink);
-      setIsModalOpen(true); // Open modal
-      setAlertMessage(null); // Clear any error messages
+  
+      const shareableLink = response.data.shareableLink;
+      
+      sessionStorage.setItem(`shareableLink_${chatId}`, shareableLink);
+  
+      setShareableLink(shareableLink);
+      setIsModalOpen(true);
+      setAlertMessage(null);
     } catch (error) {
       console.error("Error making chat shareable:", error);
       setAlertMessage({ type: "error", text: "Failed to generate shareable link." });

@@ -4,7 +4,16 @@ import { TbLayoutSidebarLeftExpandFilled } from "react-icons/tb";
 import { FaPencilAlt, FaUserCircle } from "react-icons/fa";
 import ProfileMenu from "../Profile/ProfileMenu";
 
-const Header = ({ toggleSidebar }) => {
+const Header = ({ toggleSidebar, setAlert }) => {
+
+
+  const handleNewChatClick = (e) => {
+    if (location.pathname === "/new") {
+      e.preventDefault(); 
+      setAlert({ type: "error", text: "Already on New Chat Page." });
+    }
+  };
+
   return (
     <header className="w-full text-white py-4 px-6 grid grid-cols-3 items-center shadow-md bg-[#1b1c1d]">
       {/* Left Section */}
@@ -13,7 +22,7 @@ const Header = ({ toggleSidebar }) => {
           <TbLayoutSidebarLeftExpandFilled className="text-2xl sm:text-3xl" />
         </button>
 
-        <Link to="/new" className="sm:flex items-center hidden">
+        <Link to="/new" onClick={handleNewChatClick} className="sm:flex items-center hidden">
           <FaPencilAlt className="text-lg sm:text-xl" />
         </Link>
       </div>
