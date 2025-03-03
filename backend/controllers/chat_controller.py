@@ -178,6 +178,5 @@ async def get_response(userId: str, data: dict):
     
 
     if not message_data:
-        raise HTTPException(status_code=404, detail="Message not found.")
-    
+        return {"response" : "Processing"}
     return jsonable_encoder(message_data)

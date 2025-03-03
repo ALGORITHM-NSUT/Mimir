@@ -18,7 +18,6 @@ const ChatPage = () => {
   const [messageId, setMessageId] = useState();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [chatHistory, setChatHistory] = useState([]);
-  const isNewChat = !urlChatId;
   const sidebarRef = useRef(null);
   const chatContainerRef = useRef(null);
   const { user } = useContext(UserContext);
@@ -26,6 +25,14 @@ const ChatPage = () => {
   const [isLoading, setisLoading] = useState(false);  
   const [alert, setAlert] = useState(null)
 
+  const [isNewChat, setIsNewChat] = useState(null);
+
+  
+  useEffect(()=>{
+    if(location.pathname === "/new" && !isNewChat){
+      setIsNewChat(true)
+    }  
+  },[])
 
 
   useEffect(()=>{
@@ -76,6 +83,7 @@ const ChatPage = () => {
     }
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [isSidebarOpen]);
+  
 
   const fetchChatHistory = async (chatId) => {
     try {
@@ -91,6 +99,7 @@ const ChatPage = () => {
 
   const handleSendMessage = async (message) => {
     setisLoading(true)
+
     setChatHistory((prevHistory) => {
       const updatedHistory = [
         ...prevHistory,
@@ -116,18 +125,19 @@ const ChatPage = () => {
         navigate(`/chat/${newChatId}`);
       }
 
-      
-
       pollForUpdatedResponse(userId, messageId)
     } catch (error) {
-      setChatHistory((prevHistory) => [
-        ...prevHistory,
+      setChatHistory((prevHistory) => {
+        const updatedHistory = [...prevHistory,
         {
           query: message,
           response: "Error fetching response. Try again.",
           references: [],
-        },
-      ]);
+        },]
+
+        return updatedHistory
+
+    });
     }finally{
       setisLoading(false)
     }
@@ -135,6 +145,7 @@ const ChatPage = () => {
   const pollForUpdatedResponse = (userId, messageId) => {
     const interval = setInterval(async () => {
       try {
+        console.log("making api call")
         const response = await axios.post(
           `${import.meta.env.VITE_BACKEND_URL}/api/chat/response/${userId}`,
           { messageId }
@@ -142,9 +153,9 @@ const ChatPage = () => {
   
         console.log("Polling Response:", response.data); // Debugging
   
-        const { message, response: botResponse, references } = response.data;
+        const { query: message, response: botResponse, references } = response.data;
   
-        if (response.data && response.data.response !== "Processing...") {
+        if (botResponse && botResponse !== "Processing") {
           setChatHistory((prevHistory) =>
             prevHistory.map((item) =>
               item.query=== message
@@ -184,7 +195,7 @@ const ChatPage = () => {
           ref={chatContainerRef}
           className="flex-grow flex sm:max-h-[90vh] max-h-[85vh] flex-col px-4 sm:px-10 overflow-y-auto pb-24 sm:pb-28"
         >
-          {isNewChat? (
+          {isNewChat === true? (
             <div className="flex flex-col justify-center items-center mb-20 flex-grow">
               <h1 className="text-center text-5xl sm:text-5xl lg:text-5xl font-semibold bg-gradient-to-r from-violet-400 via-blue-400 to-pink-400 text-transparent bg-clip-text">
                 What can I help with?
