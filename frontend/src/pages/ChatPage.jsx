@@ -22,7 +22,6 @@ const ChatPage = () => {
   const chatContainerRef = useRef(null);
   const { user } = useContext(UserContext);
   const userId = user.userId
-  const [isLoading, setisLoading] = useState(false);  
   const [alert, setAlert] = useState(null)
 
   const [isNewChat, setIsNewChat] = useState(null);
@@ -98,12 +97,11 @@ const ChatPage = () => {
   };
 
   const handleSendMessage = async (message) => {
-    setisLoading(true)
 
     setChatHistory((prevHistory) => {
       const updatedHistory = [
         ...prevHistory,
-        { query: message, response: "Processing...", references: [] },
+        { query: message, response: "Processing...", references: [], status: "Processing" },
       ];
       console.log("Updated Chat History (Before API Call):", updatedHistory);
       return updatedHistory;
@@ -133,13 +131,12 @@ const ChatPage = () => {
           query: message,
           response: "Error fetching response. Try again.",
           references: [],
+          status: "failed"
         },]
 
         return updatedHistory
 
     });
-    }finally{
-      setisLoading(false)
     }
   };
   const pollForUpdatedResponse = (userId, messageId) => {
@@ -159,7 +156,7 @@ const ChatPage = () => {
           setChatHistory((prevHistory) =>
             prevHistory.map((item) =>
               item.query=== message
-                ? { ...item, response: botResponse, references: references || [] }
+                ? { ...item, response: botResponse, references: references || [], status: "resolved" }
                 : item
             )
           );
