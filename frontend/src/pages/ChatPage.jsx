@@ -8,6 +8,7 @@ import Header from "../components/ChatPage/Header";
 import { UserContext } from "../Context/UserContext";
 import Alert from "@mui/material/Alert";
 import { motion, AnimatePresence } from "framer-motion";
+import ScrollCue from "../components/ChatPage/ScrollCue";
 
 const ChatPage = () => {
   const { chatId: urlChatId } = useParams();
@@ -69,13 +70,12 @@ const ChatPage = () => {
     setChatId(urlChatId);
     if (urlChatId) {
       const storedChat = sessionStorage.getItem("chatHistory");
+      sessionStorage.removeItem("chatHistory");
       if (storedChat) {
         const parsedChat = JSON.parse(storedChat);
         if (parsedChat.chatId === urlChatId) {
           setChatHistory(parsedChat.history);
           setMessageId(parsedChat.messageId);
-          sessionStorage.removeItem("chatHistory");
-
           return;
         }
       }
@@ -114,14 +114,13 @@ const ChatPage = () => {
 
       const { chatId: newChatId, messageId } = response.data;
 
-      setMessageId(response.data.messageId);
+      setMessageId(messageId);
 
       if (isNewChat) {
         sessionStorage.setItem("chatHistory", JSON.stringify({ chatId: newChatId, messageId, history: updatedHistory }));
         navigate(`/chat/${newChatId}`);
       }
 
-      setIsNewChat(false);
       setChatId(newChatId);
       pollForUpdatedResponse(userId, messageId);
     } catch (error) {
@@ -163,7 +162,6 @@ const ChatPage = () => {
             )
           );
 
-          setIsNewChat(false);
           clearInterval(interval);
         }
       } catch (error) {
@@ -192,7 +190,7 @@ const ChatPage = () => {
   }, []);
 
   return (
-    <div className="relative min-h-screen w-full bg-[#1b1c1d] text-white text-[16px] flex flex-col">
+    <div className="relative h-screen w-full bg-[#1b1c1d] text-white text-[16px] flex flex-col overflow-hidden">
       <Sidebar
         isOpen={isSidebarOpen}
         toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
@@ -207,7 +205,7 @@ const ChatPage = () => {
         {/* Chat History Section */}
         <div
           ref={chatContainerRef}
-          className="flex-grow flex sm:max-h-[70vh] max-h-[65vh] flex-col px-4 sm:px-10 overflow-y-auto pb-24 sm:pb-28 w-full sm:w-[70%] "
+          className="flex-grow flex sm:max-h-[70vh] max-h-[70vh] flex-col px-4 sm:px-10 overflow-y-auto pb-24 sm:pb-28 w-full "
         >
           {isNewChat === true ? (
             <div className="flex flex-col justify-center items-center mb-20 flex-grow">
@@ -217,15 +215,18 @@ const ChatPage = () => {
             </div>
           ) : (
             <>
+            <div className="flex justify-center">
               <ChatHistory chatHistory={chatHistory} />
+            </div>
+
             </>
           )}
         </div>
       </div>
 
       <motion.div
-        className={`fixed bottom-0 left-0 right-0 bg-[#1b1c1d] ${
-          isNewChat ? "bottom-48" : "bottom-0"
+        className={`fixed left-0 bottom-6 right-0 bg-[#1b1c1d] ${
+          isNewChat ? "sm:bottom-48" : "sm:bottom-0"
         } `}
         initial="initial"
         animate="animate"
@@ -244,48 +245,10 @@ const ChatPage = () => {
       )}
 
       {/* Scroll to Bottom Button */}
-      <AnimatePresence>
-        {showScrollButton && (
-          <motion.button
-            initial={{ opacity: 0, scale: 0.5, y: 20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.5, y: 20 }}
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.9 }}
-            onClick={() => chatContainerRef.current.scrollTo({ top: chatContainerRef.current.scrollHeight, behavior: 'smooth' })}
-            className="fixed bottom-32 right-8 bg-gray-800 text-white rounded-full p-3 shadow-lg cursor-pointer z-50 hover:shadow-xl transition-shadow duration-300"
-            style={{
-              boxShadow: '0 0 20px rgba(123, 97, 255, 0.3)'
-            }}
-          >
-            <motion.div
-              animate={{
-                y: [0, -4, 0],
-              }}
-              transition={{
-                duration: 1.5,
-                repeat: Infinity,
-                ease: "easeInOut"
-              }}
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-6 w-6"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M19 14l-7 7m0 0l-7-7m7 7V3"
-                />
-              </svg>
-            </motion.div>
-          </motion.button>
-        )}
-      </AnimatePresence>
+      <div >
+        <ScrollCue showScrollButton={showScrollButton} chatContainerRef={chatContainerRef}/>
+      </div>
+
     </div>
   );
 };

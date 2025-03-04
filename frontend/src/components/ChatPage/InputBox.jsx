@@ -57,8 +57,8 @@ const InputBox = ({ onSendMessage, setAlert }) => {
   };
 
   const glowEffect = isFocused ? 
-    'ring-2 ring-cyan-500/50 shadow-lg shadow-cyan-500/20' : 
-    'hover:shadow-md hover:shadow-cyan-500/10';
+    'ring-1 ring-cyan-500/50 shadow-sm shadow-cyan-500/20' : 
+    'hover:shadow-xs hover:shadow-cyan-500/10';
 
   return (
     <motion.div
@@ -129,9 +129,7 @@ const InputBox = ({ onSendMessage, setAlert }) => {
         </motion.div>
 
         <motion.button
-          className={`p-3 text-gray-50 rounded-full 
-            bg-gradient-to-r from-blue-400 to-pink-400
-            transition-all shadow-lg ${
+          className={`p-3 ml-2 text-gray-50 hover:text-gray-400 rounded-full bg-[#404040] hover:bg-[#505050] transition-all shadow-md ${
             message.trim() ? 'hover:shadow-cyan-500/50' : 'opacity-50 cursor-not-allowed'
           }`}
           onClick={handleSend}
@@ -145,7 +143,7 @@ const InputBox = ({ onSendMessage, setAlert }) => {
               rotate: [0, 360],
               scale: [1, 1.2, 1] 
             } : {}}
-            transition={{ duration: 0.4, ease: "easeInOut" }}
+            transition={{ duration: 0.6, ease: "easeInOut" }}
           >
             <IoSend size={22} />
           </motion.div>
