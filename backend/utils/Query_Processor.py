@@ -24,8 +24,9 @@ from google.api_core.exceptions import GoogleAPIError, ResourceExhausted
 
 load_dotenv()
 GEMINI_API_KEY = os.getenv("GOOGLE_API_KEY")
+MONGO_URI_MIMIIR = os.getenv("MONGO_URI_MIMIR")
 chat_model = ChatGroq(model_name="llama-3.3-70b-specdec")
-mongoDb_client = AsyncIOMotorClient("mongodb+srv://algorithmnsut:DywWUsn7Oad3ia3k@ragcluster.nam3q.mongodb.net/?retryWrites=true&w=majority&appName=RAGcluster")
+mongoDb_client = AsyncIOMotorClient(MONGO_URI_MIMIIR)
 
 
 client = genai.configure(api_key=GEMINI_API_KEY)

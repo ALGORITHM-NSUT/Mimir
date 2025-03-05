@@ -21,12 +21,10 @@ Query_expansion_prompt = """given this query: {query} and current date {current_
 
                 Generate a JSON file with the following structure:
                 {{
-                "queries": [List of 2 search variations, each as a string],
+                "queries": [List of search variations, each as a string],
                 "keywords": [List of relevant keywords]
                 }}
 
-
-                1 query should focus on 1 type of information
 
                 Ensure the output is a valid JSON file and contains only the requested JSON structure.
                 """

@@ -207,7 +207,7 @@ const ChatPage = () => {
         {/* Chat History Section */}
         <div
           ref={chatContainerRef}
-          className="flex-grow flex sm:max-h-[70vh] max-h-[70vh] flex-col px-4 sm:px-10 overflow-y-auto pb-24 sm:pb-28 w-full "
+          className="flex-grow flex sm:max-h-[80vh] max-h-[80vh] flex-col px-4 sm:px-10 overflow-y-auto pb-24 sm:pb-28 w-full "
         >
           {isNewChat === true ? (
             <div className="flex flex-col justify-center items-center mb-20 flex-grow">
