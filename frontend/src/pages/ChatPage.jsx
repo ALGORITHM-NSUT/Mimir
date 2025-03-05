@@ -76,6 +76,7 @@ const ChatPage = () => {
         if (parsedChat.chatId === urlChatId) {
           setChatHistory(parsedChat.history);
           setMessageId(parsedChat.messageId);
+          pollForUpdatedResponse(userId, parsedChat.messageId);
           return;
         }
       }
@@ -119,6 +120,7 @@ const ChatPage = () => {
       if (isNewChat) {
         sessionStorage.setItem("chatHistory", JSON.stringify({ chatId: newChatId, messageId, history: updatedHistory }));
         navigate(`/chat/${newChatId}`);
+        return;
       }
 
       setChatId(newChatId);
