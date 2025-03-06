@@ -17,7 +17,7 @@ import google.api_core.exceptions
 load_dotenv()
 
 GEMINI_API_KEY = os.getenv("GOOGLE_API_KEY")
-chat_model = ChatGroq(model_name="llama-3.3-70b-versatile")
+chat_model = ChatGroq(model_name="llama-3.3-70b-specdec")
 
 genai.configure(api_key=GEMINI_API_KEY)
 model = genai.GenerativeModel("gemini-2.0-flash", system_instruction=GEMINI_PROMPT)
