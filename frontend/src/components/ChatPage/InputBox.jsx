@@ -1,5 +1,5 @@
 // InputBox.jsx
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { IoSend } from "react-icons/io5";
 import { RiRobot2Line } from "react-icons/ri";
 import SpeechButton from "./SpeechButton";
@@ -12,6 +12,12 @@ const InputBox = ({ onSendMessage, setAlert }) => {
   const [isListening, setIsListening] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
   const textAreaRef = useRef(null);
+
+  useEffect(() => {
+    if (textAreaRef.current && window.innerWidth > 768) {
+      textAreaRef.current.focus();
+    }
+  }, []);
 
   const handleSend = () => {
     if (message.trim()) {
