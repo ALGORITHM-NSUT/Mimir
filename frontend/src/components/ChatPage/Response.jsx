@@ -27,26 +27,26 @@ const TableCell = ({ children, isHeader }) => {
 const Response = ({ text }) => {
   return (
     <div className="mt-2 max-w-full w-full">
-  <FaMagic className="mb-4 text-purple-400 text-md" />
-  <div className="text-gray-300 text-sm md:text-base font-sans antialiased leading-relaxed break-words whitespace-pre-wrap w-full max-w-full">
-    <div className="overflow-auto">
-      <div className="prose prose-invert max-w-none break-words whitespace-pre-wrap">
-        <ReactMarkdown
-          remarkPlugins={[remarkGfm]}
-          rehypePlugins={[rehypeSanitize]}
-          components={{
-            table: Table,
-            tr: TableRow,
-            th: (props) => <TableCell {...props} isHeader />,
-            td: TableCell,
-          }}
-        >
-          {text}
-        </ReactMarkdown>
+      <FaMagic className="mb-4 text-purple-400 text-md" />
+      <div className="text-gray-300 text-sm md:text-base font-sans antialiased leading-relaxed break-words whitespace-pre-wrap w-full max-w-full">
+        <div className="overflow-auto">
+          <div className="prose prose-invert max-w-none break-words whitespace-pre-wrap">
+            <ReactMarkdown
+              remarkPlugins={[remarkGfm]}
+              rehypePlugins={[rehypeSanitize]}
+              components={{
+                table: Table,
+                tr: TableRow,
+                th: (props) => <TableCell {...props} isHeader />,
+                td: TableCell,
+              }}
+            >
+              {text}
+            </ReactMarkdown>
+          </div>
+        </div>
       </div>
     </div>
-  </div>
-</div>
 
   );
 };

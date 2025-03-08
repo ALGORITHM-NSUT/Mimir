@@ -1,29 +1,53 @@
-import React, { useEffect, useState } from "react";
+import React, { useState, useEffect } from "react";
+import { Box, Typography, Stepper, Step, StepLabel, Paper, useMediaQuery } from "@mui/material";
+import { FaSearch, FaFileAlt } from "react-icons/fa";
+import { MdOutlineTextSnippet, MdOutlinePsychology } from "react-icons/md"; // Parsing & Understanding icons
 
-const statuses = [
-  "Sending...",
-  "Analyzing...",
-  "Finding Relevant Documents...",
-  "Finishing...",
+const steps = ["Parsing", "Understanding", "Searching", "Retrieving Docs"];
+const stepIcons = [
+  <MdOutlineTextSnippet size={50} color="#a78bfa" />, // Parsing
+  <MdOutlinePsychology size={50} color="#a78bfa" />, // Understanding
+  <FaSearch size={50} color="#a78bfa" />, // Searching
+  <FaFileAlt size={50} color="#a78bfa" />, // Retrieving Docs
 ];
 
 const ChatLoader = () => {
-  const [currentStatus, setCurrentStatus] = useState(statuses[0]);
+  const [activeStep, setActiveStep] = useState(0);
+  const isMobile = useMediaQuery("(max-width:600px)");
 
   useEffect(() => {
-    let index = 0;
     const interval = setInterval(() => {
-      index = (index + 1) % statuses.length;
-      setCurrentStatus(statuses[index]);
-    }, 1500); // Change every 1.5 seconds
+      setActiveStep((prevStep) => (prevStep < steps.length - 1 ? prevStep + 1 : prevStep));
+    }, 1500);
 
     return () => clearInterval(interval);
   }, []);
 
   return (
-    <div className="w-full max-w-md mx-auto p-4 bg-gray-800 text-gray-200 rounded-lg shadow-lg flex items-center justify-center h-24">
-      <p className="text-lg font-medium animate-pulse">{currentStatus}</p>
-    </div>
+    <Paper sx={{ p: 3, textAlign: "center", mx: "auto", bgcolor: "transparent", boxShadow: "none" }}>
+      <Typography variant="h6" fontWeight="bold" color="#a78bfa" gutterBottom>
+        {steps[activeStep]}...
+      </Typography>
+
+      <Box display="flex" justifyContent="center" my={2}>
+        {stepIcons[activeStep]}
+      </Box>
+
+      <Stepper activeStep={activeStep} alternativeLabel={!isMobile} orientation={isMobile ? "vertical" : "horizontal"}>
+        {steps.map((label, index) => (
+          <Step key={index}>
+            <StepLabel
+              sx={{
+                "& .MuiStepLabel-label": { color: "#ddd", fontSize: isMobile ? "12px" : "14px" },
+                "& .MuiStepIcon-root": { color: activeStep >= index ? "#a78bfa" : "#555" },
+              }}
+            >
+              {label}
+            </StepLabel>
+          </Step>
+        ))}
+      </Stepper>
+    </Paper>
   );
 };
 
