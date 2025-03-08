@@ -1,14 +1,15 @@
-Context_sufficient_prompt = """Evaluate if this context fully answers '{question}':
-                keep in mind direct question answering is not the goal here, but rather to evaluate the context's relevance and sufficiency
-                pay attention to these keywords: {keywords}
-                
-                it is very crucial to answer this question with the highest accuracy possible, do not make any assumptions, only use the information provided in the context.
-                only say NO if you are very very sure
-                Answer ONLY 'YES' or 'NO':
-                DO NOT OUTPUT ANYTHING ELSE BESIDES 'YES' or 'NO'
+Context_sufficient_prompt = """Context Sufficiency Evaluation Prompt:
 
-                pay very close attention to the context, you must not miss any information:
-                {context} 
+                  Assess whether the provided context adequately addresses the query: "{question}".
 
-                considering today is {current_date}
-                """
+                  The goal is not to directly answer the question but to determine whether the context is relevant and sufficient.
+                  Pay close attention to the following keywords: {keywords}.
+                  Strictly base your evaluation on the given context—do not make assumptions or infer information beyond what is explicitly stated.
+                  Only respond "YES" if the context fully supports answering the question with confidence. Respond "NO" only if you are absolutely certain that the context is insufficient.
+                  Context for evaluation:
+                  {context}
+
+                  Current date: {current_date}
+
+                  Your response must be only "YES" or "NO"—no additional text or explanations.
+"""
