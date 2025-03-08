@@ -24,7 +24,7 @@ const Sidebar = ({ isOpen, toggleSidebar, sidebarRef, setAlert }) => {
     if (userId) {
       loadChats();
     }
-  }, [chatId, userId]);
+  }, []);
 
   const loadChats = async () => {
     const cachedChats = sessionStorage.getItem(`chats_${userId}`);

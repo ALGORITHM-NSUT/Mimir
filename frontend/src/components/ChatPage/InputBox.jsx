@@ -68,7 +68,7 @@ const InputBox = ({ onSendMessage, setAlert }) => {
       variants={containerVariants}
       transition={{ duration: 0.3 }}
       className={`relative flex items-center py-1 px-4 bg-[#303030]
-        backdrop-blur-lg shadow-xl rounded-2xl w-full sm:w-[65%] overflow-hidden 
+        backdrop-blur-lg shadow-xl rounded-3xl w-full sm:w-[65%] overflow-hidden 
         transition-all duration-300 ${glowEffect}`}
       onClick={() => textAreaRef.current?.focus()}
     >
