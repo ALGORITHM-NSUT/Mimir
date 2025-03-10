@@ -58,7 +58,7 @@ If the current context **does not fully answer** the query, generate **two new s
 📌 **Ensure valid JSON format** with **no missing brackets or formatting errors or any such characters which may be not supported in json**.
 ensure it should be validly readable when extracted with json.loads in python 
 Ignore any double '{{' in the output format, use single bracket everywhere in json output
-
+always give exact title and link as present in context for documents used to answer the query
 ```json
 {{
     "answerable": true | false,
@@ -78,20 +78,28 @@ Ignore any double '{{' in the output format, use single bracket everywhere in js
 
 1️⃣ Answer is Fully Available
 🔍 Query: "What are the rules regarding the improvement exam?"
-📄 Context: "Maximum A grade can be given in summer semester..."
+📄 Context: "{{
+                title:"summer semester rules"
+                link: "xyz"
+                content: "Maximum A grade can be given in summer semester..."
+            }}"
 ✅ Output:
 {{
     "answerable": true,
     "queries": [],
     "knowledge": "",
     "answer": "Maximum A grade can be given in summer semester.",
-    "links": [{{ "title": "Exam Rules Document", "link": "https://nsut.ac.in/improvement-rules" }}]
+    "links": [{{ "title": "summer semester rules", "link": "xyz" }}]
 }}
 
 
 2️⃣ Answer Requires Additional Retrieval
 🔍 Query: "What is the 4th semester result of student X?"
-📄 Context: "5th semester result of student X is 9 SGPA with roll number 1234 for year 2023."
+📄 Context: "{{
+                title:"5th semester gazzette report for btech 2025"
+                link: "xyz"
+                content: "student with roll number 1234 scored 9 in 5th semester"
+            }}"
 ❌ Not enough information. New queries are needed.
 ✅ Output:
 {{
@@ -100,7 +108,7 @@ Ignore any double '{{' in the output format, use single bracket everywhere in js
         "4th semester result for student X with roll number 1234 for year 2022",
         "Even semester Gazette report for student X with roll number 1234 for year 2022"
     ],
-    "knowledge": "Student X's roll number is 1234. Their 5th semester SGPA in 2023 was 9.",
+    "knowledge": "Student X's roll number is 1234. Their 5th semester SGPA in 2023 was 9. as per (title: 5th semester gazzette report for btech 2025., link: xyz)",
     "answer": "",
     "links": []
 }}
