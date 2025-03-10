@@ -70,7 +70,6 @@ const ChatPage = () => {
     setChatId(urlChatId);
     if (urlChatId) {
       const storedChat = sessionStorage.getItem("chatHistory");
-      sessionStorage.removeItem("chatHistory");
       if (storedChat) {
         const parsedChat = JSON.parse(storedChat);
         if (parsedChat.chatId === urlChatId) {
@@ -115,10 +114,11 @@ const ChatPage = () => {
 
       const { chatId: newChatId, messageId } = response.data;
 
-      setMessageId(messageId);
+      setMessageId(messageId);  
+      sessionStorage.setItem("chatHistory", JSON.stringify({ chatId: newChatId, messageId, history: updatedHistory }));
+
 
       if (isNewChat) {
-        sessionStorage.setItem("chatHistory", JSON.stringify({ chatId: newChatId, messageId, history: updatedHistory }));
         navigate(`/chat/${newChatId}`);
         return;
       }
@@ -162,8 +162,8 @@ const ChatPage = () => {
                 ? { ...item, response: botResponse, references: references || [], status: "resolved" }
                 : item
             )
-          );
-
+          );  
+          sessionStorage.removeItem("chatHistory");
           clearInterval(interval);
         }
       } catch (error) {
@@ -211,7 +211,7 @@ const ChatPage = () => {
         >
           {isNewChat === true ? (
             <div className="flex flex-col justify-center items-center mb-20 flex-grow">
-              <h1 className="text-center text-5xl sm:text-5xl lg:text-5xl font-semibold bg-gradient-to-r from-violet-400 via-blue-400 to-pink-400 text-transparent bg-clip-text">
+              <h1 className="text-center text-5xl sm:text-5xl lg:text-5xl font-semibold bg-gradient-to-r from-violet-400 via-blue-400 to-pink-400 text-transparent bg-clip-text py-2">
                 What can I help with?
               </h1>
             </div>
@@ -227,15 +227,15 @@ const ChatPage = () => {
       </div>
 
       <motion.div
-        className={`fixed left-0 bottom-6 right-0 bg-[#1b1c1d] ${
-          isNewChat ? "sm:bottom-48" : "sm:bottom-0"
+        className={`fixed left-0 bottom-6 right-0 ${
+          isNewChat ? "sm:bottom-48" : "sm:bottom-5"
         } `}
         initial="initial"
         animate="animate"
         exit="exit"
         transition={{ type: "spring", stiffness: 200, damping: 25 }}
       >
-        <div className={`mx-auto px-4 py-4 flex w-full justify-center`}> {/* Centered and added padding */}
+        <div className={`mx-auto my-2 px-4 flex justify-center`}> 
           <InputBox onSendMessage={handleSendMessage} setAlert={setAlert} />
         </div>
       </motion.div>
@@ -250,6 +250,11 @@ const ChatPage = () => {
       <div >
         <ScrollCue showScrollButton={showScrollButton} chatContainerRef={chatContainerRef}/>
       </div>
+
+      <div className="fixed bottom-0 left-1/2 -translate-x-1/2 mb-2 text-gray-400 text-xs font-extralight text-center whitespace-nowrap max-w-[90%]">
+        <span>Mimir can make mistakes. Check important info.</span>
+      </div>
+
 
     </div>
   );

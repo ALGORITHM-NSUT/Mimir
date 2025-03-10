@@ -6,7 +6,6 @@ from utils.token_utils import generate_secure_token
 from utils.token_utils import verify_chat_share_token
 from utils.response_strategy import response_strategy
 import os
-import langchain_core
 import secrets
 from fastapi.encoders import jsonable_encoder
 
@@ -59,7 +58,7 @@ async def handle_chat_request(data: dict):
                 if not isinstance(query, str):
                     raise ValueError(f"Invalid query format in chat: {chat}")
 
-                chats.append(langchain_core.messages.human.HumanMessage(query))
+                chats.append({"role" : "user", "content" : query})
 
                 # Handle missing or malformed references
                 references = ""
@@ -77,7 +76,7 @@ async def handle_chat_request(data: dict):
                 if not isinstance(response, str):
                     raise ValueError(f"Invalid response format in chat: {chat}")
 
-                chats.append(langchain_core.messages.AIMessage(response + references))
+                chats.append({"role" : "assistant", "content" : (response + references)})
 
             except Exception as e:
                 print(f"Error processing chat entry: {e}")
