@@ -57,14 +57,14 @@ class QueryProcessor:
 
                     iteration_context = self._format_context(chunk_results, current_ids)
                     context_entries.append(iteration_context)
-
+                    print(iteration_context)
                     # full_context += iteration_context + "\n\n"
                     ans = await self._generate_answer(question, iteration_context, self.current_date, keywords, all_queries, knowledge, max_iter - 1, iteration)  
                     if ans["answerable"]:
                         print(f"Stopping early at iteration {iteration+1}")
                         return ans
-                    else:
-                        print(ans)
+                    # else:
+                    #     print(ans)
                     if iteration == max_iter - 1:
                         print(f"could not find ans, returning relevant info")
                         return ans
@@ -90,7 +90,7 @@ class QueryProcessor:
                             content += "chunk number : " + str(chunk["chunk_num"]) + "\npage number: " + str(chunk["page"]) + (("\n\n" + summary) if content == "" else "") + "\n\n" + rest_text + "\n\n"
                     if content != "" and metadata != {}:
                         metadata["content"] = content
-                    processed.append(content)
+                    processed.append(metadata)
                 return processed
 
             def _format_context(self, items: list, docs: set) -> str:
@@ -282,6 +282,7 @@ class QueryProcessor:
                             "doc_info.sections": 0,
                             "doc_info.entities": 0,
                             "doc_info.doc_id": 0,
+                            "doc_info._id": 0,
                             "chunk_id": 0
                         }
                     },
