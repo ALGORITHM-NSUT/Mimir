@@ -11,3 +11,26 @@ class UserChat(BaseModel):
     userId: str
     chatId: str
     title: str
+
+class link(BaseModel):
+    title: str
+    link: str
+
+class response(BaseModel):
+    retrieve: bool
+    query: str
+    answer: str
+    links: list[link]
+
+
+class answer(BaseModel):
+    answerable: bool
+    queries: list[str]
+    knowledge: str
+    answer: str
+    links: list[link]
+
+class expand(BaseModel):
+    queries: list[str]
+    keywords: list[str]
+    specifity: float
