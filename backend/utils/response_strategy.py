@@ -10,37 +10,16 @@ import re
 import time
 import google.api_core.exceptions
 import traceback
-from together import Together
+from google.genai.types import Content
 
 load_dotenv()
-
-GEMINI_API_KEY = os.getenv("GOOGLE_API_KEY")
-# chat_model = ChatGroq(model_name="llama-3.3-70b-specdec")
-
-client = Together(api_key=os.getenv('TOGETHER_API_KEY'))
-messages = [{"role": "system", "content": Semantic_cache_prompt}]
-model="meta-llama/Llama-3.3-70B-Instruct-Turbo-Free"
-
-genai.configure(api_key=GEMINI_API_KEY)
-model = genai.GenerativeModel("gemini-2.0-flash", system_instruction=GEMINI_PROMPT)
 qp = QueryProcessor()
 
-async def response_strategy(message: str, chatHistory: list):
+async def response_strategy(message: str, chat):
     try:
         async def chat_with_bot(user_input):
-            messages.append({"role": "user", "content": user_input})
-            bot_response = client.chat.completions.create(
-                model="meta-llama/Llama-3.3-70B-Instruct-Turbo-Free",
-                messages=messages,
-                max_tokens=None,
-                temperature=0.7,
-                top_p=0.7,
-                top_k=50,
-                repetition_penalty=1,
-                stop=["<|eot_id|>","<|eom_id|>"],
-                stream=False
-            )
-            return bot_response.choices[0].message.content
+            response = chat.send_message(user_input)
+            return response.text
 
         async def interactive_chat(user_input=message):
             if not user_input.strip():
@@ -59,25 +38,26 @@ async def response_strategy(message: str, chatHistory: list):
                     print(f"Quota exceeded, retrying in {wait_time} seconds...")
                     time.sleep(wait_time)
             
-            def extract_json(text):
-                match = re.search(r'\{.*\}', text, re.DOTALL)
-                return match.group(0) if match else None
+            # def extract_json(text):
+            #     match = re.search(r'\{.*\}', text, re.DOTALL)
+            #     return match.group(0) if match else None
             
-            json_string = extract_json(bot_reply)
-            if not json_string:
-                raise ValueError(f"Failed to extract JSON from bot_reply: {bot_reply}")
+            # json_string = extract_json(bot_reply)
+            # if not json_string:
+            #     raise ValueError(f"Failed to extract JSON from bot_reply: {bot_reply}")
             
-            json_data = json.loads(json_string)
+            json_data = json.loads(bot_reply)
             answer = {}
-            if json_data.get("retrieve", "").lower() == "true":
+            print(json_data)
+            if json_data.get("retrieve") == True:
                 answer = await qp.process_query(json_data["query"])
                 answer["retrieve"] = True
-                messages.append({ "role": "assistant", 
-                    "content":
-                        answer["answer"] + "\nLinks:\n" +
-                        "\n".join(f"{link['title']}: {link['link']}" for link in answer["links"])
-                        if answer.get("links") else ""
-                })
+                chat.record_history(
+                    user_input = "",
+                    model_output=[Content(parts=[{"text": json.dumps(answer, indent=2)}], role="model")],
+                    is_valid=True,
+                    automatic_function_calling_history=None
+                )
             else:
                 answer["retrieve"] = False
                 answer["answer"] = json_data.get("answer", "No answer found.")
