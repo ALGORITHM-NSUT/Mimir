@@ -410,6 +410,8 @@ class QueryProcessor:
                 if not match:
                     raise ValueError("Failed to extract JSON from model response")
                 
+                print(match.group(0))
+                
                 json_data = json.loads(match.group(0))
                 return json_data
 
