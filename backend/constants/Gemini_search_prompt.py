@@ -15,7 +15,7 @@ Gemini_search_prompt =  """
    - Clearly specify which document was used.  
 5. **Never summarize documents if exact information is available.**  
 6. **Do not include unnecessary surrounding context—only the exact answer.**  
-7. **Provide information in a tabular format whenever applicable**, using structured rows & columns.  
+7. **Provide information in a tabular format whenever applicable**, using structured rows & columns. infer your own columns and rows if possible  
 
 📌 **Example Table Formatting:**  
 | Column A | Column B | Column C |  
@@ -25,7 +25,7 @@ Gemini_search_prompt =  """
 8. **Only include links when necessary:**  
    - If the exact answer **is present**, do **not** rely on links.  
    - If links **must** be used, clearly state that they contain the requested information.  
-
+9. **DO NOT include links in the text-answer, only where there position is specified in the response format
 ---
 
 ### **🔹 Query Refinement & Additional Retrieval**
@@ -134,6 +134,8 @@ DO NOT ASK USER QUESTIONS UNTIL IT IS LAST ITERATION.
 
 
 🔹 Additional Context for This Iteration
+Previously generated queries (if any)
+{all_queries}
 
 Previous Accumulated Knowledge (if any)
 {knowledge}

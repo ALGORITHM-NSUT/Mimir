@@ -23,7 +23,7 @@ GEMINI_API_KEY = os.getenv("GOOGLE_API_KEY")
 MONGO_URI_MIMIIR = os.getenv("MONGO_URI_MIMIR")
 mongoDb_client = AsyncIOMotorClient(MONGO_URI_MIMIIR)
 
-
+llm = "gemini-2.0-flash"
 client = genai.Client(api_key=GEMINI_API_KEY)
 
 class QueryProcessor:
@@ -33,7 +33,7 @@ class QueryProcessor:
                 self.db = self.client["Docs"]
                 self.documents = self.db.documents
                 self.chunks = self.db.chunks
-                self.current_date = datetime.now().isoformat()
+                self.current_date = datetime.now().date().isoformat()
                 self.search_prompt = Gemini_search_prompt
 
             async def process_query(self, question: str):
@@ -42,7 +42,7 @@ class QueryProcessor:
                 seen_ids = set()
                 seen_ids.add(ObjectId("aaaaaaaaaaaaaaaaaaaaaaaa"))
                 query_variations, doc_query, keywords, specifity = await self._expand_query(question)
-                all_queries = [question] + query_variations
+                all_queries = query_variations
                 new_queries = all_queries
                 knowledge = ""
                 doc_ids = await self._search_docs(doc_query) if doc_query else []
@@ -370,7 +370,7 @@ class QueryProcessor:
 
                 for attempt in range(5):  # Retry up to 5 times
                     try:
-                        response = client.models.generate_content(model = "gemini-2.0-flash", contents=[prompt],
+                        response = client.models.generate_content(model = llm, contents=[prompt],
                         config=types.GenerateContentConfig(
                         system_instruction=GEMINI_PROMPT,
                         response_mime_type='application/json',
@@ -402,13 +402,13 @@ class QueryProcessor:
             async def _generate_answer(self, question: str, context: str, current_date: str, keywords: list, knowledge: str, all_queries: list, max_iter: int, iteration: int) -> dict:
                 """Generate and format final response"""
                 response = client.models.generate_content(
-                    model = "gemini-2.0-flash",
+                    model = llm,
                     contents = [self.search_prompt.format(question=question,
                         context=context,
                         current_date=current_date,
                         keywords=keywords,
                         knowledge=knowledge,
-                        all_queries=all_queries,
+                        all_queries=all_queries[1:],
                         max_iter=max_iter,
                         iteration=iteration)],
                     config=types.GenerateContentConfig(
