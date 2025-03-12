@@ -1,13 +1,10 @@
 from bson import ObjectId
 from datetime import datetime
-from concurrent.futures import ThreadPoolExecutor
 import time
 from constants.Gemini_search_prompt import Gemini_search_prompt
 from constants.Query_expansion import Query_expansion_prompt
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
-from pymongo import MongoClient
 import os
-import google.generativeai as genai
 from dotenv import load_dotenv
 import json
 from constants.Gemini_system_prompt import GEMINI_PROMPT
@@ -17,16 +14,17 @@ import asyncio
 from pymongo.errors import OperationFailure
 import random
 from google.api_core.exceptions import GoogleAPIError, ResourceExhausted
-
+from models.chat_model import expand, answer
+from google import genai
+from google.genai import types
 
 load_dotenv()
 GEMINI_API_KEY = os.getenv("GOOGLE_API_KEY")
 MONGO_URI_MIMIIR = os.getenv("MONGO_URI_MIMIR")
 mongoDb_client = AsyncIOMotorClient(MONGO_URI_MIMIIR)
 
-
-client = genai.configure(api_key=GEMINI_API_KEY)
-model = genai.GenerativeModel("gemini-2.0-flash", system_instruction= GEMINI_PROMPT)
+llm = "gemini-2.0-flash"
+client = genai.Client(api_key=GEMINI_API_KEY)
 
 class QueryProcessor:
             def __init__(self):
@@ -35,7 +33,7 @@ class QueryProcessor:
                 self.db = self.client["Docs"]
                 self.documents = self.db.documents
                 self.chunks = self.db.chunks
-                self.current_date = datetime.now().isoformat()
+                self.current_date = datetime.now().date().isoformat()
                 self.search_prompt = Gemini_search_prompt
 
             async def process_query(self, question: str):
@@ -44,7 +42,7 @@ class QueryProcessor:
                 seen_ids = set()
                 seen_ids.add(ObjectId("aaaaaaaaaaaaaaaaaaaaaaaa"))
                 query_variations, doc_query, keywords, specifity = await self._expand_query(question)
-                all_queries = [question] + query_variations
+                all_queries = query_variations
                 new_queries = all_queries
                 knowledge = ""
                 doc_ids = await self._search_docs(doc_query) if doc_query else []
@@ -57,7 +55,7 @@ class QueryProcessor:
 
                     iteration_context = self._format_context(chunk_results, current_ids)
                     context_entries.append(iteration_context)
-                    print(iteration_context)
+                    # print(iteration_context)
                     # full_context += iteration_context + "\n\n"
                     ans = await self._generate_answer(question, iteration_context, self.current_date, keywords, all_queries, knowledge, max_iter - 1, iteration)  
                     if ans["answerable"]:
@@ -372,12 +370,20 @@ class QueryProcessor:
 
                 for attempt in range(5):  # Retry up to 5 times
                     try:
-                        text = model.generate_content(prompt).text
-                        print(text)
-                        match = re.search(r'\{.*\}', text, re.DOTALL)
-                        if not match:
+                        response = client.models.generate_content(model = llm, contents=[prompt],
+                        config=types.GenerateContentConfig(
+                        system_instruction=GEMINI_PROMPT,
+                        response_mime_type='application/json',
+                        response_schema=expand)).text
+                        print(response)
+                        # match = re.search(r'\{.*\}', text, re.DOTALL)
+                        # if not match:
+                        #     raise ValueError("Failed to extract JSON from model response")
+                        # json_data = json.loads(match.group(0))
+                        try:
+                            json_data = json.loads(response)
+                        except:
                             raise ValueError("Failed to extract JSON from model response")
-                        json_data = json.loads(match.group(0))
                         return [query, json_data.get("queries")[0] if json_data.get("queries") else None], json_data["queries"][1] if json_data.get("queries") else None, json_data.get("keywords", []), json_data.get("specifity", 0.5)
                     
                     except (json.JSONDecodeError, ValueError) as e:
@@ -395,24 +401,29 @@ class QueryProcessor:
 
             async def _generate_answer(self, question: str, context: str, current_date: str, keywords: list, knowledge: str, all_queries: list, max_iter: int, iteration: int) -> dict:
                 """Generate and format final response"""
-                response = model.generate_content(
-                    self.search_prompt.format(question=question,
+                response = client.models.generate_content(
+                    model = llm,
+                    contents = [self.search_prompt.format(question=question,
                         context=context,
                         current_date=current_date,
                         keywords=keywords,
                         knowledge=knowledge,
-                        all_queries=all_queries,
+                        all_queries=all_queries[1:],
                         max_iter=max_iter,
-                        iteration=iteration)
+                        iteration=iteration)],
+                    config=types.GenerateContentConfig(
+                        system_instruction=GEMINI_PROMPT,
+                        response_mime_type='application/json',
+                        response_schema=answer)
                     ).text
                 
-                match = re.search(r'\{.*\}', response, re.DOTALL)  # Extract JSON safely
-                if not match:
+                # match = re.search(r'\{.*\}', response, re.DOTALL)  # Extract JSON safely
+                # if not match:
+                #     raise ValueError("Failed to extract JSON from model response")
+                try:
+                    json_data = json.loads(response)
+                except:
                     raise ValueError("Failed to extract JSON from model response")
-                
-                print(match.group(0))
-                
-                json_data = json.loads(match.group(0))
                 return json_data
 
 

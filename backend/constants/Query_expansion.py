@@ -7,6 +7,7 @@ Given the following query: "{query}" and the current date "{current_date}" (for 
 - **Ensure meaningful variation**:
   - First query should be **more specific** (adding details like entities, semester, event, department, etc.).
   - Second query should be **broader** (covering document level topic of the query, searchable in a document summary which would find the relevant document required to answer the query, but without unnecessary generalization, keep information such as batch, semester, etc.).
+  - If query is very broad in scope and no single type of document may cover it, don't make the second query, make only 1
 - Modify numeric values logically (e.g., even ↔ odd semester).
 - If the query **already includes timeframes**, generate an alternative variation **without altering the intended year**.
 - **Avoid redundant transformations** (e.g., simple word reordering).
@@ -57,6 +58,20 @@ given query: "5th semester result for Sarthak sharma in csda"
         "Sarthak Sharma",
         "CSDA"
     ],
-    "specificity": 0.7
+    "specificity": 0.8
+}}
+
+example:
+given query: "who is the HOD of west campus ece department"
+{{
+    "queries": [
+        "HOD name for ece department west campus 2025"
+    ],
+    "keywords": [
+        "HOD",
+        "west campus",
+        "ece"
+    ],
+    "specificity": 0.4
 }}
 """

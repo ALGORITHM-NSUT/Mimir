@@ -3,7 +3,7 @@ import { BsFileEarmarkTextFill } from "react-icons/bs";
 
 const References = ({ references }) => {
   const BACKEND_URL = import.meta.env.VITE_BACKEND_URL; 
-  const PROXY_URL = `${BACKEND_URL}/proxy?url=`; 
+  const PROXY_URL = `${BACKEND_URL}/api/ref/proxy?url=`; 
 
   if (!references || references.length === 0) return null;
 
