@@ -22,6 +22,8 @@ const LoginButton = () => {
 
       if (res.ok) {
         setUser(data.user)
+        sessionStorage.setItem("user", JSON.stringify(data.user));
+        setTimeout(() => navigate("/new"), 300);
       } else {
         console.error("Login failed:", data.detail);
       }
@@ -46,6 +48,7 @@ const LoginButton = () => {
       console.error("Google Sign-In script not loaded");
     }
   }, []);
+  
 
   return <div id="google-signin-btn"></div>;
 };

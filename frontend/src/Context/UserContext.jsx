@@ -36,15 +36,12 @@ const UserProvider = ({ children }) => {
       });
 
       google.accounts.id.disableAutoSelect(); 
+      document.cookie = "g_state=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
 
       setUser(null);
       sessionStorage.removeItem("user");
   
       // window.location.href = "https://accounts.google.com/logout";
-      
-      setTimeout(() => {
-        window.location.href = "/";
-      }, 2000); 
   
     } catch (error) {
       console.error("Logout failed:", error);
