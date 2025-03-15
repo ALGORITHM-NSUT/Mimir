@@ -28,20 +28,29 @@ const UserProvider = ({ children }) => {
         sessionStorage.removeItem("user"); 
       });
   }, []);
-
   const logoutUser = async () => {
     try {
       await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/auth/logout`, {
         method: "POST",
         credentials: "include",
       });
+
+      google.accounts.id.disableAutoSelect(); 
+
       setUser(null);
-      sessionStorage.removeItem("user"); 
-      window.location.href = "/";
+      sessionStorage.removeItem("user");
+  
+      window.location.href = "https://accounts.google.com/logout";
+  
+      setTimeout(() => {
+        window.location.href = "/";
+      }, 2000); 
+  
     } catch (error) {
       console.error("Logout failed:", error);
     }
   };
+  
 
   return (
     <UserContext.Provider value={{ user, setUser, logoutUser }}>
