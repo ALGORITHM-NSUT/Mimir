@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { FcGoogle } from "react-icons/fc";
 import ScrollPrompt from "./ScrollPrompt";
-import { Link } from "react-router-dom";
+import { Link } from "react-router-dom"; 
+import LoginButton from "./LoginButton";
 
 const GetStarted = () => {
   const [showScrollPrompt, setShowScrollPrompt] = useState(true);
@@ -21,6 +22,8 @@ const GetStarted = () => {
       window.removeEventListener("scroll", handleScroll);
     };
   }, []);
+
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-2">
       {/* Left Section: Logo, Description, Login Form */}
@@ -59,9 +62,8 @@ const GetStarted = () => {
             </div>
 
             {/* Submit Button */}
-            <Link type="button" className="w-full flex items-center justify-center bg-white text-gray-700 border border-gray-300 py-2 rounded-md shadow-sm hover:bg-gray-100" to = "/new">
-              <FcGoogle  className="h-5 w-5 mr-2" />
-              <h1 className="font-bold">Continue with Google</h1>
+            <Link type="button" className="w-full flex items-center justify-center bg-white text-gray-700 border border-gray-300 py-2 rounded-md shadow-sm hover:bg-gray-100" >
+                <LoginButton/>
             </Link>
           </form>
         </div>
