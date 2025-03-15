@@ -35,9 +35,7 @@ const LoginButton = () => {
       window.google.accounts.id.initialize({
         client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID,
         callback: handleCredentialResponse,
-        auto_select: false,
-        itp_support: true,
-        setCookie: true
+        auto_select: false
       });
 
       window.google.accounts.id.renderButton(
