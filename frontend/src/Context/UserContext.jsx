@@ -40,8 +40,8 @@ const UserProvider = ({ children }) => {
       setUser(null);
       sessionStorage.removeItem("user");
   
-      window.location.href = "https://accounts.google.com/logout";
-  
+      // window.location.href = "https://accounts.google.com/logout";
+      
       setTimeout(() => {
         window.location.href = "/";
       }, 2000); 
