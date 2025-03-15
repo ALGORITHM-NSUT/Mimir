@@ -67,7 +67,7 @@ async def login_user(request: Request, response: Response):
         value=token,
         httponly=True,
         secure=True, #i will flip it later
-        samesite= None,
+        samesite= "None",
     )
 
     return {"message": "Login successful", "user": {"userId": str(user["_id"]), "name": user["name"], "email": user["email"]}}
