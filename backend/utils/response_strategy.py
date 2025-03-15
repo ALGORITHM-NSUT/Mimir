@@ -13,6 +13,7 @@ from utils.Query_Processor import QueryProcessor
 import re
 import time
 import google.api_core.exceptions
+import traceback
 
 load_dotenv()
 
@@ -34,7 +35,7 @@ async def response_strategy(message: str, chatHistory: list):
         memory.chat_memory.add_message(langchain_core.messages.SystemMessage(content=system_prompt))
 
         async def chat_with_bot(user_input):
-            bot_response = conversation.predict(input=user_input)
+            bot_response = await asyncio.to_thread(conversation.predict, input=user_input)
             return bot_response
 
         async def interactive_chat(user_input=message):
@@ -87,4 +88,6 @@ async def response_strategy(message: str, chatHistory: list):
     except google.api_core.exceptions.ResourceExhausted:
         return {"response": "Quota limit exceeded. Please wait before trying again.", "references": []}
     except Exception as e:
+        detailed_error = traceback.format_exc()
+        print("Detailed error:", detailed_error)
         return {"response": f"Error generating AI response: {str(e)}", "references": []}

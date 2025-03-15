@@ -1,28 +1,29 @@
-import React from 'react';
-import styled from 'styled-components';
+import React, { useEffect, useState } from "react";
+
+const statuses = [
+  "Sending...",
+  "Analyzing...",
+  "Finding Relevant Documents...",
+  "Finishing...",
+];
 
 const ChatLoader = () => {
+  const [currentStatus, setCurrentStatus] = useState(statuses[0]);
+
+  useEffect(() => {
+    let index = 0;
+    const interval = setInterval(() => {
+      index = (index + 1) % statuses.length;
+      setCurrentStatus(statuses[index]);
+    }, 1500); // Change every 1.5 seconds
+
+    return () => clearInterval(interval);
+  }, []);
+
   return (
-    <StyledWrapper>
-      <div aria-label="Orange and tan hamster running in a metal wheel" role="img" className="wheel-and-hamster">
-        <div className="wheel" />
-        <div className="hamster">
-          <div className="hamster__body">
-            <div className="hamster__head">
-              <div className="hamster__ear" />
-              <div className="hamster__eye" />
-              <div className="hamster__nose" />
-            </div>
-            <div className="hamster__limb hamster__limb--fr" />
-            <div className="hamster__limb hamster__limb--fl" />
-            <div className="hamster__limb hamster__limb--br" />
-            <div className="hamster__limb hamster__limb--bl" />
-            <div className="hamster__tail" />
-          </div>
-        </div>
-        <div className="spoke" />
-      </div>
-    </StyledWrapper>
+    <div className="w-full max-w-md mx-auto p-4 bg-gray-800 text-gray-200 rounded-lg shadow-lg flex items-center justify-center h-24">
+      <p className="text-lg font-medium animate-pulse">{currentStatus}</p>
+    </div>
   );
 }
 
