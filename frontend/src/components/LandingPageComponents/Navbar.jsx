@@ -12,7 +12,7 @@ const Navbar = ({ scrollToSection, featuresRef, faqRef, getStartedRef }) => {
       animate={{ y: 0, opacity: 1 }}
       transition={{ duration: 0.1, ease: "easeOut" }}
     >
-      <div className="container mx-auto flex justify-between items-center px-2 md:px-4">
+      <div className="container mx-auto flex justify-between items-center px-2 md:px-6">
         {/* Logo */}
         <motion.div
           className="flex justify-center items-center cursor-pointer"
