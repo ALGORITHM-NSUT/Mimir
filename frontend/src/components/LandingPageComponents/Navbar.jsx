@@ -51,16 +51,6 @@ const Navbar = ({ scrollToSection, featuresRef, faqRef, getStartedRef }) => {
             </motion.button>
           </div>
 
-          {/* Get Started Button */}
-          <motion.button
-            className="px-4 py-2 bg-gray-100 text-black rounded-xl text-md sm:text-lg hover:bg-gray-300 transition"
-            onClick={() => navigate("/login")}
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            transition={{ duration: 0.2 }}
-          >
-            Get Started
-          </motion.button>
         </motion.div>
       </div>
     </motion.nav>

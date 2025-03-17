@@ -47,7 +47,7 @@ const LoginButton = () => {
     type: "standard",
     theme: "filled_blue", 
     size: "large", 
-    shape: "rectangular", 
+    shape: "pill", 
   }
 );
     } else {
