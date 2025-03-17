@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { FaPlus, FaTimes } from "react-icons/fa";
+import { motion } from "framer-motion";
 
 const FAQ = () => {
   const [openIndex, setOpenIndex] = useState(null);
@@ -7,15 +8,18 @@ const FAQ = () => {
   const faqs = [
     {
       question: "How does Mimir work?",
-      answer: "Mimir is an AI-powered tool that retrieves information from university notices, circulars, and other documents using advanced retrieval techniques.",
+      answer:
+        "Mimir is an AI-powered tool that retrieves information from university notices, circulars, and other documents using advanced retrieval techniques.",
     },
     {
       question: "Is Mimir free to use?",
-      answer: "Yes, Mimir is completely free for NSUT students. Simply log in with your official NSUT ID to access all features.",
+      answer:
+        "Yes, Mimir is completely free for NSUT students. Simply log in with your official NSUT ID to access all features.",
     },
     {
       question: "Can I access old university notices?",
-      answer: "Yes, Mimir has an indexed archive of past university notices, allowing you to quickly find information from previous semesters.",
+      answer:
+        "Yes, Mimir has an indexed archive of past university notices, allowing you to quickly find information from previous semesters.",
     },
   ];
 
@@ -24,30 +28,44 @@ const FAQ = () => {
   };
 
   return (
-    <div className="p-6 bg-[#faf9f5] my-10">
-      <h2 className="text-3xl font-bold text-center mb-8">Frequently Asked Questions</h2>
-      <div className="space-y-4">
+    <div className="p-6 bg-gray-950 mb-10">
+      <h2 className="text-3xl font-bold text-gray-100 text-center mb-8">
+        Frequently Asked Questions
+      </h2>
+      <div className="space-y-4 max-w-3xl mx-auto">
         {faqs.map((faq, index) => (
-          <div key={index} className="bg-gray-100 p-4 rounded-lg shadow-md">
+          <div
+            key={index}
+            className="bg-gray-100 p-5 rounded-xl shadow-lg transition-all duration-300"
+          >
             {/* Question Header */}
-            <div
-              className="flex justify-between items-center cursor-pointer"
+            <button
+              className="flex justify-between items-center w-full text-left focus:outline-none"
               onClick={() => toggleFAQ(index)}
+              aria-expanded={openIndex === index}
             >
-              <h3 className="text-lg font-semibold">{faq.question}</h3>
-              <button className="text-xl text-gray-600">
+              <h3 className="text-lg font-semibold text-gray-800">{faq.question}</h3>
+              <motion.span
+                animate={{ rotate: openIndex === index ? 180 : 0 }}
+                transition={{ duration: 0.3 }}
+                className="text-xl text-gray-600"
+              >
                 {openIndex === index ? <FaTimes /> : <FaPlus />}
-              </button>
-            </div>
+              </motion.span>
+            </button>
 
-            {/* Answer Section */}
-            <div
-              className={`mt-2 text-gray-700 transition-all duration-300 ${
-                openIndex === index ? "block" : "hidden"
-              }`}
+            {/* Answer Section with Smooth Animation */}
+            <motion.div
+              initial={false}
+              animate={{
+                height: openIndex === index ? "auto" : 0,
+                opacity: openIndex === index ? 1 : 0,
+              }}
+              transition={{ duration: 0.3, ease: "easeInOut" }}
+              className="overflow-hidden text-gray-700"
             >
-              {faq.answer}
-            </div>
+              <p className="mt-3">{faq.answer}</p>
+            </motion.div>
           </div>
         ))}
       </div>

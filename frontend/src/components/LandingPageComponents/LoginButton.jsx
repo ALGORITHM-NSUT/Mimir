@@ -4,6 +4,7 @@ import { UserContext } from "../../Context/UserContext";
 
 const LoginButton = () => {
   const { setUser } = useContext(UserContext);
+  const navigate = useNavigate()
 
 
   const handleCredentialResponse = async (response) => {
@@ -40,10 +41,15 @@ const LoginButton = () => {
         auto_select: false
       });
 
-      window.google.accounts.id.renderButton(
-        document.getElementById("google-signin-btn"),
-        { theme: "outline", size: "large" }
-      );
+     google.accounts.id.renderButton(
+  document.getElementById("google-signin-btn"),
+  {
+    type: "standard",
+    theme: "filled_blue", 
+    size: "large", 
+    shape: "rectangular", 
+  }
+);
     } else {
       console.error("Google Sign-In script not loaded");
     }
