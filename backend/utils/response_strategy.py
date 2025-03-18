@@ -69,14 +69,12 @@ async def response_strategy(message: str, chat):
     except google.api_core.exceptions.ResourceExhausted:
         return {
             "response": "Quota limit exceeded. Please wait before trying again.",
-            "references": [],
-            "chatHistory": conversation
+            "references": []
         }
     except Exception as e:
         detailed_error = traceback.format_exc()
         print("Detailed error:", detailed_error)
         return {
             "response": f"Error generating AI response: {str(e)}",
-            "references": [],
-            "chatHistory": conversation
+            "references": []
         }

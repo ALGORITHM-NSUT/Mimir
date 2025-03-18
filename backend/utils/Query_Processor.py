@@ -57,7 +57,7 @@ class QueryProcessor:
                     context_entries.append(iteration_context)
                     # print(iteration_context)
                     # full_context += iteration_context + "\n\n"
-                    ans = await self._generate_answer(question, iteration_context, self.current_date, keywords, all_queries, knowledge, max_iter - 1, iteration)  
+                    ans = await self._generate_answer(question, iteration_context, self.current_date, keywords, all_queries[-1:], knowledge, max_iter - 1, iteration)  
                     if ans["answerable"]:
                         print(f"Stopping early at iteration {iteration+1}")
                         return ans
@@ -77,19 +77,43 @@ class QueryProcessor:
                 for doc in docs:
                     metadata = {}
                     content = ""
+                    pages_added = set()
+                    page_summaries = []  # will hold the list from metadata later
+
                     for chunk in all_results:
                         if str(chunk["doc_id"]) == doc:
-                            overall = chunk["text"].split("\n\n")
-                            rest_text = "\n\n".join(overall[2:])
-                            summary = overall[1]
-                            if metadata == {}:
+                            # On first encounter, initialize metadata and extract page summaries
+                            if not metadata:
                                 metadata = chunk["doc_info"][0]
                                 metadata["Publish Date"] = metadata["Publish Date"].date().isoformat()
-                            content += "chunk number : " + str(chunk["chunk_num"]) + "\npage number: " + str(chunk["page"]) + (("\n\n" + summary) if content == "" else "") + "\n\n" + rest_text + "\n\n"
-                    if content != "" and metadata != {}:
+                                # Ensure document-level summary is added as a field.
+                                metadata["summary"] = metadata.get("summary", "")
+                                # Extract the list of page summaries (0-indexed list)
+                                page_summaries = metadata.get("page_summaries", [])
+                                
+                            page = chunk["page"]
+                            # Add page summary only once per page.
+                            if page not in pages_added and (page - 1) < len(page_summaries):
+                                content += (
+                                    f"page summary for page {page}: {page_summaries[page - 1]}\n\n"
+                                )
+                                pages_added.add(page)
+                                
+                            # Append chunk details.
+                            content += (
+                                f"chunk number: {chunk['chunk_num']}\n"
+                                f"{chunk['text']}\n"
+                            )
+                            if "table_summary" in chunk and chunk["table_summary"]:
+                                content += f"table summary: {chunk['table_summary']}\n"
+
+                            content += "\n"
+                            
+                    if content and metadata:
                         metadata["content"] = content
                     processed.append(metadata)
                 return processed
+
 
             def _format_context(self, items: list, docs: set) -> str:
                 """Structure context for LLM comprehension"""
@@ -108,7 +132,7 @@ class QueryProcessor:
                         "$vectorSearch": {
                             "queryVector": doc_query_vector,
                             "path": "summary_embedding",
-                            "numCandidates": 200,
+                            "numCandidates": 500,
                             "limit": limit,
                             "index": "vector_index"
                         }
@@ -130,7 +154,7 @@ class QueryProcessor:
                         "$vectorSearch": {
                             "queryVector": query_vector,
                             "path": "embedding",
-                            "numCandidates": 1000,
+                            "numCandidates": 5000,
                             "limit": limit,
                             "index": "vector_index"
                         }
@@ -168,7 +192,8 @@ class QueryProcessor:
                             "chunk_id": "$docs.chunk_id",
                             "text": "$docs.text",
                             "page": "$docs.page",
-                            "chunk_num": "$docs.chunk_num"
+                            "chunk_num": "$docs.chunk_num",
+                            "table_summary": "$docs.table_summary"
                         }
                     },
                     {
@@ -225,7 +250,8 @@ class QueryProcessor:
                                         "chunk_id": "$docs.chunk_id",
                                         "text": "$docs.text",
                                         "page": "$docs.page",
-                                        "chunk_num": "$docs.chunk_num"
+                                        "chunk_num": "$docs.chunk_num",
+                                        "table_summary": "$docs.table_summary"
                                     }
                                 },
                                 {"$sort": {"fts_score": -1}},
@@ -242,7 +268,8 @@ class QueryProcessor:
                             "chunk_id": {"$first": "$chunk_id"},
                             "text": {"$first": "$text"},
                             "page": {"$first": "$page"},
-                            "chunk_num": {"$first": "$chunk_num"}
+                            "chunk_num": {"$first": "$chunk_num"},
+                            "table_summary": {"$first": "$table_summary"}
                         }
                     },
                     {
@@ -259,7 +286,8 @@ class QueryProcessor:
                             "chunk_id": 1,
                             "text": 1,
                             "page": 1,
-                            "chunk_num": 1
+                            "chunk_num": 1,
+                            "table_summary": 1
                         }
                     },
                     
@@ -274,7 +302,6 @@ class QueryProcessor:
                     {
                         "$project": {
                             "embedding": 0,
-                            "doc_info.summary": 0,
                             "doc_info.content": 0,
                             "doc_info.summary_embedding": 0,
                             "doc_info.sections": 0,
@@ -384,7 +411,7 @@ class QueryProcessor:
                             json_data = json.loads(response)
                         except:
                             raise ValueError("Failed to extract JSON from model response")
-                        return [query, json_data.get("queries")[0] if json_data.get("queries") else None], json_data["queries"][1] if json_data.get("queries") else None, json_data.get("keywords", []), json_data.get("specifity", 0.5)
+                        return [json_data.get("queries")[0] if json_data.get("queries") else None, query], json_data["queries"][1] if json_data.get("queries") else None, json_data.get("keywords", []), json_data.get("specifity", 0.5)
                     
                     except (json.JSONDecodeError, ValueError) as e:
                         print(f"Error parsing response: {e}, retrying...")
