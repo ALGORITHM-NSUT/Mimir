@@ -16,6 +16,10 @@ Gemini_search_prompt =  """
 5. **Never summarize documents if exact information is available.**  
 6. **Do not include unnecessary surrounding context—only the exact answer.**  
 7. **Provide information in a tabular format whenever applicable**, using structured rows & columns. infer your own columns and rows if possible  
+8. **If answer is not found before last iteration keep searching. DO NOT ask user to look into documents on their own, DO NOT say you could NOT find answer before last iteration.**
+9. **If the answer is not found after the last iteration, provide a message stating that the answer was not found. Do not give irrelevant information**
+10. **If the answer is found, provide the answer in the format specified in the prompt, DO NOT add links in the answer field ever, add them only into links field**.
+
 
 📌 **Example Table Formatting:**  
 | Column A | Column B | Column C |  
@@ -134,7 +138,7 @@ DO NOT ASK USER QUESTIONS UNTIL IT IS LAST ITERATION.
 
 
 🔹 Additional Context for This Iteration
-Previously generated queries (if any)
+Previous query attempt (if any)
 {all_queries}
 
 Previous Accumulated Knowledge (if any)
