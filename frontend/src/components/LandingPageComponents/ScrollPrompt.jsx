@@ -18,12 +18,12 @@ const ScrollPrompt = ({title}) => {
     <div
       id="scrollPrompt"
       onClick={handleScroll}
-      className="fixed bottom-2 cursor-pointer opacity-70 transition-opacity duration-300 flex flex-col items-center"
+      className="fixed bottom-8 sm:bottom-6 cursor-pointer transition-opacity duration-300 flex flex-col items-center"
     >
       <div className="animate-bounce">
         <svg
           xmlns="http://www.w3.org/2000/svg"
-          className="w-10 h-10 text-black"
+          className="w-10 h-10 text-white"
           fill="none"
           viewBox="0 0 24 24"
           stroke="currentColor"
@@ -36,7 +36,7 @@ const ScrollPrompt = ({title}) => {
           />
         </svg>
       </div>
-      <p className='text-black'>{title}</p>
+      <p className='text-white'>{title}</p>
     </div>
   );
 };

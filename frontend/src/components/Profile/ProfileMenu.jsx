@@ -3,54 +3,36 @@ import {
   FaUserCircle,
   FaShareAlt,
   FaCog,
-  FaSignOutAlt,
-  FaTimes,
-  FaCopy,
-  FaCheck
+  FaSignOutAlt
 } from "react-icons/fa";
 import axios from "axios";
 import { useParams } from "react-router-dom";
 import { UserContext } from "../../Context/UserContext.jsx";
 import Alert from "@mui/material/Alert";
+import LogoutConfirmationModal from "../../modals/LogoutConfirmationModal.jsx";
+import ShareChatModal from "../../modals/ShareChatModal.jsx";
+
 
 const ProfileMenu = () => {
   const [isOpen, setIsOpen] = useState(false);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [shareableLink, setShareableLink] = useState("");
-  const [copied, setCopied] = useState(false);
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
   const [alertMessage, setAlertMessage] = useState(null);
   const menuRef = useRef(null);
-  const modalRef = useRef(null);
   const { chatId } = useParams();
-  const { user } = useContext(UserContext);
-  const userId = user.userId
+  const { user, logoutUser } = useContext(UserContext);
+  const userId = user.userId;
 
-  // Toggle menu visibility
   const toggleMenu = () => setIsOpen((prev) => !prev);
 
-  useEffect(()=>{
-    if(alertMessage){
-      const timeout = setTimeout(()=>{
+  useEffect(() => {
+    if (alertMessage) {
+      const timeout = setTimeout(() => {
         setAlertMessage(null);
       }, 2000);
-      return ()=>clearTimeout(timeout)
+      return () => clearTimeout(timeout);
     }
-  }, [alertMessage])
-
-  // Close modal when clicking outside
-  useEffect(() => {
-    const handleClickOutsideModal = (event) => {
-      if (modalRef.current && !modalRef.current.contains(event.target)) {
-        setIsModalOpen(false);
-      }
-    };
-
-    if (isModalOpen) {
-      document.addEventListener("mousedown", handleClickOutsideModal);
-    }
-
-    return () => document.removeEventListener("mousedown", handleClickOutsideModal);
-  }, [isModalOpen]);
+  }, [alertMessage]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -64,82 +46,21 @@ const ProfileMenu = () => {
   }, []);
 
   const handleShareChat = async () => {
-    console.log("Share Chat Clicked!");
-  
     if (!chatId) {
       setAlertMessage({ type: "error", text: "Please start a Conversation" });
       return;
     }
-  
-    const cachedLink = sessionStorage.getItem(`shareableLink_${chatId}`);
-    if (cachedLink) {
-      setShareableLink(cachedLink);
-      setIsModalOpen(true);
-      return;
-    }
-  
-    try {
-      const response = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/chat/share`, {
-        chatId,
-        userId,
-      });
-  
-      const shareableLink = response.data.shareableLink;
-      
-      sessionStorage.setItem(`shareableLink_${chatId}`, shareableLink);
-  
-      setShareableLink(shareableLink);
-      setIsModalOpen(true);
-      setAlertMessage(null);
-    } catch (error) {
-      console.error("Error making chat shareable:", error);
-      setAlertMessage({ type: "error", text: "Failed to generate shareable link." });
-    }
+    setIsShareModalOpen(true);
   };
-
-  // Copy link to clipboard
-  const copyToClipboard = async () => {
-    try {
-      if (navigator.clipboard && window.isSecureContext) {
-        // Preferred modern method
-        await navigator.clipboard.writeText(shareableLink);
-      } else {
-        // Fallback for older browsers & mobile Safari
-        const textArea = document.createElement("textarea");
-        textArea.value = shareableLink;
-        document.body.appendChild(textArea);
-        textArea.select();
-        document.execCommand("copy");
-        document.body.removeChild(textArea);
-      }
-  
-      setCopied(true);
-      setAlertMessage({ type: "success", text: "Link copied to clipboard!" });
-  
-      setTimeout(() => {
-        setCopied(false);
-        setAlertMessage(null);
-      }, 2000);
-    } catch (error) {
-      console.error("Copy failed:", error);
-      setAlertMessage({ type: "error", text: "Failed to copy link. Please try manually." });
-    }
-  };
-  
 
   return (
     <div className="relative">
-      {/* Profile Icon */}
       <div className="flex justify-end">
         <FaUserCircle className="text-xl sm:text-2xl cursor-pointer" onClick={toggleMenu} />
       </div>
 
-      {/* Dropdown Menu */}
       {isOpen && (
-        <div
-          ref={menuRef}
-          className="absolute right-0 mt-2 w-48 bg-[#2a2a2a] text-gray-100 rounded-xl shadow-lg z-50"
-        >
+        <div ref={menuRef} className="absolute right-0 mt-2 w-48 bg-[#2a2a2a] text-gray-100 rounded-xl shadow-lg z-50">
           <ul className="py-2">
             <li
               className="px-4 py-2 flex items-center gap-2 hover:bg-gray-700 cursor-pointer rounded-md mx-2 transition-all"
@@ -152,7 +73,10 @@ const ProfileMenu = () => {
               <FaCog className="text-lg" />
               Settings
             </li>
-            <li className="px-4 py-2 flex items-center gap-2 hover:bg-red-500 cursor-pointer rounded-md mx-2 transition-all">
+            <li
+              className="px-4 py-2 flex items-center gap-2 hover:bg-red-500 cursor-pointer rounded-md mx-2 transition-all"
+              onClick={() => setIsLogoutModalOpen(true)}
+            >
               <FaSignOutAlt className="text-lg" />
               Logout
             </li>
@@ -160,37 +84,26 @@ const ProfileMenu = () => {
         </div>
       )}
 
-      {/* Alerts */}
       {alertMessage && (
         <div className="fixed top-4 left-1/2 transform -translate-x-1/2 w-96 z-50">
           <Alert severity={alertMessage.type}>{alertMessage.text}</Alert>
         </div>
       )}
 
-      {/* Share Chat Modal */}
-      {isModalOpen && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
-          <div ref={modalRef} className="bg-[#2a2a2a] text-gray-100 rounded-lg p-6 w-[90%] max-w-md shadow-lg">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-lg font-semibold">Share Chat</h2>
-              <FaTimes className="cursor-pointer text-xl" onClick={() => setIsModalOpen(false)} />
-            </div>
-            <p className="text-sm text-gray-300 mb-4">Copy and share this link:</p>
 
-            <div
-              className="flex items-center justify-between bg-gray-800 p-2 rounded-md cursor-pointer transition-all duration-200 hover:bg-gray-700"
-              onClick={copyToClipboard}
-              role="button"
-              aria-label="Copy shareable link"
-            >
-              <span className="truncate text-gray-300 px-2 w-full">
-                {copied ? "Copied!" : shareableLink}
-              </span>
-              {copied ? <FaCheck className="text-green-400" /> : <FaCopy className="text-gray-400 hover:text-white transition" />}
-            </div>
-          </div>
-        </div>
-      )}
+      <ShareChatModal
+        isOpen={isShareModalOpen}
+        onClose={() => setIsShareModalOpen(false)}
+        chatId={chatId}
+        userId={userId}
+        setAlertMessage={setAlertMessage}
+      />
+
+      <LogoutConfirmationModal
+        isOpen={isLogoutModalOpen}
+        onClose={() => setIsLogoutModalOpen(false)}
+        onConfirm={logoutUser}
+      />
     </div>
   );
 };
