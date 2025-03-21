@@ -2,6 +2,7 @@ Gemini_search_prompt =  """📅 **Current Date:** {current_date}
 🔎 **Original User Query:** "{question}"  
 🔄 **Iteration:** {iteration} of {max_iter}  
 🔄 **Step of Action Plan:** {step}  
+{deviation}
 
 Schema of search:
 📚 **Full Action Plan:**  
@@ -44,14 +45,18 @@ STRICT JSON OUTPUT ONLY.
 - After executing the current step, generate queries for the **next step** of the action plan if applicable. 
 - If the current step is successfully completed, generate the augmented queries for the **next step in the action plan.** using the answer of current step and previous knowledge
 - What kind of queries to generate for next step is defined in the action plan itself.   
-
+- You may add a step yourself if by looking at given data you may need more information to complete the next step (like searching for names, codes, full forms etc). somewhat deviation from action plan is allowed as long as it is aiding the answer of final query. set the step to -1 in this case
+- Use your system knowledge to predict what the next step should be and proceed accordingly if the action plan is not being answered or not being applicable to data found as it was made on preconceptions, only you have actual data
 ---
 
-### **🔹 Partial Answer Accumulation & Knowledge Storage**
+### **🔹 Partial Answer Accumulation & Context Storage**
 - **Store results from all specific queries in the `knowledge` field.**  
 - **Knowledge must be structured and formatted for future use, expanded if rich data is found and concise if minimal.**
 - **Expand if rich information is found, keep concise if minimal data is available.**  
 - **Knowledge must contain document links and titles from where knowledge is extracted, in case user query is not answerable, relevant documents can be returned in final iteration.**
+- **Any data given for a step will not be given again, so store what detail you need in this knowledge base"
+- **IF a step is also part of full answer for the user, store that in perfect user presentable markdown in detail in the knowledge base as well. so it can be used to append in the final answer**
+- **IF a query uses and operator and multiple questions are there but only some are solved and stored before final iteration or answering user, add this knowledge to the final answer and atleast answer user partially**  
 ---
 
 ### **🚦 Iterative Answering Constraints**
@@ -60,7 +65,7 @@ STRICT JSON OUTPUT ONLY.
 3️⃣ **Retry a failed step only if remaining iterations > remaining steps in the action plan.**  
 4️⃣ **If the full answer for Original User query is found before completing all steps, terminate the action plan early and return the final answer.**  
 5️⃣ **If data for a future step is already available, skip to that step and update the `step` accordingly.**  
-6️⃣ **If the current step fails and remaining iterations are insufficient to complete the plan, set `step` to `-1` and search directly for the final answer using the original query.**
+6️⃣ **If the current step fails and IF and ONLY IF remaining iterations are insufficient to complete the plan, set `step` to `-1` and search directly for the final answer using the original query.**
 7. **If the current step fails and remaining iterations are sufficient to complete the plan, retry the step. give step = current step in json with same queries**
 8. **If it is the last iteration and user query is not directly answered, return relevant documents with links and titles and tell user answer can be found here.**
 
@@ -75,6 +80,15 @@ STRICT JSON OUTPUT ONLY.
 
 ---
 
+## **📌 Guidelines for Expansive score (`expansivity`)**
+- Assign a **float value between `0.0` and `1.0`** to indicate how large the answer of the query can be expected to be.
+- **Use the following reference scale:**
+- **`1.0` → Very large** (e.g., `"Give me the academic calendar"`)
+- **`0.5` → Moderately large** (e.g., `"Tell me about all the professors in CSE department?"`)
+- **`0.0` → Very small** (e.g., `"Tell me about the student X's roll number?"`)
+
+---
+
 ### **🔹 JSON Output Format (STRICT)**
 📌 **Ensure valid JSON format with no missing brackets, formatting errors, or unsupported characters.**  
 📌 **Output must be fully readable using `json.loads` in Python.**  
@@ -82,21 +96,23 @@ STRICT JSON OUTPUT ONLY.
 📌 **These are next step queries for which the data that will be fetched from database, be careful**
 ```json
 {{
-    "full_answer": true | false, (this indicates the answer to original query: {question} is found compeletely or not)
+    "final_answer": true | false, (this indicates the final answer to original query: "{question}" is compelete for user view or not)
     "specific_queries": [
         {{
             "query": "Sub-query 1 augmented with knowledge from previous steps",
             "keywords": ["Keyword 1", "Keyword 2"], (same as action plan, replaced with actual data values from previous steps)
             "specifity: : float (same as action plan for this step and sub-query, unless using a different query and abandoning it, then recalculate it yourself)
+            "expansivity": float (same as action plan for this step and sub-query, unless using a different query and abandoning it, then keep it high)
         }},
         {{
             "query": "Sub-query 1 augmented with knowledge from previous steps",
             "keywords": ["Keyword 1", "Keyword 2"],
-            "specifity: : float 
+            "specifity: : float,
+            "expansivity": float
         }},
         ...
     ],
-    "knowledge": "Stored partial answer to improve future retrievals.",
+    "partial_answer": "Stored partial answer to improve future retrievals.",
     "answer": "Final answer (if available).",
     "step": integer,  // the next step number being executed; use -1 if abandoning the action plan
     "links": [

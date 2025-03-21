@@ -14,19 +14,21 @@ Query_expansion_prompt = """Given the following query: "{query}" and the current
 - **Each step must have at least one "specific query."**  
 - **Document-level queries may be 0 or more per step.**  
 - **Each specific query must have a specificity score (`0.0 - 1.0`) and extracted keywords.**  
-- **Ensure the action plan is structured for efficient retrieval.**  
+- **Ensure the action plan is structured for efficient retrieval.**
+- **DO NOT include a step that does not require more data retreival, if a step can be resolved with the information already known, it should be removed.**
 
 ---
 
 ## **📌 Guidelines for Query Expansion**
 - Generate **specific queries** to retrieve data step-by-step.  
+- **Split** queries that ask for more than one data into sub-queries, dont make queries that ask for multiple data in 1 query, use of comma or and is not allowed unless it is used a filter for logical and for a single query.
 - **Ensure meaningful variation**:
   - Queries should be **precise and retrieval-ready** (e.g., add batch, semester, department, roll number if available).  
   - **Modify numeric values logically** (e.g., even ↔ odd semester if applicable).  
   - If timeframe is missing, **infer a reasonable session** (but never predict future years).  
 - **Use both full form and abbreviation** if relevant.  
 - **Maintain original query intent**—no unnecessary generalization. 
-- whenever asking for roll number check for result using the **most recent** semester for which result is for sure declared(You need to estimate it using current date and your system knowledge, even semester end in may, odd in december, results declared 15 days later) 
+- whenever asking for roll number check for result but DO NOT SPECIFY semester only specify branch
 ---
 
 ## **📌 Guidelines for Specificity Score (`specificity`)**
@@ -37,6 +39,12 @@ Query_expansion_prompt = """Given the following query: "{query}" and the current
   - **`0.0` → Very broad** (e.g., `"Tell me about placements at NSUT?"`)  
 - **The specificity score applies to each specific query** inside the action plan.  
 
+## **📌 Guidelines for Expansive score (`expansivity`)**
+- Assign a **float value between `0.0` and `1.0`** to indicate how large the answer of the query can be expected to be.
+- **Use the following reference scale:**
+- **`1.0` → Very large** (e.g., `"Give me the academic calendar"`)
+- **`0.5` → Moderately large** (e.g., `"Tell me about all the professors in CSE department?"`)
+- **`0.0` → Very small** (e.g., `"Tell me about the student X's roll number?"`)
 ---
 
 ### ** Guidelines for Keyword Extraction**
@@ -59,6 +67,7 @@ Query_expansion_prompt = """Given the following query: "{query}" and the current
                 {{
                     "query": "Specific Query 1",
                     "specificity": float,
+                    "expansivity": float
                     "keywords": ["keyword1", "keyword2"]
                 }}
             ],
@@ -71,12 +80,14 @@ Query_expansion_prompt = """Given the following query: "{query}" and the current
 }}
 
 📌 Rules:
-At least one "specific query" per step each should be very unqiue(max limit of 3) do not make more than required.
+**At least one "specific query" per step each should be very unqiue(max limit of 3) do not make more than required, without specific queries NO DATA will be returned.**
 "Document queries" can be 0 or more per step.
 Each "specific query" must have specificity and extracted keywords.
 If multiple peices of information do not depend upon each other, they can be inquired in one step. different document queries can be inquired in the same step.
 Only generate multiple steps if answer of 1 step will be used to get enough data for next step
-Document_queries list can contain mmore tha 1 type of unrelated documents, try your best to reduce steps 
+Document_queries list can contain mmore tha 1 type of unrelated documents, try your best to reduce steps while increasing subqueries
+try to make a step to get full forms of ambiguos data.
+if data gathering by document query is ambiguos and may or may not depend upon previous data, you may create a new step for it.
 Ensure JSON is well-formed.
 
 📌 Example 1: Query for Occasion-Based Holiday
@@ -91,6 +102,7 @@ Ensure JSON is well-formed.
                 {{
                     "query": "NSUT Academic Calendar 2025 official holidays",
                     "specificity": 0.6,
+                    "expansivity": 0.9,
                     "keywords": ["academic calendar", "holiday", "2025"]
                 }}
             ],
@@ -105,6 +117,7 @@ Ensure JSON is well-formed.
                 {{
                     "query": "Diwali holiday notification from NSUT administration 2025",
                     "specificity": 0.6,
+                    "expansivity": 0.5,
                     "keywords": ["Diwali", "holiday", "2025"]
                 }}
             ],
@@ -132,6 +145,7 @@ Step 2: If Diwali isn't explicitly listed, verify with notices or circulars.
                 {{
                     "query": "end semester result of student X in branch B",
                     "specificity": 0.8,
+                    "expansivity": 0.3,
                     "keywords": ["user", "B", "result"]
                 }}
             ],
@@ -146,6 +160,7 @@ Step 2: If Diwali isn't explicitly listed, verify with notices or circulars.
                 {{
                     "query": "Seating arrangement for roll number X in end-semester exam 2025",
                     "specificity": 0.9,
+                    "expansivity": 0.5,
                     "keywords": ["seating arrangement", "endsem", "roll number X", "2025"]
                 }}
             ],
@@ -172,11 +187,13 @@ Step 2: Use that roll number to search for seating arrangements in the official 
                 {{
                     "query": "NSUT B.Tech IT fee structure 2025",
                     "specificity": 0.6,
+                    "expansivity": 0.7,
                     "keywords": ["fee structure", "B.Tech IT", "2025"]
                 }},
                 {{
                     "query": "Summer semester start date for 2025 at NSUT",
                     "specificity": 0.6,
+                    "expansivity": 0.3,
                     "keywords": ["Summer semester", "2025"]
                 }}
             ],
@@ -204,6 +221,7 @@ Step 1: Directly retrieve the Fee Structure and summer semester document since t
                 {{
                     "query": "student X Z - 1 semeseter result for branch Y",
                     "specificity": 0.8,
+                    "expansivity": 0.3,
                     "keywords": ["X", "ITNS", "Z - 1 semester"]
                 }}
             ],
@@ -218,6 +236,7 @@ Step 1: Directly retrieve the Fee Structure and summer semester document since t
                 {{
                     "query": "student X roll number A information ITNS branch",
                     "specificity": 0.8,
+                    "expansivity": 0.9,
                     "keywords": ["X", "ITNS", "A"]
                 }}
             ],
@@ -230,17 +249,18 @@ Step 1: with roll number it will be easier to find a students information
 Step 2: Now we will have roll number of student X, so we can search for studentz’s details in all documents.
 
 📌 Example 5: All information about student X
-🔍 Query: "Student X 2nd semester result csai branch"
+🔍 Query: "Student X csai branch, he is in 3rd semester"
 ✅ Generated Action Plan:
 {{
     "action_plan": [
         {{
             "step": 1,
-            "reason": "all semester result contain roll numbers so answer it directly in 1 step",
+            "reason": "since student X is currently still in 3rd semester, their result will not have been published, get 2nd semester result instead, all semester result contain roll numbers so answer it directly in 1 step",
             "specific_queries": [
                 {{
                     "query": "student X 2nd semester result CSAI NSUT gazette report",
                     "specificity": 0.8,
+                    "expansivity": 0.3,
                     "keywords": ["X", "CSAI", "2nd semester", "result", "gazette report"]
                 }}
             ],
@@ -262,7 +282,7 @@ step1: Directly search the user query because it cannot be broken down into furt
 ✔ Queries must be highly precise and optimized for retrieval.
 ✔ DO NOT HALLUCINATE AND GENERATE INFORMATION YOURSELF, ONLY USE INFORMATION YOU CAN ACCURATELY LOGICALLY INFER OR IS DIRECTLY GIVEN
 
-🔍 Additional Context for This Query Execution 📌 Previously Known User Knowledge:
+📌 Previously Known User Knowledge: (maybe irrelvant, ignore if irrelevant to the query)
 
 {user_knowledge}
 
