@@ -127,7 +127,7 @@ Step 2: If Diwali isn't explicitly listed, verify with notices or circulars.
     "action_plan": [
         {{
             "step": 1,
-            "reason": "Retrieve the roll number of the student X using any of their semester result.",
+            "reason": "Retrieve the roll number of the student X using any of their previous semester result.",
             "specific_queries": [
                 {{
                     "query": "end semester result of student X in branch B",

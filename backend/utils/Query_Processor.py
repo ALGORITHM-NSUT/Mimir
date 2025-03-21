@@ -50,6 +50,8 @@ class QueryProcessor:
         for iteration in range(max_iter):
             doc_queries = []
             if (step != -1):
+                step = max(step, 1)
+                step = min(step, len(plan))
                 doc_queries = plan[step - 1]["document_queries"]
             doc_ids = await self._search_docs(doc_queries) if len(doc_queries) != 0 else []
 
@@ -422,7 +424,7 @@ class QueryProcessor:
                 # json_data = json.loads(match.group(0))
                 
                 try:
-                    json_data = json.loads(response)
+                    json_data = json.loads(response, strict = False)
                     print(json_data)
                 except:
                     raise ValueError("Failed to extract JSON from model response")
@@ -443,6 +445,11 @@ class QueryProcessor:
 
     async def _generate_answer(self, question: str, context: str, current_date: str, plan: dict, knowledge: str, max_iter: int, iteration: int, user_knowledge: str, step: int) -> dict:
         """Generate and format final response"""
+        specific_queries = []
+        if step != -1:
+            specific_queries = plan[step - 1]["specific_queries"]
+        else:
+            specific_queries = ["abandoned action plan in previous step directly searching user queries"]
         response = client.models.generate_content(
             model = llm,
             contents = [self.search_prompt.format(question=question,
@@ -454,7 +461,7 @@ class QueryProcessor:
                 iteration=iteration,
                 user_knowledge=user_knowledge,
                 step=step,
-                specific_queries=plan[step - 1]["specific_queries"])],
+                specific_queries=specific_queries)],
             config=types.GenerateContentConfig(
                 system_instruction=GEMINI_PROMPT,
                 response_mime_type='application/json',
@@ -466,7 +473,7 @@ class QueryProcessor:
         # if not match:
         #     raise ValueError("Failed to extract JSON from model response")
         try:
-            json_data = json.loads(response)
+            json_data = json.loads(response, strict = False)
         except:
             raise ValueError("Failed to extract JSON from model response")
         return json_data

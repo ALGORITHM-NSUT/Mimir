@@ -10,15 +10,17 @@ Schema of search:
 🔍 **Current Step Queries:**  
 {specific_queries}  
 
+STRICT JSON OUTPUT ONLY.
 ---
 
 ### **🔹 Execution Guidelines for This Step**
 1️⃣ **Focus only on the current step of the action plan.**  
-2️⃣ **Extract exact information**—use precise figures, dates, and details from documents.  
+2️⃣ **Extract exact information**—use precise figures, dates, links and details from documents.  
 3️⃣ **Use "Publish Date" as the primary sorting metric** to prioritize the most relevant documents.  
 4️⃣ **If multiple documents provide conflicting information:**  
-   - Default to **the latest version**.  
-   - Clearly specify which document was used.  
+   - Default to **the latest version**. and just summarize the previous version  
+   - Clearly specify which document was used with dates.  
+   - Tell user that multiple documents were found and give link to both
 5️⃣ **Do not summarize documents if the exact answer is available.**  
 6️⃣ **Do not include unnecessary surrounding context—provide only the precise answer.**  
 7️⃣ **Provide information in a tabular format whenever possible.**  
@@ -49,6 +51,7 @@ Schema of search:
 - **Store results from all specific queries in the `knowledge` field.**  
 - **Knowledge must be structured and formatted for future use, expanded if rich data is found and concise if minimal.**
 - **Expand if rich information is found, keep concise if minimal data is available.**  
+- **Knowledge must contain document links and titles from where knowledge is extracted, in case user query is not answerable, relevant documents can be returned in final iteration.**
 ---
 
 ### **🚦 Iterative Answering Constraints**
@@ -58,6 +61,8 @@ Schema of search:
 4️⃣ **If the full answer for Original User query is found before completing all steps, terminate the action plan early and return the final answer.**  
 5️⃣ **If data for a future step is already available, skip to that step and update the `step` accordingly.**  
 6️⃣ **If the current step fails and remaining iterations are insufficient to complete the plan, set `step` to `-1` and search directly for the final answer using the original query.**
+7. **If the current step fails and remaining iterations are sufficient to complete the plan, retry the step. give step = current step in json with same queries**
+8. **If it is the last iteration and user query is not directly answered, return relevant documents with links and titles and tell user answer can be found here.**
 
 ---
 ## **📌 Guidelines for Specificity Score (`specificity`)**
@@ -73,7 +78,7 @@ Schema of search:
 ### **🔹 JSON Output Format (STRICT)**
 📌 **Ensure valid JSON format with no missing brackets, formatting errors, or unsupported characters.**  
 📌 **Output must be fully readable using `json.loads` in Python.**  
-📌 **Provide exact document title and link as extracted from context.**  
+📌 **Provide exact document title and link as extracted from context. ONLY that are relevant and used for the final answer**  
 📌 **These are next step queries for which the data that will be fetched from database, be careful**
 ```json
 {{
@@ -110,6 +115,7 @@ YOU ARE NOT ALLOWED TO SAY "I am unable to find answer until plan is compelete o
 NEVER hallucinate missing details.
 NEVER include irrelevant documents.
 ONLY provide information explicitly available in the retrieved context.
+ONLY PROVIDE LINKS AND TITLES OF DOCUMENTS THAT ARE ACTUALLY USED IN THE ANSWER.
 DO NOT modify user queries beyond necessary refinement.
 DO NOT provide any response outside the JSON format.
 DO NOT provide user exactly the information they already know
