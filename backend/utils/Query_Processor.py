@@ -47,9 +47,11 @@ class QueryProcessor:
         ans = {}
         step = 1
         queries = plan[step - 1]["specific_queries"]
+        deviation = step
         for iteration in range(max_iter):
             doc_queries = []
             if (step != -1):
+                deviation = step
                 step = max(step, 1)
                 step = min(step, len(plan))
                 doc_queries = plan[step - 1]["document_queries"]
@@ -59,10 +61,9 @@ class QueryProcessor:
 
             iteration_context = self._format_context(chunk_results, current_ids)
             context_entries.append(iteration_context)
-            # print(iteration_context)
-            # full_context += iteration_context + "\n\n"
-            ans = await self._generate_answer(question, iteration_context, self.current_date, plan, knowledge, max_iter - 1, iteration, user_knowledge, step)  
-            if ans["full_answer"]:
+            seen_ids.update(current_ids)
+            ans = await self._generate_answer(question, iteration_context, self.current_date, plan, knowledge, max_iter - 1, iteration, user_knowledge, step, deviation)  
+            if ans["final_answer"]:
                 print(f"Stopping early at iteration {iteration+1}")
                 return ans
             else:
@@ -70,7 +71,9 @@ class QueryProcessor:
             if iteration == max_iter - 1:
                 print(f"could not find ans, returning relevant info")
                 return ans
-            knowledge = ans["knowledge"]
+            knowledge = ans["partial_answer"]
+            if (ans["step"] == -1):
+                deviation = step
             step = ans["step"]
             print("next step", step)
             queries = ans["queries"]
@@ -170,7 +173,7 @@ class QueryProcessor:
                 "$vectorSearch": {
                     "queryVector": query_vector,
                     "path": "embedding",
-                    "numCandidates": 5000,
+                    "numCandidates": 1000,
                     "limit": limit,
                     "index": "vector_index"
                 }
@@ -220,7 +223,6 @@ class QueryProcessor:
                             "$search": {
                                 "index": "text",
                                 "compound": {
-                                    
                                     "must": [
                                         
                                     ],
@@ -359,11 +361,11 @@ class QueryProcessor:
 
     async def _search_in_chunks(self, queries: list, seen_ids: set, doc_ids: list, iteration: int) -> list:
         minscore = 0.75
-        limit = 20
         
         query_results = {}
 
         async def search_query(query):
+            limit = int(max(5, 20 * query["expansivity"]))
             vector_weight = min(0.7, max(0.3, 1 - query["specifity"]))
             full_text_weight = 1 - vector_weight
             return await self._search_query(query["query"], seen_ids, minscore, vector_weight, full_text_weight, limit, query["keywords"], doc_ids)
@@ -413,18 +415,20 @@ class QueryProcessor:
 
         for attempt in range(5):  # Retry up to 5 times
             try:
-                response = client.models.generate_content(model = llm, contents=[prompt],
-                config=types.GenerateContentConfig(
-                system_instruction=GEMINI_PROMPT,
-                response_mime_type='application/json',
-                response_schema=expand)).text
-                # match = re.search(r'\{.*\}', text, re.DOTALL)
-                # if not match:
-                #     raise ValueError("Failed to extract JSON from model response")
-                # json_data = json.loads(match.group(0))
+                response = client.models.generate_content(
+                    model = llm, 
+                    contents=[prompt],
+                    config=types.GenerateContentConfig(
+                        system_instruction=GEMINI_PROMPT,
+                        response_mime_type='application/json',
+                        response_schema=expand,
+                        temperature=0)).text
+                match = re.search(r'\{.*\}', response, re.DOTALL)
+                if not match:
+                    raise ValueError("Failed to extract JSON from model response")
                 
                 try:
-                    json_data = json.loads(response, strict = False)
+                    json_data = json.loads(match.group(0), strict = False)
                     print(json_data)
                 except:
                     raise ValueError("Failed to extract JSON from model response")
@@ -443,9 +447,12 @@ class QueryProcessor:
 
         raise Exception("Failed after multiple retries due to API quota limits.")
 
-    async def _generate_answer(self, question: str, context: str, current_date: str, plan: dict, knowledge: str, max_iter: int, iteration: int, user_knowledge: str, step: int) -> dict:
+    async def _generate_answer(self, question: str, context: str, current_date: str, plan: dict, knowledge: str, max_iter: int, iteration: int, user_knowledge: str, step: int, deviation: int) -> dict:
         """Generate and format final response"""
         specific_queries = []
+        previous_step_knowledge = ""
+        if step != deviation:
+            previous_step_knowledge = f"the action plan was abandoned last time at step f{step}"
         if step != -1:
             specific_queries = plan[step - 1]["specific_queries"]
         else:
@@ -461,19 +468,20 @@ class QueryProcessor:
                 iteration=iteration,
                 user_knowledge=user_knowledge,
                 step=step,
-                specific_queries=specific_queries)],
+                specific_queries=specific_queries,
+                deviation = previous_step_knowledge)],
             config=types.GenerateContentConfig(
                 system_instruction=GEMINI_PROMPT,
                 response_mime_type='application/json',
                 response_schema=answer,
-                temperature=0.2)
+                temperature=0)
             ).text
         
-        # match = re.search(r'\{.*\}', response, re.DOTALL)  # Extract JSON safely
-        # if not match:
-        #     raise ValueError("Failed to extract JSON from model response")
+        match = re.search(r'\{.*\}', response, re.DOTALL)  # Extract JSON safely
+        if not match:
+            raise ValueError("Failed to extract JSON from model response")
         try:
-            json_data = json.loads(response, strict = False)
+            json_data = json.loads(match.group(0), strict = False)
         except:
             raise ValueError("Failed to extract JSON from model response")
         return json_data

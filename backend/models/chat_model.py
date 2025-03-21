@@ -26,6 +26,7 @@ class response(BaseModel):
 class query(BaseModel):
     query: str
     specifity: float
+    expansivity: float
     keywords: list[str]
 
 class step(BaseModel):
@@ -38,9 +39,9 @@ class expand(BaseModel):
     action_plan: list[step]
 
 class answer(BaseModel):
-    full_answer: bool
+    final_answer: bool
     queries: list[query]
-    knowledge: str
+    partial_answer: str
     answer: str
     step: int
     links: list[link]
