@@ -366,7 +366,7 @@ class QueryProcessor:
         query_results = {}
 
         async def search_query(query):
-            limit = int(max(5, 25 * query["expansivity"]))
+            limit = int(max(10, 25 * query["expansivity"]))
             vector_weight = min(0.7, max(0.3, 1 - query["specifity"]))
             full_text_weight = 1 - vector_weight
             return await self._search_query(query["query"], seen_ids, minscore, vector_weight, full_text_weight, limit, query["keywords"], doc_ids)

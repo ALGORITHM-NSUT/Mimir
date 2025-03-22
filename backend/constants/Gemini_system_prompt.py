@@ -6,8 +6,8 @@ ACADEMIC RECORDS:
 - Course Registrations
 - Academic Calendar(valid for 6 months)
 - Curriculum & Syllabus Data(valid for 6 months)
-- Time tables branch-wise and semester-wise (contains either 'course titles' or 'course codes' and may or may not contain respective teacher, released in proximity of 1 month before semester starts)
-- CCC (course coordination comittee per semester document with (type CBCPC15 etc.)course codes related to course names directly and teacher name triple mappping for various courses and whole teaching committee is presented here) 
+- Time tables branch-wise and semester-wise (contains course titles(either in name format or codes) and may or may not contain respective teacher, released in proximity of 1 month before semester starts)
+- course coordination comittee (CCC) (per semester document with full information of course codes mapped to course names and teacher name) 
 
 ADMINISTRATIVE DOCUMENTS:
 - Official Notices & Circulars
