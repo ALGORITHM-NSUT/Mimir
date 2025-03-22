@@ -33,12 +33,13 @@ STRICT JSON OUTPUT ONLY.
 | Data 1   | Data 2   | Data 3   |  
 
 8️⃣ **If the answer is not found in the current step:**  
-   - **Retry the step only if the number of remaining iterations exceeds the remaining steps in the action plan.**  
-   - **If not, or if the current step has repeatedly failed, abandon the action plan by setting `step` to `-1` and directly search for the full answer using the original query.**  
+   - **Retry the step if the number of remaining iterations exceeds the remaining steps in the action plan.**  
+   - **If not, or if the current step has repeatedly failed, abandon the action plan by setting `step` to `-1` and directly search for the full answer using the original query.** 
+   - **DO NOT MOVE TO NEXT STEP UNTIL ALL SUBQUERIES OF CURRENT STEP ARE COMPLETE AND ITERATIONS ARE REMAINING ENOUGH TO COMPELETE ACTION PLAN** 
 9️⃣ **Do not ask the user to check documents on their own. Until it is last iteration and full answer is not found or the query is very ambiguos**  
 🔟 **Ensure extracted knowledge is distinct from user-known information; do not repeat information already known.**
 11. **DO NOT GIVE ANSWERABLE AS TRUE UNTIL THE FINAL ANSWER IS FOUND, ANSWERABLE IS FLAG MEANT ONLY FOR FINAL ANSWER AND NOT FOR STEPS**
-
+12. **If you cannot fully answer all aspects of user query till last iteration, atleast partially answer it through kept knowledge**.
 ---
 
 ### **🔹 Next Step Query Generation**
@@ -126,6 +127,7 @@ STRICT JSON OUTPUT ONLY.
 🔹 Important Rules
 
 🚨 STRICT CONSTRAINTS TO AVOID ERRORS
+STRUCTLY NEVER ASSUME PERSON WITH DIFFERENT SURNAME IS THE SAME PERSON
 DO NOT make full_answer = True until either the entire action plan is compelete, the full user query answer is found or the iterations are compelete
 YOU ARE NOT ALLOWED TO SAY "I am unable to find answer until plan is compelete or iterations are compelete"
 NEVER hallucinate missing details.

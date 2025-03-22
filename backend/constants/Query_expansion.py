@@ -5,9 +5,10 @@ Query_expansion_prompt = """Given the following query: "{query}" and the current
 2️⃣ **Each step consists of at least one specific query (no maximum limit).**  
 3️⃣ **For "AND" queries (multiple pieces of information needed), create multiple specific queries per step.**  
 4️⃣ **Determine if specific queries can be resolved using document-level searches or require direct retrieval.**  
-5️⃣ **An action plan can have a minimum of 1 step and a maximum of 3 steps.**  
+5️⃣ **An action plan can have a minimum of 1 step and a maximum of 4 steps.**  
 6️⃣ **If required, use previously known user knowledge to refine queries.**  
-
+7.  **Before making queries, think very carefully about the timeline, what date is today, what date is the query asking for, and what date documents are typically released to determine accurately what documents you would have in the database and reason correctly.**
+8. **If user mentions past, think how much documents would have been released after it**
 ---
 
 ## **📌 Action Plan Structure**
@@ -16,7 +17,8 @@ Query_expansion_prompt = """Given the following query: "{query}" and the current
 - **Each specific query must have a specificity score (`0.0 - 1.0`) and extracted keywords.**  
 - **Ensure the action plan is structured for efficient retrieval.**
 - **DO NOT include a step that does not require more data retreival, if a step can be resolved with the information already known, it should be removed.**
-
+- **May create (optional step) if the data retreived may not be confirmed to follow the action plan assumptions**.
+- **If no specific year given , use the current year as a default. unless according to docuemnt release timelines from system information, that document wouldnt have been released**
 ---
 
 ## **📌 Guidelines for Query Expansion**
@@ -28,7 +30,8 @@ Query_expansion_prompt = """Given the following query: "{query}" and the current
   - If timeframe is missing, **infer a reasonable session** (but never predict future years).  
 - **Use both full form and abbreviation** if relevant.  
 - **Maintain original query intent**—no unnecessary generalization. 
-- whenever asking for roll number check for result but DO NOT SPECIFY semester only specify branch
+- **Document queries should not be too generic, they chould still contain semester, timeframe(if given), department, etc if available.**
+- **whenever asking for roll number check for result of PREVIOUS semester for only specific branch given, unless asked data is of previous year then search for current result**
 ---
 
 ## **📌 Guidelines for Specificity Score (`specificity`)**
@@ -80,14 +83,14 @@ Query_expansion_prompt = """Given the following query: "{query}" and the current
 }}
 
 📌 Rules:
-**At least one "specific query" per step each should be very unqiue(max limit of 3) do not make more than required, without specific queries NO DATA will be returned.**
+**At least one "specific query" per step each should be very unqiue do not make more than required but no max limit, without specific queries NO DATA will be returned.**
 "Document queries" can be 0 or more per step.
 Each "specific query" must have specificity and extracted keywords.
 If multiple peices of information do not depend upon each other, they can be inquired in one step. different document queries can be inquired in the same step.
 Only generate multiple steps if answer of 1 step will be used to get enough data for next step
-Document_queries list can contain mmore tha 1 type of unrelated documents, try your best to reduce steps while increasing subqueries
+Document_queries list can contain more tha 1 type of unrelated documents, try your best to reduce steps while increasing subqueries
 try to make a step to get full forms of ambiguos data.
-if data gathering by document query is ambiguos and may or may not depend upon previous data, you may create a new step for it.
+if data gathering by document query is ambiguos and may or may not depend upon previous data, you may create an (optional step) for it and mention it in the reason.
 Ensure JSON is well-formed.
 
 📌 Example 1: Query for Occasion-Based Holiday
@@ -122,8 +125,8 @@ Ensure JSON is well-formed.
                 }}
             ],
             "document_queries": [
-                "Official Notices & Circulars",
-                "Administrative Policies"
+                "Official Notices & Circulars for 2025",
+                "Administrative Policies 2025"
             ]
         }}
     ]
@@ -133,24 +136,24 @@ Step 1: First, search the Academic Calendar for all listed holidays.
 Step 2: If Diwali isn't explicitly listed, verify with notices or circulars.
 
 📌 Example 2: Query for Seating Arrangement of a Student
-🔍 Query: "Where is my seating arrangement for the end semester exam for A semester in B branch?"
+🔍 Query: "Where is my seating arrangement for the end semester exam for 4th semester in B branch?"
 
 ✅ Generated Action Plan:
 {{
     "action_plan": [
         {{
             "step": 1,
-            "reason": "Retrieve the roll number of the student X using any of their previous semester result.",
+            "reason": "Retrieve the roll number of the student X using their previous semester result because the user hasnt mentioned past so they must mean they are currently in the specified semester so current semester has not ended and result will not available to retreive",
             "specific_queries": [
                 {{
-                    "query": "end semester result of student X in branch B",
+                    "query": "end semester result of student X in branch B, 3rd semster",
                     "specificity": 0.8,
                     "expansivity": 0.3,
-                    "keywords": ["user", "B", "result"]
+                    "keywords": ["X", "B", "result", "3rd semester"]
                 }}
             ],
             "document_queries": [
-                "Official Gazette Report for branch B"
+                "Official Gazette Report for 3rd semester branch B"
             ]
         }},
         {{
@@ -161,11 +164,11 @@ Step 2: If Diwali isn't explicitly listed, verify with notices or circulars.
                     "query": "Seating arrangement for roll number X in end-semester exam 2025",
                     "specificity": 0.9,
                     "expansivity": 0.5,
-                    "keywords": ["seating arrangement", "endsem", "roll number X", "2025"]
+                    "keywords": ["seating arrangement", "endsem", "X", "2025"]
                 }}
             ],
             "document_queries": [
-                "Seating Plan for End Semester Exam for A - 1 semester for branch B"
+                "Seating Plan for End Semester Exam for A semester for branch B"
             ]
         }}
     ]
@@ -208,70 +211,34 @@ Step 2: Use that roll number to search for seating arrangements in the official 
 📌 Reasoning Explanation:
 Step 1: Directly retrieve the Fee Structure and summer semester document since the information is likely stored there. no more steps needed since the information is not interdependent, all can be inquired in 1 step
 
-📌 Example 4: All information about student X
-🔍 Query: "All information present about a student X from branch B.Tech ITNS in Z semester"
+
+📌 Example 3: result of a student
+🔍 Query: "3rd semester result of a student X in branch Y"
 
 ✅ Generated Action Plan:
 {{
     "action_plan": [
         {{
             "step": 1,
-            "reason": "with roll number X, finding student’s details may be easier and we will also get result simultaneously",
+            "reason": "Retrieve the Result directly as result is stored with both roll number and names",
             "specific_queries": [
                 {{
-                    "query": "student X Z - 1 semeseter result for branch Y",
-                    "specificity": 0.8,
-                    "expansivity": 0.3,
-                    "keywords": ["X", "ITNS", "Z - 1 semester"]
-                }}
+                    "query": "student X semester 2 branch Y result 2025",
+                    "specificity": 0.6,
+                    "expansivity": 0.4,
+                    "keywords": ["X, "Y", "2nd semester", "2025"]
+                }},
+                
             ],
             "document_queries": [
-                "result for B.tech Z semester",
+                "Official gazette report for 2nd semester Y branch 2025"
             ]
-        }},
-        {{
-            "step": 2,
-            "reason": "Now we will have roll number of student X, so we can search for student’s details in all documents.",
-            "specific_queries": [
-                {{
-                    "query": "student X roll number A information ITNS branch",
-                    "specificity": 0.8,
-                    "expansivity": 0.9,
-                    "keywords": ["X", "ITNS", "A"]
-                }}
-            ],
-            "document_queries": []
         }}
     ]
 }}
 📌 Reasoning Explanation:
-Step 1: with roll number it will be easier to find a students information
-Step 2: Now we will have roll number of student X, so we can search for studentz’s details in all documents.
+Step 1: Directly retrieve the Fee Structure and summer semester document since the information is likely stored there. no more steps needed since the information is not interdependent, all can be inquired in 1 step
 
-📌 Example 5: All information about student X
-🔍 Query: "Student X csai branch, he is in 3rd semester"
-✅ Generated Action Plan:
-{{
-    "action_plan": [
-        {{
-            "step": 1,
-            "reason": "since student X is currently still in 3rd semester, their result will not have been published, get 2nd semester result instead, all semester result contain roll numbers so answer it directly in 1 step",
-            "specific_queries": [
-                {{
-                    "query": "student X 2nd semester result CSAI NSUT gazette report",
-                    "specificity": 0.8,
-                    "expansivity": 0.3,
-                    "keywords": ["X", "CSAI", "2nd semester", "result", "gazette report"]
-                }}
-            ],
-            "document_queries": [
-                "result for B.tech CSAI 2nd semester",
-            ]
-        }}
-    ]
-}}
-📌 Reasoning Explanation:
-step1: Directly search the user query because it cannot be broken down into further steps, no need to get roll numbers seperately as they will be retreived with result.
 
 📌 Final Reminder
 🚨 STRICT RULES TO ENFORCE:
