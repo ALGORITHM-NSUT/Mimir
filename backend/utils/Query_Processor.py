@@ -57,11 +57,10 @@ class QueryProcessor:
                 doc_queries = plan[step - 1]["document_queries"]
             doc_ids = await self._search_docs(doc_queries) if len(doc_queries) != 0 else []
 
-            chunk_results, current_ids = await self._search_in_chunks(queries, seen_ids, doc_ids, iteration + 1)
+            chunk_results, current_docids, seen_ids = await self._search_in_chunks(queries, seen_ids, doc_ids, iteration + 1)
 
-            iteration_context = self._format_context(chunk_results, current_ids)
+            iteration_context = self._format_context(chunk_results, current_docids)
             context_entries.append(iteration_context)
-            seen_ids.update(current_ids)
             ans = await self._generate_answer(question, iteration_context, self.current_date, plan, knowledge, max_iter - 1, iteration, user_knowledge, step, deviation)  
             if ans["final_answer"]:
                 print(f"Stopping early at iteration {iteration+1}")
@@ -300,6 +299,7 @@ class QueryProcessor:
                         {"$ifNull": ["$fts_score", 0]}
                         ]
                     },
+                    "_id": 1,
                     "doc_id": 1,
                     "chunk_id": 1,
                     "text": 1,
@@ -326,7 +326,8 @@ class QueryProcessor:
                     "doc_info.entities": 0,
                     "doc_info.doc_id": 0,
                     "doc_info._id": 0,
-                    "chunk_id": 0
+                    "doc_info.page_summaries": 0,
+                    "chunk_id": 0,
                 }
             },
             {"$sort": {"score": -1}},
@@ -365,7 +366,7 @@ class QueryProcessor:
         query_results = {}
 
         async def search_query(query):
-            limit = int(max(5, 20 * query["expansivity"]))
+            limit = int(max(5, 25 * query["expansivity"]))
             vector_weight = min(0.7, max(0.3, 1 - query["specifity"]))
             full_text_weight = 1 - vector_weight
             return await self._search_query(query["query"], seen_ids, minscore, vector_weight, full_text_weight, limit, query["keywords"], doc_ids)
@@ -388,7 +389,7 @@ class QueryProcessor:
         all_results.sort(key= lambda chunk: chunk["chunk_num"])
         docs = {str(chunk["doc_id"]) for chunk in all_results}
         processed = self._process_chunks(docs, all_results, chunk_query_mapping)
-        return processed, docs
+        return processed, docs, seen_ids
     
     def _rerank(self, formatted: dict, question: str) -> list:
         """Generate reranking"""
@@ -474,7 +475,7 @@ class QueryProcessor:
                 system_instruction=GEMINI_PROMPT,
                 response_mime_type='application/json',
                 response_schema=answer,
-                temperature=0)
+                temperature=0.1)
             ).text
         
         match = re.search(r'\{.*\}', response, re.DOTALL)  # Extract JSON safely
