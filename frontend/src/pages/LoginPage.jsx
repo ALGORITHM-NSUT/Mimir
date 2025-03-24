@@ -60,7 +60,7 @@ const LoginPage = () => {
           </form>
         </div>
 
-        {/* Right side */}
+        {/* Right side
         <div className="hidden md:flex md:flex-col md:justify-center md:items-center bg-gradient-to-br from-purple-900 to-blue-900 via-[#0b0b0b] p-8">
           <div className="relative z-10 flex flex-col mt-4 items-center mb-8 ">
             <div className="flex flex-col items-center justify-center">
@@ -78,7 +78,7 @@ const LoginPage = () => {
             </div>
          
           </div>
-        </div>
+        </div> */}
       </div>
     
    

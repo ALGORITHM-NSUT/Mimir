@@ -44,4 +44,35 @@
 html, body {
   overflow-x: hidden;
 }
+.tnc-container {
+  border-left: 4px solid #4B70F5;
+  background-color: #1e1e1e;
+  padding: 1rem;
+  border-radius: 8px;
+}
+
+.tnc-header {
+  color: #4B70F5;
+  font-weight: bold;
+  text-align: center;
+  margin-bottom: 0.5rem;
+}
+
+.tnc-list {
+  list-style-type: disc;
+  margin-left: 1.5rem;
+  padding-left: 1rem;
+}
+
+.tnc-highlight {
+  color: #3DC2EC;
+  font-weight: bold;
+}
+
+.tnc-note {
+  text-align: center;
+  margin-top: 1rem;
+  font-style: italic;
+}
+
 

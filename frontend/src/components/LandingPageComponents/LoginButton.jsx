@@ -46,8 +46,9 @@ const LoginButton = () => {
   {
     type: "standard",
     theme: "filled_blue", 
-    size: "large", 
+    size: "extra large", 
     shape: "pill", 
+    
   }
 );
     } else {
@@ -56,7 +57,7 @@ const LoginButton = () => {
   }, []);
   
 
-  return <div id="google-signin-btn"></div>;
+  return <div className="align-center" id="google-signin-btn"></div>;
 };
 
 export default LoginButton;

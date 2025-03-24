@@ -15,7 +15,7 @@ const References = ({ references }) => {
         {references.map((ref, index) => (
           <a
             key={index}
-            href={`${PROXY_URL}${encodeURIComponent(ref.link)}`} // Using Proxy
+            href={ref.link.includes("drive.google.com") ? ref.link : `${PROXY_URL}${encodeURIComponent(ref.link)}`}
             target="_blank"
             rel="noopener"
             className="block p-4 rounded-xl shadow-lg transition duration-300 
