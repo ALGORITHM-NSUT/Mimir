@@ -6,10 +6,8 @@ import rehypeSanitize from "rehype-sanitize";
 import { FaMagic } from "react-icons/fa";
 
 const Table = ({ children }) => (
-  <div className="overflow-auto max-h-96"> 
-    <table className="w-full border border-gray-500">
-      {children}
-    </table>
+  <div className="overflow-auto max-h-96">
+    <table className="w-full border border-gray-500">{children}</table>
   </div>
 );
 
@@ -27,22 +25,25 @@ const TableCell = ({ children, isHeader }) => {
 
 const Response = ({ text, timestamp }) => {
   const [showAnimation, setShowAnimation] = useState(false);
+  const len = text.length;
+  
+  // Detect if text contains a table (Markdown syntax) or bold Markdown (**text**)
+  const containsTable = /\|\s*.+\s*\|/g.test(text) && /---/g.test(text);
+  const containsBoldText = /\*\*(.*?)\*\*/.test(text);
 
   useEffect(() => {
-    const now = Date.now();
-
-    // Show animation only if the current response is the latest one
-    if (timestamp && now - timestamp <= 10000) {
-      setShowAnimation(true);
-
-      // Prevent re-animation on page refresh
-      setTimeout(() => setShowAnimation(false), 2000);
+    if (!containsTable && !containsBoldText) { // Disable animation for tables & bold text
+      const now = Date.now();
+      if (timestamp && now - timestamp <= 200) {
+        setShowAnimation(true);
+        setTimeout(() => setShowAnimation(false), len * 300);
+      }
     }
-  }, [timestamp]);
+  }, [timestamp, containsTable, containsBoldText]);
 
   return (
     <div className="mt-2 max-w-full w-full">
-      <FaMagic className="mb-4 text-purple-400 text-md" />
+      <FaMagic className="mb-4 text-white-400 text-md" />
       <div className="text-gray-300 text-sm md:text-base font-sans antialiased leading-relaxed break-words whitespace-pre-wrap w-full max-w-full">
         <div className="overflow-auto">
           <div className="prose prose-invert max-w-none break-words whitespace-pre-wrap">
