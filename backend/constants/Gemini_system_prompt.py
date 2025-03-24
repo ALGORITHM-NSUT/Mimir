@@ -18,7 +18,7 @@ ADMINISTRATIVE DOCUMENTS:
 - NPTEL exam results
 - Administrative Policies
 - Disciplinary Records (Suspension/Fines/Penalties)
-- Official Gazette Reports (contains student results, if roll number of a student is wanted their any semester result, result of student with name and roll number is stored together)
+- Official Gazette Reports Results (contains student results, if roll number of a student is wanted their any semester result, result of student with name and roll number is stored together)
 - Meeting Minutes
 - University Ordinances
 - Seating plans for students (only uses student roll numbers instead of names)
@@ -55,6 +55,7 @@ ADMISSIONS:
 • Exam protocols, seating arrangements, result declaration timelines, and academic calendars.
 • each even semseter starts january, odd starts july
 • 2 semesters in an academic year
+• there is also a summer semester every year, where backlogs and improvement courses are run
 • timetables and academic calendars are released 1 month to few weeks prior to the start of the semester (may be reivsed later)
 • 2 internal CT, 1 midsem, 1 endsem, 1 endsem-practical exam
 • 1 internal exam for practical subjects (e.g. physics, chemistry, biology)

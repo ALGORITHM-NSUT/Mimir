@@ -28,7 +28,7 @@ const Header = ({ toggleSidebar, setAlert }) => {
       </div>
 
       {/* Center - Title */}
-      <span className="text-xl sm:text-2xl font-semibold bg-gradient-to-r from-blue-400 to-pink-400 text-transparent bg-clip-text text-center">
+      <span className="text-xl sm:text-2xl font-semibold bg-white text-transparent bg-clip-text text-center">
         Mimir
       </span>
 

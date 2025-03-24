@@ -9,12 +9,12 @@ Query_expansion_prompt = """Given the following query: "{query}" and the current
 6️⃣ **If required, use previously known user knowledge to refine queries.**  
 7.  **Before making queries, think very carefully about the timeline, what date is today, what date is the query asking for, and what date documents are typically released to determine accurately what documents you would have in the database and reason correctly.**
 8. **If user mentions past, think how much documents would have been released after it**
-9. **ALWAYS Use both full form and abbreviation in all document queries and specific queries and keywords** if possible.  
+9. **ALWAYS Use both full form and abbreviation in both document queries and specific queries in every single query, no need to make multiple queries just to have both abbrevation and full form** if given.
 ---
 
 ## **📌 Action Plan Structure**
 - **Each step must have at least one "specific query."**  
-- **Document-level queries may be 0 or more per step.**  
+- **"Document queries" can be 0 or more per step. DO NOT make more than required. DO NOT make Document queries that are very similar to each other, keep them minimum in number and unique** 
 - **Each specific query must have a specificity score (`0.0 - 1.0`) and extracted keywords.**  
 - **Ensure the action plan is structured for efficient retrieval.**
 - **DO NOT include a step that does not require more data retreival, if a step can be resolved with the information already known, it should be removed.**
@@ -29,9 +29,12 @@ Query_expansion_prompt = """Given the following query: "{query}" and the current
   - Queries should be **precise and retrieval-ready** (e.g., add batch, semester, department, roll number if available).  
   - **Modify numeric values logically** (e.g., even ↔ odd semester if applicable).  
   - If timeframe is missing, **infer a reasonable session** (but never predict future years).  
-- **ALWAYS Use both full form and abbreviation in both document queries and specific queries** if given.  
+- **ALWAYS Use both full form and abbreviation in both document queries and specific queries in every single query, no need to make multiple queries just to have both abbrevation and full form** if given.  
 - **Maintain original query intent**—no unnecessary generalization. 
-- **Document queries should not be too generic, they chould still contain semester, timeframe(if given), department, etc if available.**
+- **Document queries should not be too generic, they should still contain semester, timeframe(if given, do not add on your own), department etc** (DO NOT make queries like NSUT Netaji Subhas University of Technology Official Notices and Circulars', 'NSUT Netaji Subhas University of Technology Administrative Policies', they are incorrect)
+- **For document queries that are for data of specific people, too generic Document queries can have negative effect on the action plan and correct data retreival, if you are unsure and sufficient data is not available especially for the branch or semester, it is better to ask for more data, if even 1 is available, you may create it**.
+- **Both Document and specific queries should be sufficiently unique, they should not be different wordings of the same meaning**
+- **Specific queries should be as specific as possible, they should contain batch, semester, department, roll number etc if available**.
 - **whenever asking for roll number check for result of PREVIOUS semester for only specific branch given, unless asked data is of previous year then search for current result**
 ---
 
@@ -85,7 +88,7 @@ Query_expansion_prompt = """Given the following query: "{query}" and the current
 
 📌 Rules:
 **At least one "specific query" per step each should be very unqiue do not make more than required but no max limit, without specific queries NO DATA will be returned.**
-"Document queries" can be 0 or more per step.
+**"Document queries" can be 0 or more per step. DO NOT make more than required. DO not make Document queries that are very similar to each other, keep them minimum in number and unique**
 Each "specific query" must have specificity and extracted keywords.
 If multiple peices of information do not depend upon each other, they can be inquired in one step. different document queries can be inquired in the same step.
 Only generate multiple steps if answer of 1 step will be used to get enough data for next step
@@ -126,8 +129,7 @@ Ensure JSON is well-formed.
                 }}
             ],
             "document_queries": [
-                "Official Notices & Circulars for 2025",
-                "Administrative Policies 2025"
+                "Official Notices & Circulars for considering Diwali 2025",
             ]
         }}
     ]
@@ -136,43 +138,83 @@ Ensure JSON is well-formed.
 Step 1: First, search the Academic Calendar for all listed holidays.
 Step 2: If Diwali isn't explicitly listed, verify with notices or circulars.
 
-📌 Example 2: Query for Seating Arrangement of a Student
-🔍 Query: "Where is my seating arrangement for the end semester exam for 4th semester in B branch?"
+📌 Example 2: Query for Seating Arrangement of Students
+🔍 Query: "were sarthak sharma and saumil aggarwal seated together in same room for 6th sem midsem exams? they are in csda"
 
 ✅ Generated Action Plan:
 {{
-    "action_plan": [
+  'action_plan': [
+    {{
+      'step': 1,
+      'reason': 'To find the seating arrangement, we need the roll numbers of the students. Since the user is asking for the midsem exam seating arrangement for the 6th semester, and the current date is March 25, 2025, the 6th semester is ongoing. Therefore, the 5th-semester results are the most recent available to retrieve the roll numbers.',
+      'specific_queries': [
         {{
-            "step": 1,
-            "reason": "Retrieve the roll number of the student X using their previous semester result because the user hasnt mentioned past so they must mean they are currently in the specified semester so current semester has not ended and result will not available to retreive",
-            "specific_queries": [
-                {{
-                    "query": "end semester result of student X in branch B, 3rd semster",
-                    "specificity": 0.8,
-                    "expansivity": 0.3,
-                    "keywords": ["X", "B", "result", "3rd semester"]
-                }}
-            ],
-            "document_queries": [
-                "Official Gazette Report for 3rd semester branch B"
-            ]
+          'query': 'Find the 5th semester result of Sarthak Sharma in Computer Science and Big Data Analytics (CSDA) branch at NSUT Netaji Subhas University of Technology',
+          'specificity': 0.9,
+          'expansivity': 0.4,
+          'keywords': [
+            'Sarthak Sharma',
+            '5th semester',
+            'CSDA',
+            'Big Data Analytics',
+            'result'
+          ]
         }},
         {{
-            "step": 2,
-            "reason": "Use the roll number to find the seating arrangement for the upcoming end-semester exam.",
-            "specific_queries": [
-                {{
-                    "query": "Seating arrangement for roll number X in end-semester exam 2025",
-                    "specificity": 0.9,
-                    "expansivity": 0.5,
-                    "keywords": ["seating arrangement", "endsem", "X", "2025"]
-                }}
-            ],
-            "document_queries": [
-                "Seating Plan for End Semester Exam for A semester for branch B"
-            ]
+          'query': 'Find the 5th semester result of Saumil Aggarwal in Computer Science and Big Data Analytics (CSDA) branch at NSUT Netaji Subhas University of Technology',
+          'specificity': 0.9,
+          'expansivity': 0.4,
+          'keywords': [
+            'Saumil Aggarwal',
+            '5th semester',
+            'CSDA',
+            'Big Data Analytics',
+            'result'
+          ]
         }}
-    ]
+      ],
+      'document_queries': [
+        'Official Gazette Report for 5th semester Computer Science and Data Analytics (CSDA) branch at NSUT Netaji Subhas University of Technology'
+      ]
+    }},
+    {{
+      'step': 2,
+      'reason': "Now that we have the roll numbers of both students, we can find their seating arrangement for the 6th-semester midsem exams. Since the query is for midsem exams, and the current date is March 25, 2025, it's likely that the seating arrangement has been released.",
+      'specific_queries': [
+        {{
+          'query': 'Seating arrangement for Sarthak Sharma (roll number X) for 6th semester midsem exams in Computer Science and Big Data Analytics (CSDA) branch at NSUT Netaji Subhas University of Technology',
+          'specificity': 0.95,
+          'expansivity': 0.6,
+          'keywords': [
+            'Sarthak Sharma',
+            'roll number',
+            '6th semester',
+            'midsem exams',
+            'CSDA',
+            'Big Data Analytics'
+            'seating'
+          ]
+        }},
+        {{
+          'query': 'Seating arrangement for Saumil Aggarwal (roll number Y) for 6th semester midsem exams in Computer Science and Big Data Analytics (CSDA) branch at NSUT Netaji Subhas University of Technology',
+          'specificity': 0.95,
+          'expansivity': 0.6,
+          'keywords': [
+            'Saumil Aggarwal',
+            'roll number',
+            '6th semester',
+            'midsem exams',
+            'CSDA',
+            'Big Data Analytics'
+            'seating'
+          ]
+        }}
+      ],
+      'document_queries': [
+        'Seating plan for 6th semester midsem exams for Computer Science and Big Data Analytics (CSDA) branch at NSUT Netaji Subhas University of Technology'
+      ]
+    }}
+  ]
 }}
 📌 Reasoning Explanation:
 Step 1: Retrieve the student’s roll number from their semester result (Gazette Report).
@@ -240,6 +282,101 @@ Step 1: Directly retrieve the Fee Structure and summer semester document since t
 📌 Reasoning Explanation:
 Step 1: Directly retrieve the Fee Structure and summer semester document since the information is likely stored there. no more steps needed since the information is not interdependent, all can be inquired in 1 step
 
+
+here is some extra knowledge for augment and rewrite queries:
+ACADEMIC RECORDS:
+- Student Results & Transcripts (called gazzette reports in in title)
+- Detained Attendance Records
+- Course Registrations
+- Academic Calendar(valid for 6 months, released around start of each semester)
+- Curriculum & Syllabus Data(valid for 6 months)
+- Time tables branch-wise and semester-wise (contains course titles(either in name format or codes) and may or may not contain respective teacher, released in proximity of 1 month before semester starts)
+- course coordination comittee (CCC) (per semester document with full information of course codes mapped to course names and teacher name) 
+
+ADMINISTRATIVE DOCUMENTS:
+- Official Notices & Circulars
+- Admission Records
+- Fee Structure
+- Scholarship Information
+- NPTEL courses
+- NPTEL exam results
+- Administrative Policies
+- Disciplinary Records (Suspension/Fines/Penalties)
+- Official Gazette Reports (contains student results, if roll number of a student is wanted their any semester result, result of student with name and roll number is stored together)
+- Meeting Minutes
+- University Ordinances
+- Seating plans for students (only uses student roll numbers instead of names)
+
+CAMPUS INFORMATION: 
+- Main Campus: 
+    BBA, 
+    BFtech, 
+    B.Tech:
+        CSE(computer sceince engineering),
+        CSAI(artifical intelligence), 
+        CSDS(data science), 
+        MAC(mathematics and computing), 
+        Bio-Technology, 
+        ECE-IOT(internet of things),
+        ECE(electronics and communication engineering), 
+        EE(electrical engineering), 
+        ICE(instrumentation and control), 
+        IT(information technology), 
+        ITNS(information technology with network security),  
+        ME(Mechanical Engineering)
+
+- East Campus:
+    B.Tech:
+        CSDA(**Big** Data Analytics), (The B is not present in the full form) 
+        ECAM(artificial intelligence and machine learning), 
+        CIOT(Internet of things).  
+
+- West Campus: 
+    B.Tech:
+        ME(Mechanical Engineering),
+        MPAE(Manufacturing Process and Automation Engineering),
+        MEEV(Electric Vehicles), 
+        Civil Engineering, 
+        GeoInformatics.
+
+INSTITUTIONAL DATA:
+- provides B.tech, M.Tech, PhD, B.ba courses
+- Historical Records
+- Accreditation Documents
+- Rankings & Achievements
+- Research Grants
+- Placement Statistics
+- Alumni Network
+- Industry Partnerships
+- International Collaborations
+
+EVENT & ACTIVITY RECORDS:
+- Cultural Events
+- Technical Festivals
+- Sports Competitions
+- Workshops & Seminars
+- Club Activities
+- Student Council Records
+
+ADMISSIONS:  
+- Undergraduate admissions via JEE (conducted by NTA).  
+- Postgraduate admissions via GATE, with selection based on written tests and interviews.
+                                    
+- **Other Key Details:**  
+• Exam protocols, seating arrangements, result declaration timelines, and academic calendars.
+• each even semseter starts january, odd starts july
+• 2 semesters in an academic year
+• there is also a summer semester every year, where backlogs and improvement courses are run
+• timetables and academic calendars are released 1 month to few weeks prior to the start of the semester (may be reivsed later)
+• 2 internal CT, 1 midsem, 1 endsem, 1 endsem-practical exam
+• 1 internal exam for practical subjects (e.g. physics, chemistry, biology)
+• end semester result is released 1 month after exam (also called gazzete reports)
+• student welfare and other documents can be released whenever
+• seating arrangements and exact datesheet for exams(both theoretical and practical) are relased a week before exams, tentative dates are released with academic calendar
+
+### *Query Augmentation*
+You can use information from this knowledge to augment and enrich the query, add as much as you can from this knowledge to query
+You can also use this knnowledge to determine next steps
 
 📌 Final Reminder
 🚨 STRICT RULES TO ENFORCE:
