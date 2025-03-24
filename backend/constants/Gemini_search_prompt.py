@@ -11,6 +11,9 @@ Schema of search:
 🔍 **Current Step Queries:**  
 {specific_queries}  
 
+Previous Accumulated Knowledge (if any)
+{knowledge}
+
 STRICT JSON OUTPUT ONLY.
 ---
 
@@ -33,7 +36,8 @@ STRICT JSON OUTPUT ONLY.
 | Data 1   | Data 2   | Data 3   |  
 
 8️⃣ **If the answer is not found in the current step:**  
-   - **Retry the step if the number of remaining iterations exceeds the remaining steps in the action plan.**  
+   - **Retry the step if the number of remaining iterations exceeds the remaining steps in the action plan.** 
+   - **when retrying, always give some different variation of both specific and document queries. They should nnot be left empty**.
    - **If not, or if the current step has repeatedly failed, abandon the action plan by setting `step` to `-1` and directly search for the full answer using the original query.** 
    - **DO NOT MOVE TO NEXT STEP UNTIL ALL SUBQUERIES OF CURRENT STEP ARE COMPLETE AND ITERATIONS ARE REMAINING ENOUGH TO COMPELETE ACTION PLAN** 
 9️⃣ **Do not ask the user to check documents on their own. Until it is last iteration and full answer is not found or the query is very ambiguos**  
@@ -51,6 +55,10 @@ STRICT JSON OUTPUT ONLY.
 - **ALWAYS Use both full form and abbreviation in all document queries and specific queries and keywords** if possible.  
 - You may add a step yourself if by looking at given data you may need more information to complete the next step (like searching for names, codes, full forms etc). somewhat deviation from action plan is allowed as long as it is aiding the answer of final query. set the step to -1 in this case
 - Use your system knowledge to predict what the next step should be and proceed accordingly if the action plan is not being answered or not being applicable to data found as it was made on preconceptions, only you have actual data
+- **Document queries should not be too generic, they should still contain semester, timeframe(if given, do not add on your own), department etc** (DO NOT make queries like NSUT Netaji Subhas University of Technology Official Notices and Circulars', 'NSUT Netaji Subhas University of Technology Administrative Policies', they are incorrect)
+- **For document queries that are for data of specific people, too generic Document queries can have negative effect on the action plan and correct data retreival, if you are unsure and sufficient data is not available especially for the branch or semester, it is better to ask for more data, if even 1 is available, you may create it**.
+- **Both Document and specific queries should be sufficiently unique, they should not be different wordings of the same meaning**
+- **Specific queries should be as specific as possible, they should contain batch, semester, department, roll number etc if available**.
 ---
 
 ### **🔹 Partial Answer Accumulation & Context Storage**
@@ -149,10 +157,103 @@ If the user’s query is unrelated to the available context
 Politely reject the query instead of fabricating an answer.
 DO NOT ASK USER QUESTIONS UNTIL IT IS LAST ITERATION.
 
+here is some extra knowledge for augment and rewrite queries:
+ACADEMIC RECORDS:
+- Student Results & Transcripts (called gazzette reports in in title)
+- Detained Attendance Records
+- Course Registrations
+- Academic Calendar(valid for 6 months, released around start of each semester)
+- Curriculum & Syllabus Data(valid for 6 months)
+- Time tables branch-wise and semester-wise (contains course titles(either in name format or codes) and may or may not contain respective teacher, released in proximity of 1 month before semester starts)
+- course coordination comittee (CCC) (per semester document with full information of course codes mapped to course names and teacher name) 
+
+ADMINISTRATIVE DOCUMENTS:
+- Official Notices & Circulars
+- Admission Records
+- Fee Structure
+- Scholarship Information
+- NPTEL courses
+- NPTEL exam results
+- Administrative Policies
+- Disciplinary Records (Suspension/Fines/Penalties)
+- Official Gazette Reports (contains student results, if roll number of a student is wanted their any semester result, result of student with name and roll number is stored together)
+- Meeting Minutes
+- University Ordinances
+- Seating plans for students (only uses student roll numbers instead of names)
+
+CAMPUS INFORMATION: 
+- Main Campus: 
+    BBA, 
+    BFtech, 
+    B.Tech:
+        CSE(computer sceince engineering),
+        CSAI(artifical intelligence), 
+        CSDS(data science), 
+        MAC(mathematics and computing), 
+        Bio-Technology, 
+        ECE-IOT(internet of things),
+        ECE(electronics and communication engineering), 
+        EE(electrical engineering), 
+        ICE(instrumentation and control), 
+        IT(information technology), 
+        ITNS(information technology with network security),  
+        ME(Mechanical Engineering)
+
+- East Campus:
+    B.Tech:
+        CSDA(**Big** Data Analytics), (The B is not present in the full form) 
+        ECAM(artificial intelligence and machine learning), 
+        CIOT(Internet of things).  
+
+- West Campus: 
+    B.Tech:
+        ME(Mechanical Engineering),
+        MPAE(Manufacturing Process and Automation Engineering),
+        MEEV(Electric Vehicles), 
+        Civil Engineering, 
+        GeoInformatics.
+
+INSTITUTIONAL DATA:
+- provides B.tech, M.Tech, PhD, B.ba courses
+- Historical Records
+- Accreditation Documents
+- Rankings & Achievements
+- Research Grants
+- Placement Statistics
+- Alumni Network
+- Industry Partnerships
+- International Collaborations
+
+EVENT & ACTIVITY RECORDS:
+- Cultural Events
+- Technical Festivals
+- Sports Competitions
+- Workshops & Seminars
+- Club Activities
+- Student Council Records
+
+ADMISSIONS:  
+- Undergraduate admissions via JEE (conducted by NTA).  
+- Postgraduate admissions via GATE, with selection based on written tests and interviews.
+                                    
+- **Other Key Details:**  
+• Exam protocols, seating arrangements, result declaration timelines, and academic calendars.
+• each even semseter starts january, odd starts july
+• 2 semesters in an academic year
+• there is also a summer semester every year, where backlogs and improvement courses are run
+• timetables and academic calendars are released 1 month to few weeks prior to the start of the semester (may be reivsed later)
+• 2 internal CT, 1 midsem, 1 endsem, 1 endsem-practical exam
+• 1 internal exam for practical subjects (e.g. physics, chemistry, biology)
+• end semester result is released 1 month after exam (also called gazzete reports)
+• student welfare and other documents can be released whenever
+• seating arrangements and exact datesheet for exams(both theoretical and practical) are relased a week before exams, tentative dates are released with academic calendar
+
+### *Query Augmentation*
+You can use information from this knowledge to augment and enrich the query
+You can also use this knnowledge to determine next steps
+
 
 🔹 Additional Context for This Iteration
-Previous Accumulated Knowledge (if any)
-{knowledge}
 
 user known information (if any)
 {user_knowledge}

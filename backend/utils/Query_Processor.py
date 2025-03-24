@@ -17,11 +17,12 @@ from google.api_core.exceptions import GoogleAPIError, ResourceExhausted
 from models.chat_model import expand, answer
 from google import genai
 from google.genai import types
-from together import Together
+from google.genai.types import EmbedContentConfig
+import requests
 load_dotenv()
 GEMINI_API_KEY = os.getenv("GOOGLE_API_KEY")
 MONGO_URI_MIMIIR = os.getenv("MONGO_URI_MIMIR")
-TOGETHER_API_KEY = os.getenv("TOGETHER_API_KEY")
+JINA_API_KEY = os.getenv("JINA_API_KEY")
 mongoDb_client = AsyncIOMotorClient(MONGO_URI_MIMIIR)
 
 llm = "gemini-2.0-flash"
@@ -29,7 +30,6 @@ client = genai.Client(api_key=GEMINI_API_KEY)
 
 class QueryProcessor:
     def __init__(self):
-        self.Together_client = Together(api_key=TOGETHER_API_KEY)
         self.embeddings = GoogleGenerativeAIEmbeddings(model="models/text-embedding-004")
         self.client = mongoDb_client
         self.db = self.client["Docs"]
@@ -135,8 +135,7 @@ class QueryProcessor:
             context += f"{meta}\n\n"
         return context
     
-    async def _doc_query(self, query: str, limit: int) -> list:
-        doc_query_vector = self._get_vector(query)
+    async def _doc_query(self, doc_query_vector, limit: int, query: str) -> list:
         pipeline = [
             {
                 "$vectorSearch": {
@@ -156,28 +155,26 @@ class QueryProcessor:
             }
         ]
         result = self.documents.aggregate(pipeline)
-        docs = [{"_id" : str(doc["_id"]), "summary" : doc["summary"], "Publish Date": doc["Publish Date"].date().isoformat()} async for doc in result]
-        reranked = self._rerank(docs, query, ["summary", "Publish Date"])
-        for i in range(len(reranked)):
-            reranked[i]["_id"] = ObjectId(reranked[i]["_id"])
+        docs = [{"_id" : doc["_id"], "summary" : doc["summary"], "Publish Date": doc["Publish Date"].date().isoformat()} async for doc in result]
+        reranked = await self._rerank(docs, query, "summary")
         return reranked
 
     async def _search_docs(self, queries: list) -> list:
         """Search documents based on query string"""
         limit = 50
-        async def doc_query(query):
-            return await self._doc_query(query, limit)
-        tasks = {query: asyncio.create_task(doc_query(query)) for query in queries}
-        results_list = await asyncio.gather(*tasks.values())
+        async def doc_query(queryembed, query):
+            return await self._doc_query(queryembed, limit, query)
+        queryembeds = self._get_vector(queries)
+        tasks = [asyncio.create_task(doc_query(queryembeds[i], queries[i])) for i in range(len(queryembeds))]
+        results_list = await asyncio.gather(*tasks)
         results = [item for sublist in results_list for item in sublist]
         resultset = set()
         for item in results:
             resultset.add(item["_id"])
         return list(resultset)
 
-    async def _search_query(self, query: str, seen_ids: set, minscore: float, vector_weight: float, full_text_weight: float, limit: int, keywords: list, doc_ids: list) -> list:
+    async def _search_query(self, query_vector, seen_ids: set, minscore: float, vector_weight: float, full_text_weight: float, limit: int, keywords: list, doc_ids: list, query: str) -> list:
         """Search query with MongoDB quota handling"""
-        query_vector = self._get_vector(query)
         pipeline = [
             {
                 "$vectorSearch": {
@@ -344,16 +341,16 @@ class QueryProcessor:
             {"$sort": {"score": -1}},
             {"$limit": limit}
         ]
-        # if keywords:
-        #     pipeline[8]["$unionWith"]["pipeline"][0]["$search"]["compound"]["must"].append({"phrase": {"query": keywords, "path": "text"}})
-        # else:
-        pipeline[8]["$unionWith"]["pipeline"][0]["$search"]["compound"]["must"].append({"text": {"query": query, "path": "text"}})
+        if keywords:
+            pipeline[8]["$unionWith"]["pipeline"][0]["$search"]["compound"]["must"].append({"phrase": {"query": keywords, "path": "text"}})
+        else:
+            pipeline[8]["$unionWith"]["pipeline"][0]["$search"]["compound"]["must"].append({"text": {"query": query, "path": "text"}})
         
         if doc_ids:
             pipeline[8]["$unionWith"]["pipeline"][0]["$search"]["compound"]["must"].append({"in": {"path": "doc_id", "value": doc_ids}})
-            pipeline[0]["$vectorSearch"]["filter"] = {"_id": {"$nin": list(seen_ids)}, "doc_id": {"$in": doc_ids}}
-        else:
-            pipeline[0]["$vectorSearch"]["filter"] = {"_id": {"$nin": list(seen_ids)}}
+        #     pipeline[0]["$vectorSearch"]["filter"] = {"_id": {"$nin": list(seen_ids)}, "doc_id": {"$in": doc_ids}}
+        # else:
+        #     pipeline[0]["$vectorSearch"]["filter"] = {"_id": {"$nin": list(seen_ids)}}
 
 
         for attempt in range(5):  # Retry up to 5 times
@@ -380,8 +377,17 @@ class QueryProcessor:
             limit = int(max(10, 25 * query["expansivity"]))
             vector_weight = min(0.7, max(0.3, 1 - query["specificity"]))
             full_text_weight = 1 - vector_weight
-            return await self._search_query(query["query"], seen_ids, minscore, vector_weight, full_text_weight, limit, query["keywords"], doc_ids)
-            
+            return await self._search_query(query["embedding"], seen_ids, minscore, vector_weight, full_text_weight, limit, query["keywords"], doc_ids, query["query"])
+        
+        query_embedlist = []
+        for query in queries:
+            query_embedlist.append(query["query"])
+
+        query_embeds = self._get_vector(query_embedlist)
+
+        for i in range(len(queries)):
+            queries[i]["embedding"] = query_embeds[i]
+        
         tasks = {query["query"]: asyncio.create_task(search_query(query)) for query in queries}
         results_list = await asyncio.gather(*tasks.values())
         results = {query: result for query, result in zip(tasks.keys(), results_list)}
@@ -402,20 +408,34 @@ class QueryProcessor:
         processed = self._process_chunks(docs, all_results, chunk_query_mapping)
         return processed, docs, seen_ids
     
-    def _rerank(self, docs: list, question: str, fields: list) -> list:
+    async def _rerank(self, docs: list, question: str, field: str) -> list:
         """Generate reranking"""
+        url = 'https://api.jina.ai/v1/rerank'
+        headers = {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + JINA_API_KEY
+        }
+        data = {
+            "model": "jina-reranker-v2-base-multilingual",
+            "query": question,
+            "top_n": 20,
+            "documents": [doc[field] for doc in docs]
+        }
         reranked = []
+        response = requests.post(url, headers=headers, json=data)
+        for result in json.loads(response.text)["results"]:
+            reranked.append(docs[result["index"]])
+        # response = self.Together_client.rerank.create(
+        #     model="Salesforce/Llama-Rank-V1",
+        #     query=question,
+        #     documents=docs,
+        #     rank_fields=fields,
+        #     top_n=50
+        # )
+        # for result in response.results:
+        #     if result.relevance_score >= 0.4:
+        #         reranked.append(docs[result.index])
 
-        response = self.Together_client.rerank.create(
-            model="Salesforce/Llama-Rank-V1",
-            query=question,
-            documents=docs,
-            rank_fields=fields,
-            top_n=15
-        )
-
-        for result in response.results:
-            reranked.append(docs[result.index])
         return reranked
     
     async def _expand_query(self, query: str, user_knowledge: str) -> list:
@@ -495,7 +515,12 @@ class QueryProcessor:
             raise ValueError("Failed to extract JSON from model response")
         return json_data
 
-
-    def _get_vector(self, text: str):
+    def _get_vector(self, texts: list):
         """Generate embedding with proper error handling"""
-        return self.embeddings.embed_query(text)
+        response = client.models.embed_content(
+            model="text-embedding-004",
+            contents=texts,
+            config=EmbedContentConfig(task_type="RETRIEVAL_DOCUMENT")
+        )
+        embeddings = [embedding.values for embedding in response.embeddings]
+        return embeddings
