@@ -25,7 +25,7 @@ class response(BaseModel):
 
 class query(BaseModel):
     query: str
-    specifity: float
+    specificity: float
     expansivity: float
     keywords: list[str]
 

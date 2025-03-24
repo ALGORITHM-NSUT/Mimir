@@ -40,12 +40,15 @@ STRICT JSON OUTPUT ONLY.
 🔟 **Ensure extracted knowledge is distinct from user-known information; do not repeat information already known.**
 11. **DO NOT GIVE ANSWERABLE AS TRUE UNTIL THE FINAL ANSWER IS FOUND, ANSWERABLE IS FLAG MEANT ONLY FOR FINAL ANSWER AND NOT FOR STEPS**
 12. **If you cannot fully answer all aspects of user query till last iteration, atleast partially answer it through kept knowledge**.
+13. **If full answer is found in the current step and you are returning it, do not return links from previous steps knowledge that are irrelevant to user query, if the links are relevant (useful knowledge was obtained from them) then return them**.
 ---
 
 ### **🔹 Next Step Query Generation**
 - After executing the current step, generate queries for the **next step** of the action plan if applicable. 
 - If the current step is successfully completed, generate the augmented queries for the **next step in the action plan.** using the answer of current step and previous knowledge
-- What kind of queries to generate for next step is defined in the action plan itself.   
+- What kind of queries to generate for next step is defined in the action plan itself. 
+- Re-write queries to be more context-rich the current information you have  
+- **ALWAYS Use both full form and abbreviation in all document queries and specific queries and keywords** if possible.  
 - You may add a step yourself if by looking at given data you may need more information to complete the next step (like searching for names, codes, full forms etc). somewhat deviation from action plan is allowed as long as it is aiding the answer of final query. set the step to -1 in this case
 - Use your system knowledge to predict what the next step should be and proceed accordingly if the action plan is not being answered or not being applicable to data found as it was made on preconceptions, only you have actual data
 ---
@@ -66,10 +69,9 @@ STRICT JSON OUTPUT ONLY.
 3️⃣ **Retry a failed step only if remaining iterations > remaining steps in the action plan.**  
 4️⃣ **If the full answer for Original User query is found before completing all steps, terminate the action plan early and return the final answer.**  
 5️⃣ **If data for a future step is already available, skip to that step and update the `step` accordingly.**  
-6️⃣ **If the current step fails and IF and ONLY IF remaining iterations are insufficient to complete the plan, set `step` to `-1` and search directly for the final answer using the original query.**
-7. **If the current step fails and remaining iterations are sufficient to complete the plan, retry the step. give step = current step in json with same queries**
+6️⃣ **If the current step fails and remaining iterations are sufficient to complete the plan, retry the step. give step = current step in json with ONLY the failed queries**
+7. **If the current step fails and IF and ONLY IF remaining iterations are insufficient to complete the plan, set `step` to `-1` and search directly for the final answer using the original query.**
 8. **If it is the last iteration and user query is not directly answered, return relevant documents with links and titles and tell user answer can be found here.**
-
 ---
 ## **📌 Guidelines for Specificity Score (`specificity`)**
 - Assign a **float value between `0.0` and `1.0`** to indicate how specific the original query is.  
@@ -102,13 +104,13 @@ STRICT JSON OUTPUT ONLY.
         {{
             "query": "Sub-query 1 augmented with knowledge from previous steps",
             "keywords": ["Keyword 1", "Keyword 2"], (same as action plan, replaced with actual data values from previous steps)
-            "specifity: : float (same as action plan for this step and sub-query, unless using a different query and abandoning it, then recalculate it yourself)
+            "specificity: : float (same as action plan for this step and sub-query, unless using a different query and abandoning it, then recalculate it yourself)
             "expansivity": float (same as action plan for this step and sub-query, unless using a different query and abandoning it, then keep it high)
         }},
         {{
             "query": "Sub-query 1 augmented with knowledge from previous steps",
             "keywords": ["Keyword 1", "Keyword 2"],
-            "specifity: : float,
+            "specificity: : float,
             "expansivity": float
         }},
         ...

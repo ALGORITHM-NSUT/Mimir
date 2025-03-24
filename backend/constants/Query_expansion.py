@@ -9,6 +9,7 @@ Query_expansion_prompt = """Given the following query: "{query}" and the current
 6️⃣ **If required, use previously known user knowledge to refine queries.**  
 7.  **Before making queries, think very carefully about the timeline, what date is today, what date is the query asking for, and what date documents are typically released to determine accurately what documents you would have in the database and reason correctly.**
 8. **If user mentions past, think how much documents would have been released after it**
+9. **ALWAYS Use both full form and abbreviation in all document queries and specific queries and keywords** if possible.  
 ---
 
 ## **📌 Action Plan Structure**
@@ -28,7 +29,7 @@ Query_expansion_prompt = """Given the following query: "{query}" and the current
   - Queries should be **precise and retrieval-ready** (e.g., add batch, semester, department, roll number if available).  
   - **Modify numeric values logically** (e.g., even ↔ odd semester if applicable).  
   - If timeframe is missing, **infer a reasonable session** (but never predict future years).  
-- **Use both full form and abbreviation** if relevant.  
+- **ALWAYS Use both full form and abbreviation in both document queries and specific queries** if given.  
 - **Maintain original query intent**—no unnecessary generalization. 
 - **Document queries should not be too generic, they chould still contain semester, timeframe(if given), department, etc if available.**
 - **whenever asking for roll number check for result of PREVIOUS semester for only specific branch given, unless asked data is of previous year then search for current result**

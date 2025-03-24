@@ -17,10 +17,11 @@ from google.api_core.exceptions import GoogleAPIError, ResourceExhausted
 from models.chat_model import expand, answer
 from google import genai
 from google.genai import types
-
+from together import Together
 load_dotenv()
 GEMINI_API_KEY = os.getenv("GOOGLE_API_KEY")
 MONGO_URI_MIMIIR = os.getenv("MONGO_URI_MIMIR")
+TOGETHER_API_KEY = os.getenv("TOGETHER_API_KEY")
 mongoDb_client = AsyncIOMotorClient(MONGO_URI_MIMIIR)
 
 llm = "gemini-2.0-flash"
@@ -28,6 +29,7 @@ client = genai.Client(api_key=GEMINI_API_KEY)
 
 class QueryProcessor:
     def __init__(self):
+        self.Together_client = Together(api_key=TOGETHER_API_KEY)
         self.embeddings = GoogleGenerativeAIEmbeddings(model="models/text-embedding-004")
         self.client = mongoDb_client
         self.db = self.client["Docs"]
@@ -71,6 +73,8 @@ class QueryProcessor:
                 print(f"could not find ans, returning relevant info")
                 return ans
             knowledge = ans["partial_answer"]
+            if "links" in ans and len(ans["links"]) != 0:
+                knowledge = knowledge + " " + json.dumps(ans["links"], indent=2)
             if (ans["step"] == -1):
                 deviation = step
             step = ans["step"]
@@ -145,12 +149,18 @@ class QueryProcessor:
             },
             {
                 "$project": {
-                    "_id": 1
+                    "_id": 1,
+                    "summary": 1,
+                    "Publish Date": 1
                 }
             }
         ]
         result = self.documents.aggregate(pipeline)
-        return [doc["_id"] async for doc in result]
+        docs = [{"_id" : str(doc["_id"]), "summary" : doc["summary"], "Publish Date": doc["Publish Date"].date().isoformat()} async for doc in result]
+        reranked = self._rerank(docs, query, ["summary", "Publish Date"])
+        for i in range(len(reranked)):
+            reranked[i]["_id"] = ObjectId(reranked[i]["_id"])
+        return reranked
 
     async def _search_docs(self, queries: list) -> list:
         """Search documents based on query string"""
@@ -160,9 +170,10 @@ class QueryProcessor:
         tasks = {query: asyncio.create_task(doc_query(query)) for query in queries}
         results_list = await asyncio.gather(*tasks.values())
         results = [item for sublist in results_list for item in sublist]
-        resultset = set(results)
-        results = list(resultset)
-        return results
+        resultset = set()
+        for item in results:
+            resultset.add(item["_id"])
+        return list(resultset)
 
     async def _search_query(self, query: str, seen_ids: set, minscore: float, vector_weight: float, full_text_weight: float, limit: int, keywords: list, doc_ids: list) -> list:
         """Search query with MongoDB quota handling"""
@@ -333,10 +344,10 @@ class QueryProcessor:
             {"$sort": {"score": -1}},
             {"$limit": limit}
         ]
-        if keywords:
-            pipeline[8]["$unionWith"]["pipeline"][0]["$search"]["compound"]["must"].append({"phrase": {"query": keywords, "path": "text"}})
-        else:
-            pipeline[8]["$unionWith"]["pipeline"][0]["$search"]["compound"]["must"].append({"text": {"query": query, "path": "text"}})
+        # if keywords:
+        #     pipeline[8]["$unionWith"]["pipeline"][0]["$search"]["compound"]["must"].append({"phrase": {"query": keywords, "path": "text"}})
+        # else:
+        pipeline[8]["$unionWith"]["pipeline"][0]["$search"]["compound"]["must"].append({"text": {"query": query, "path": "text"}})
         
         if doc_ids:
             pipeline[8]["$unionWith"]["pipeline"][0]["$search"]["compound"]["must"].append({"in": {"path": "doc_id", "value": doc_ids}})
@@ -367,7 +378,7 @@ class QueryProcessor:
 
         async def search_query(query):
             limit = int(max(10, 25 * query["expansivity"]))
-            vector_weight = min(0.7, max(0.3, 1 - query["specifity"]))
+            vector_weight = min(0.7, max(0.3, 1 - query["specificity"]))
             full_text_weight = 1 - vector_weight
             return await self._search_query(query["query"], seen_ids, minscore, vector_weight, full_text_weight, limit, query["keywords"], doc_ids)
             
@@ -391,24 +402,21 @@ class QueryProcessor:
         processed = self._process_chunks(docs, all_results, chunk_query_mapping)
         return processed, docs, seen_ids
     
-    def _rerank(self, formatted: dict, question: str) -> list:
+    def _rerank(self, docs: list, question: str, fields: list) -> list:
         """Generate reranking"""
         reranked = []
-        trial = []
-        for key, docs in formatted.items():
-            trial.extend(docs)
 
-        # response = self.Together_client.rerank.create(
-        #     model="Salesforce/Llama-Rank-V1",
-        #     query=question,
-        #     documents=trial,
-        #     rank_fields=["content", "Title", "Publish Date"],
-        #     top_n=15
-        # )
+        response = self.Together_client.rerank.create(
+            model="Salesforce/Llama-Rank-V1",
+            query=question,
+            documents=docs,
+            rank_fields=fields,
+            top_n=15
+        )
 
-        # for result in response.results:
-        #     reranked.append(trial[result.index])
-        return trial
+        for result in response.results:
+            reranked.append(docs[result.index])
+        return reranked
     
     async def _expand_query(self, query: str, user_knowledge: str) -> list:
         """Generate initial query variations with API quota handling"""
