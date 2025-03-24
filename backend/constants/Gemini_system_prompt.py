@@ -4,7 +4,7 @@ ACADEMIC RECORDS:
 - Student Results & Transcripts (called gazzette reports in in title)
 - Detained Attendance Records
 - Course Registrations
-- Academic Calendar(valid for 6 months)
+- Academic Calendar(valid for 6 months, released around start of each semester)
 - Curriculum & Syllabus Data(valid for 6 months)
 - Time tables branch-wise and semester-wise (contains course titles(either in name format or codes) and may or may not contain respective teacher, released in proximity of 1 month before semester starts)
 - course coordination comittee (CCC) (per semester document with full information of course codes mapped to course names and teacher name) 
