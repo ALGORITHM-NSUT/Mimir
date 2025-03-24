@@ -24,30 +24,34 @@ const ChatLoader = () => {
   }, []);
 
   return (
-    <Paper sx={{ p: 3, textAlign: "center", mx: "auto", bgcolor: "transparent", boxShadow: "none" }}>
-      <Typography variant="h6" fontWeight="bold" color="#a78bfa" gutterBottom>
-        {steps[activeStep]}...
-      </Typography>
+    // <Paper sx={{ p: 3, textAlign: "center", mx: "auto", bgcolor: "transparent", boxShadow: "none" }}>
+    //   <Typography variant="h6" fontWeight="bold" color="#a78bfa" gutterBottom>
+    //     {steps[activeStep]}...
+    //   </Typography>
 
-      <Box display="flex" justifyContent="center" my={2}>
-        {stepIcons[activeStep]}
-      </Box>
+    //   <Box display="flex" justifyContent="center" my={2}>
+    //     {stepIcons[activeStep]}
+    //   </Box>
 
-      <Stepper activeStep={activeStep} alternativeLabel={!isMobile} orientation={isMobile ? "vertical" : "horizontal"}>
-        {steps.map((label, index) => (
-          <Step key={index}>
-            <StepLabel
-              sx={{
-                "& .MuiStepLabel-label": { color: "#ddd", fontSize: isMobile ? "12px" : "14px" },
-                "& .MuiStepIcon-root": { color: activeStep >= index ? "#a78bfa" : "#555" },
-              }}
-            >
-              {label}
-            </StepLabel>
-          </Step>
-        ))}
-      </Stepper>
-    </Paper>
+    //   <Stepper activeStep={activeStep} alternativeLabel={!isMobile} orientation={isMobile ? "vertical" : "horizontal"}>
+    //     {steps.map((label, index) => (
+    //       <Step key={index}>
+    //         <StepLabel
+    //           sx={{
+    //             "& .MuiStepLabel-label": { color: "#ddd", fontSize: isMobile ? "12px" : "14px" },
+    //             "& .MuiStepIcon-root": { color: activeStep >= index ? "#a78bfa" : "#555" },
+    //           }}
+    //         >
+    //           {label}
+    //         </StepLabel>
+    //       </Step>
+    //     ))}
+    //   </Stepper>
+    // </Paper>
+
+    <div>
+      <span>Loading..</span>
+    </div>
   );
 };
 

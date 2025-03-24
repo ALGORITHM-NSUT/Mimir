@@ -36,7 +36,7 @@ const Response = ({ text, timestamp }) => {
       setShowAnimation(true);
 
       // Prevent re-animation on page refresh
-      setTimeout(() => setShowAnimation(false), 2000);
+      setTimeout(() => setShowAnimation(false), (text.length)*300);
     }
   }, [timestamp]);
 

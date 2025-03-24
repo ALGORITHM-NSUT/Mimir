@@ -1,5 +1,7 @@
 from datetime import datetime
 from fastapi import HTTPException
+import asyncio
+import threading
 from pymongo import ASCENDING
 from utils.db import db
 from utils.token_utils import generate_secure_token
@@ -17,6 +19,7 @@ from constants.Semantic_cache_prompt import Semantic_cache_prompt
 messages_collection = db["messages"]
 user_chats_collection = db["user_chats"]
 GEMINI_API_KEY = os.getenv("GOOGLE_API_KEY")
+client = genai.Client(api_key=GEMINI_API_KEY)
 
 async def prepare_chat_data(data: dict) -> dict:
     chatId = data.get("chatId")
@@ -41,34 +44,37 @@ async def prepare_chat_data(data: dict) -> dict:
 
     return data
 
+def run_in_thread(func, *args):
+    """Run function in a separate thread to avoid blocking FastAPI."""
+    thread = threading.Thread(target=func, args=args, daemon=True)
+    thread.start()
 
-async def handle_chat_request(data: dict):
+def handle_chat_request_sync(data: dict):
+    """Sync version of handle_chat_request to run in a worker thread."""
     chatId = data.get("chatId")
     message = data.get("message")
     userId = data.get("userId")
     chatHistory = data.get("chatHistory")
     messageId = data.get("messageId")
-    client = genai.Client(api_key=GEMINI_API_KEY)
-    chats = client.chats.create(model="gemini-2.0-flash-lite", 
-        config=types.GenerateContentConfig(
-        system_instruction=Semantic_cache_prompt,
-        response_mime_type='application/json',
-        response_schema=response_format)
-    )
-    if not userId:
-        raise HTTPException(status_code=400, detail="User ID is required")
 
-    print(data)
+    if not userId:
+        return
+
+    chats = client.chats.create(
+        model="gemini-2.0-flash-lite",
+        config=types.GenerateContentConfig(
+            system_instruction=Semantic_cache_prompt,
+            response_mime_type="application/json",
+            response_schema=response_format,
+        ),
+    )
 
     if chatHistory:
         for chat in chatHistory:
-            try:
-                # Ensure "query" exists and is a string
-                query = chat.get("query")
-                if not isinstance(query, str):
-                    raise ValueError(f"Invalid query format in chat: {chat}")
+            query = chat.get("query")
+            response = chat.get("response")
 
-                # Handle missing or malformed references
+            if isinstance(query, str) and isinstance(response, str):
                 references = ""
                 if "references" in chat and isinstance(chat["references"], list):
                     references_list = [
@@ -79,22 +85,15 @@ async def handle_chat_request(data: dict):
                     if references_list:
                         references = "\nLinks:\n" + " \n ".join(references_list)
 
-                # Ensure "response" exists and is a string
-                response = chat.get("response")
-                if not isinstance(response, str):
-                    raise ValueError(f"Invalid response format in chat: {chat}")
-
-                chats.record_history(user_input=UserContent(parts=[{"text": query}]),
+                chats.record_history(
+                    user_input=UserContent(parts=[{"text": query}]),
                     model_output=[Content(parts=[{"text": response + references}], role="model")],
                     is_valid=True,
-                    automatic_function_calling_history=None
+                    automatic_function_calling_history=None,
                 )
 
-            except Exception as e:
-                print(f"Error processing chat entry: {e}")
-
     try:
-        full_response = await response_strategy(message, chats)
+        full_response = asyncio.run(response_strategy(message, chats))  # Run async in sync mode
         response_text = full_response["response"]
         references = full_response["references"]
 
@@ -108,17 +107,14 @@ async def handle_chat_request(data: dict):
             "timestamp": datetime.utcnow(),
         }
 
-        inserted_message = await messages_collection.insert_one(message_data)
-        message_id = str(inserted_message.inserted_id)
-        
-        return {
-            "chatId": chatId,
-            "messageId": message_id,
-            "response": response_text,
-            "references": references,
-        }
+        asyncio.run(messages_collection.insert_one(message_data))  # Run DB insert in sync mode
+
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        print(f"Chat processing error: {e}")
+
+async def handle_chat_request(data: dict):
+    """Wrapper to run in background thread."""
+    run_in_thread(handle_chat_request_sync, data)
 
 async def get_all_chats(userId: str):
     if not userId:
