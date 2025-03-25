@@ -72,7 +72,8 @@ class QueryProcessor:
             if iteration == max_iter - 1:
                 print(f"could not find ans, returning relevant info")
                 return ans
-            knowledge += ans["partial_answer"]
+            if "partial_answer" in ans:
+                knowledge += ans["partial_answer"]
             if "links" in ans and len(ans["links"]) != 0:
                 knowledge = knowledge + " " + json.dumps(ans["links"], indent=2)
             if (ans["step"] == -1):
