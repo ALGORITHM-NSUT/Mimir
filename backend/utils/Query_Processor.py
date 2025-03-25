@@ -72,7 +72,7 @@ class QueryProcessor:
             if iteration == max_iter - 1:
                 print(f"could not find ans, returning relevant info")
                 return ans
-            knowledge = ans["partial_answer"]
+            knowledge += ans["partial_answer"]
             if "links" in ans and len(ans["links"]) != 0:
                 knowledge = knowledge + " " + json.dumps(ans["links"], indent=2)
             if (ans["step"] == -1):
@@ -233,14 +233,14 @@ class QueryProcessor:
                                     "must": [
                                         
                                     ],
-                                    "mustNot": [
-                                        {
-                                            "in": {
-                                            "path": "_id",
-                                            "value": list(seen_ids)
-                                            }
-                                        }
-                                    ]
+                                    # "mustNot": [
+                                    #     {
+                                    #         "in": {
+                                    #         "path": "_id",
+                                    #         "value": list(seen_ids)
+                                    #         }
+                                    #     }
+                                    # ]
                                 }
                             }
                         },
