@@ -28,6 +28,28 @@ mongoDb_client = AsyncIOMotorClient(MONGO_URI_MIMIIR)
 llm = "gemini-2.0-flash"
 client = genai.Client(api_key=GEMINI_API_KEY)
 
+MAX_RETRIES = 5
+
+def _retry_on_error(func):
+    async def wrapper(*args, **kwargs):
+        for attempt in range(MAX_RETRIES):
+            try:
+                return await func(*args, **kwargs)
+            except (OperationFailure, ResourceExhausted) as e:
+                print(f"Error in {func.__name__}: {e}, retrying...")
+                await asyncio.sleep(2 ** attempt + random.uniform(0, 1))
+            except GoogleAPIError as e:
+                print(f"Google API error in {func.__name__}: {e}")
+                return None
+            except json.JSONDecodeError:
+                print(f"JSON parsing error in {func.__name__}, retrying...")
+                await asyncio.sleep(2 ** attempt + random.uniform(0, 1))
+            except Exception as e:
+                print(f"Unexpected error in {func.__name__}: {e}")
+                return None
+        raise Exception(f"{func.__name__} failed after multiple retries.")
+    return wrapper
+
 class QueryProcessor:
     def __init__(self):
         self.embeddings = GoogleGenerativeAIEmbeddings(model="models/text-embedding-004")
@@ -163,7 +185,7 @@ class QueryProcessor:
         limit = 50
         async def doc_query(queryembed, query):
             return await self._doc_query(queryembed, limit, query)
-        queryembeds = self._get_vector(queries)
+        queryembeds = await self._get_vector(queries)
         tasks = [asyncio.create_task(doc_query(queryembeds[i], queries[i])) for i in range(len(queryembeds))]
         results_list = await asyncio.gather(*tasks)
         results = [item for sublist in results_list for item in sublist]
@@ -380,7 +402,7 @@ class QueryProcessor:
         for query in queries:
             query_embedlist.append(query["query"])
 
-        query_embeds = self._get_vector(query_embedlist)
+        query_embeds = await self._get_vector(query_embedlist)
 
         for i in range(len(queries)):
             queries[i]["embedding"] = query_embeds[i]
@@ -408,24 +430,20 @@ class QueryProcessor:
             'Content-Type': 'application/json',
             'Authorization': 'Bearer ' + JINA_API_KEY
         }
-        searchspace = []
-        for doc in docs:
-            chunk = ""
-            for field in fields:
-                if field in doc and doc[field] is not None:
-                    chunk += doc[field] + "\n"
-            searchspace.append(chunk)
+        searchspace = ["\n".join(doc[field] for field in fields if field in doc and doc[field] is not None) for doc in docs]
         data = {
             "model": "jina-reranker-v2-base-multilingual",
             "query": question,
             "top_n": min(20, len(docs)),
             "documents": searchspace
         }
-        reranked = []
-        response = requests.post(url, headers=headers, json=data)
-        for result in json.loads(response.text)["results"]:
-            if result["relevance_score"] > 0.3:
-                reranked.append(docs[result["index"]])
+        try:
+            response = requests.post(url, headers=headers, json=data)
+            response.raise_for_status()
+            return [docs[result["index"]] for result in response.json()["results"] if result["relevance_score"] > 0.3]
+        except Exception as e:
+            print(f"Reranking failed: {e}, returning original documents.")
+            return docs
         # response = self.Together_client.rerank.create(
         #     model="Salesforce/Llama-Rank-V1",
         #     query=question,
@@ -437,7 +455,7 @@ class QueryProcessor:
         #     if result.relevance_score >= 0.4:
         #         reranked.append(docs[result.index])
 
-        return reranked
+        # return reranked
     
     async def _expand_query(self, query: str, user_knowledge: str) -> list:
         """Generate initial query variations with API quota handling"""
@@ -460,9 +478,10 @@ class QueryProcessor:
                 try:
                     json_data = json.loads(match.group(0), strict = False)
                     print(json_data)
+                    return json_data["action_plan"]
                 except:
                     raise ValueError("Failed to extract JSON from model response")
-                return json_data["action_plan"]
+                
                         
             except (json.JSONDecodeError, ValueError) as e:
                 print(f"Error parsing response: {e}, retrying...")
@@ -488,41 +507,57 @@ class QueryProcessor:
             specific_queries = plan[step - 1]["specific_queries"]
         else:
             specific_queries = ["abandoned action plan in previous step directly searching user queries"]
-        response = client.models.generate_content(
-            model = llm,
-            contents = [self.search_prompt.format(question=question,
-                context=context,
-                current_date=current_date,
-                action_plan=plan,
-                knowledge=knowledge,
-                max_iter=max_iter,
-                iteration=iteration,
-                user_knowledge=user_knowledge,
-                step=step,
-                specific_queries=specific_queries,
-                deviation = previous_step_knowledge)],
-            config=types.GenerateContentConfig(
-                system_instruction=GEMINI_PROMPT,
-                response_mime_type='application/json',
-                response_schema=answer,
-                temperature=0.2)
-            ).text
-        
-        match = re.search(r'\{.*\}', response, re.DOTALL)  # Extract JSON safely
-        if not match:
-            raise ValueError("Failed to extract JSON from model response")
-        try:
-            json_data = json.loads(match.group(0), strict = False)
-        except:
-            raise ValueError("Failed to extract JSON from model response")
-        return json_data
+        for attempt in range(MAX_RETRIES):
+            try:
+                response = client.models.generate_content(
+                    model = llm,
+                    contents = [self.search_prompt.format(question=question,
+                        context=context,
+                        current_date=current_date,
+                        action_plan=plan,
+                        knowledge=knowledge,
+                        max_iter=max_iter,
+                        iteration=iteration,
+                        user_knowledge=user_knowledge,
+                        step=step,
+                        specific_queries=specific_queries,
+                        deviation = previous_step_knowledge)],
+                    config=types.GenerateContentConfig(
+                        system_instruction=GEMINI_PROMPT,
+                        response_mime_type='application/json',
+                        response_schema=answer,
+                        temperature=0.2)
+                    ).text
+                
+                match = re.search(r'\{.*\}', response, re.DOTALL)  # Extract JSON safely
+                if not match:
+                    raise ValueError("Failed to extract JSON from model response")
+                try:
+                    json_data = json.loads(match.group(0), strict = False)
+                    return json_data
+                except:
+                    print("Retrying JSON extraction in _generate_answer...")
+                    raise ValueError("Failed to extract JSON from model response")
 
-    def _get_vector(self, texts: list):
-        """Generate embedding with proper error handling"""
+            except (json.JSONDecodeError, ValueError) as e:
+                print(f"Error parsing response: {e}, retrying...")
+
+            except ResourceExhausted:
+                print(f"Quota exceeded, retrying after delay...")
+                time.sleep(2 ** attempt + random.uniform(0, 1))  # Exponential backoff
+
+            except GoogleAPIError as e:
+                print(f"Google API error: {e}")
+                break  # If it's an unknown API error, don't retry
+
+
+    async def _get_vector(self, texts: list):
+        if not texts:
+            raise Exception("Internal Server Error: requests must not be empty")
+        
         response = client.models.embed_content(
             model="text-embedding-004",
             contents=texts,
             config=EmbedContentConfig(task_type="RETRIEVAL_DOCUMENT")
         )
-        embeddings = [embedding.values for embedding in response.embeddings]
-        return embeddings
+        return [embedding.values for embedding in response.embeddings]
