@@ -44,13 +44,7 @@ const ChatPage = () => {
     }
   }, [chatHistory]);
 
-  useEffect(() => {
-    const handleMouseMove = (e) => {
-      if (e.clientX <= 20) setIsSidebarOpen(true);
-    };
-    window.addEventListener("mousemove", handleMouseMove);
-    return () => window.removeEventListener("mousemove", handleMouseMove);
-  }, []);
+
 
   useEffect(() => {
     const handleClickOutside = (e) => {

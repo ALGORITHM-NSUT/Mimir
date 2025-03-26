@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import ScrollPrompt from "./ScrollPrompt";
+import LoginPage from "../../pages/LoginPage";
+import LoginModal from "../../modals/LoginModal"; // Import the Modal component
 
 const GetStarted = () => {
-  const navigate = useNavigate();
   const [showScrollPrompt, setShowScrollPrompt] = useState(true);
+  const [isModalOpen, setIsModalOpen] = useState(false); // Modal control
 
   useEffect(() => {
     const handleScroll = () => {
@@ -44,10 +45,15 @@ const GetStarted = () => {
 
       <motion.button
         className="mt-14 px-6 py-4 bg-gray-100 text-black rounded-xl text-xl sm:text-2xl hover:bg-gray-300 transition"
-        onClick={() => navigate("/login")}
+        onClick={() => setIsModalOpen(true)} // Open Modal
       >
         Try Mimir
       </motion.button>
+
+      {/* Modal Implementation */}
+      <LoginModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
+        
+      
 
       {showScrollPrompt && <ScrollPrompt title={"Know More"} />}
     </div>

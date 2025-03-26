@@ -16,7 +16,7 @@ const Sidebar = ({ isOpen, toggleSidebar, sidebarRef, setAlert }) => {
   const userId = user?.userId;
 
   const navigateToChat = (chatId) => {
-    setTimeout(() => navigate(`/chat/${chatId}`), 150); 
+    navigate(`/chat/${chatId}`); 
   };
 
 
