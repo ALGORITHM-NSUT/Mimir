@@ -1,6 +1,7 @@
 Query_expansion_prompt = """Given the following query: "{query}" and the current date "{current_date}" (for reference in this session), your task is to create an **action plan** to retrieve information step by step, based on your system knowledge of where different types of data are stored.  
 
 🚨 **STRICT RULES TO FOLLOW:**  
+1. **DO NOT** go beyond what user has asked, stay limited to the query scope.
 1️⃣ **Break down the query into logical steps.**  
 2️⃣ **Each step consists of at least one specific query (no maximum limit).**  
 3️⃣ **For "AND" queries (multiple pieces of information needed), create multiple specific queries per step.**  
@@ -17,6 +18,7 @@ Query_expansion_prompt = """Given the following query: "{query}" and the current
 
 ## **📌 Action Plan Structure**
 - **Each step must have at least one "specific query."**  
+- **Do not make unnecessary steps that go beyond user query**
 - **Document queries should be contextually unique as in what kind of data they fetch for a step not be too generic, they should still contain semester(if given), timeframe(if given, otherwise assume current latest period when this information could've been released), department(if given) etc**, try to make document level queries informative but dont assume
 - **"Document queries" can be 0 or more per step. DO NOT make more than required. DO NOT make Document queries that are very similar to each other, keep them minimum in number and unique** 
 - **Each specific query must have a specificity score (`0.0 - 1.0`) and expansivity score (`0.0 - 1.0`)**  
@@ -37,7 +39,7 @@ Query_expansion_prompt = """Given the following query: "{query}" and the current
 - **Maintain original query intent**—no unnecessary generalization. 
 - **For document queries that are for data of specific people, too generic Document queries can have negative effect on the action plan and correct data retreival, if you are unsure and sufficient data is not available especially for the branch or semester, it is better to ask for more data, if even 1 is available, you may create it**.
 - **Both Document and specific queries should be sufficiently unique
-- **Specific queries should be as specific as possible, they should contain batch, semester, department, roll number etc if available**.
+- **Specific queries should be as specific as possible based on type of data required, they should contain batch, semester, department, roll number etc if available, for data that depends on it, for common data that does not depend on such fields as per knowledge given to you below, it is not required**.
 - **In each specific query if there is a name, always provide that full name in double quotes**. 
 - **whenever asking for roll number check for result of PREVIOUS semester for only specific branch given, unless asked data is of previous year then search for current result**
 ---
@@ -95,13 +97,16 @@ ACADEMIC RECORDS:
 - Student Results & Transcripts (called gazzette reports in in title)
 - Detained Attendance Records
 - Course Registrations
-- Academic Calendar(valid for 6 months, released every 6 months, twice an year does not relate to previous semester or previous year)
 - Curriculum & Syllabus Data(valid for 6 months)
 - Time tables branch-wise and semester-wise (contains course titles(either in name format or codes) and may or may not contain respective teacher, released in proximity of 1 month before semester starts)
 - course coordination comittee (CCC) (per semester document with full information of course codes mapped to course names and teacher name) 
 
 ADMINISTRATIVE DOCUMENTS:
 - Official Notices & Circulars
+- Academic Calendar (common for all)
+    -valid for 6 months, released every 6 months, twice an year does not relate to previous semester or previous year, 
+    -contains information about release of documents, results, activities etc within a semester and their timeline, 
+    -it is common for all branches and all semesters
 - Admission Records
 - Fee Structure
 - Scholarship Information
@@ -339,6 +344,7 @@ Step 1: Directly retrieve the Fee Structure and summer semester document since t
 
 📌 Final Reminder
 🚨 STRICT RULES TO ENFORCE:
+✔ You CANNOT ask for documents that may not have been released by now for any verfication, pay attention
 ✔ Action plan must be structured step-by-step.
 ✔ Each step has at least one specific query.
 ✔ Document queries should only be included if relevant.

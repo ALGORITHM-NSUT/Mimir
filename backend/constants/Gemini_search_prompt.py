@@ -18,6 +18,9 @@ STRICT JSON OUTPUT ONLY.
 ---
 
 ### **🔹 Execution Guidelines for This Step**
+1. **Your objective is to answer either the current step question or the original user question, based on what you can find in the context**
+2. **If answering the current step question not final answer then you must make context enriched specific and document queries for the next step as detailed in the action plan**
+3. **Try to answer as quickly as possible**.
 1️⃣ **Focus only on the current step of the action plan.**  
 2️⃣ **Extract exact information**—use precise figures, dates, links and details from documents.  
 3️⃣ **Use "Publish Date" as the primary sorting metric** to prioritize the most relevant documents.  
@@ -52,7 +55,7 @@ STRICT JSON OUTPUT ONLY.
 ### **🔹 Next Step Query Generation**
 - If the current step is successfully completed, generate the augmented queries for the **next step in the action plan.** using the answer of current step and previous knowledge
 - What kind of queries to generate for next step is defined in the action plan itself. 
-**Each step consists of at least one specific query (no maximum limit).**  
+**Each step consists of at least 1 specific query (no maximum limit).**  
 - Re-write queries to be more context-rich the current information you have  
 - **ALWAYS Use both full form and abbreviation in all document queries and specific queries** if possible. 
 - **make as minimum and contextually unique document queries as possible, no 2 document queries should retreive similar type of data** 
@@ -61,7 +64,7 @@ STRICT JSON OUTPUT ONLY.
 - **Document queries should be contextually unique as in what kind of data they fetch for a step not be too generic, they should still contain semester(if given), timeframe(if given, otherwise assume current latest period when this information could've been released), department(if given) etc**, try to make document level queries informative but dont assume
 - **For document queries that are for data of specific people, too generic Document queries can have negative effect on the action plan and correct data retreival, if you are unsure and sufficient data is not available especially for the branch or semester, it is better to ask for more data, if even 1 is available, you may create it**.
 - **Both Document and specific queries should be sufficiently unique
-- **Specific queries should be as specific as possible, they should contain batch, semester, department, roll number etc if available**.
+- **Specific queries should be as specific as possible based on type of data required, they should contain batch, semester, department, roll number etc if available and required for data that depends on it, for common data that does not depend on such fields as per your system knowledge, it is not required**.
 - **In each specific query if there is a name, always provide that full name in double quotes**. (example: "John Smith" attendance for subject X)
 - **NEVER assume previous year, unless stated, always assume current year, do not use wordings like 2023-2024, ONLY use 2023 or 2024**.
 - **DO NOT add nsut or netaji subhas university of technology in queries, all documents are from the same university, so it is not required**.
@@ -104,13 +107,13 @@ STRICT JSON OUTPUT ONLY.
 - **`0.0` → Very small** (e.g., `"Tell me about the student X's roll number?"`)
 
 ---
-## **📝 Guidelines for all_prcoess_done boolean for user query: {question}**
+## **📝 Guidelines for final_answer boolean for user query: {question}**
+- **only True when final answer to the query : "{question}" is found or iterations have compeleted**.
 - **This does not mean step answer, if not answering to original query, keep this false**
 - **Set `final_answer` to `True` if the final answer is found** (i.e., the final answer is ready for user view).
     -It cannot be true if answer is not found and this is not the last iteration (STRICT)
     -Only when setting it to false we can go to next step
     -You cannot give answer like "____ is not found" and set final answer as true UNLESS you are sure that the answer is not found and you are in the last iteration
-- **Set `all_prcoess_done` to `False` when the action plan is not completed and the user vieweable answer is not found.
 - **If any step fails(even if partially) and you are currently not on last iteration, this should ALWAYS be false**.
 ---
 
@@ -130,9 +133,9 @@ STRICT JSON OUTPUT ONLY.
 
 ```json
 {{
-    "final_step_answer": true | false, (only True when all steps are completed and answer is ready for user view, awlays False if current step is not last step of plan)
-    "current_step_answer": true | false, (only True if current step answer is fully available and you are ready to move to next step, false if retry required)
-    "specific_queries": [ (MANDATORY FIELD, augmented queries for next step as per the plan)
+    "final_answer": true | false, (only True when final answer to the query : "{question}" is found or iterations have compeleted and ready for user view, awlays False if not)
+    "current_step_answer": true | false, (only True if current step specific query answer is fully available and you are ready to move to next step, false if retry required)
+    "specific_queries": [ (MANDATORY FIELD, NEVER EMPTY, augmented queries for next step as per the plan)
         {{
             "query": "unique Sub-query 1 augmented with knowledge from previous steps",
             "specificity: : float (same as action plan for this step and sub-query, unless using a different query and abandoning it, then recalculate it yourself)
@@ -148,7 +151,7 @@ STRICT JSON OUTPUT ONLY.
     "document_queries": list["Unique Document-Level Query 1"]
     "partial_answer": "Stored partial answer to improve future retrievals.",
     "answer": "Final answer (if available).",
-    "step": integer,  // the next step number being executed; use -1 if abandoning the action plan
+    "step": integer range 1 to max steps in plan,  // the next step number being executed; use -1 if abandoning the action plan
     "links": [
         {{
             "title": "Document title used for reference",

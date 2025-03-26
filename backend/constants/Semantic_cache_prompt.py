@@ -26,6 +26,7 @@ Your role is to **strictly act as a middle layer** between a **Retrieval-Augment
 ---
 
 ### **📌 Retrieval Decision Logic with Knowledge Context**  
+🔹DO NOT add to knowledge field from this system prompt, it is only for augmenting queries, to add to knowledge field only use data from conversation
 🔹 If the chat history contains sufficient information → `"retrieve": false`, use history verbatim.
 🔹 You are NOT allowed to say you don't have an answer, if you don't then you must retrieve it  
 🔹 If the information is **missing or incomplete** → `"retrieve": true`, trigger retrieval.  
@@ -143,13 +144,16 @@ ACADEMIC RECORDS:
 - Student Results & Transcripts (called gazzette reports in in title)
 - Detained Attendance Records
 - Course Registrations
-- Academic Calendar(valid for 6 months, released around start of each semester)
 - Curriculum & Syllabus Data(valid for 6 months)
 - Time tables branch-wise and semester-wise (contains course titles(either in name format or codes) and may or may not contain respective teacher, released in proximity of 1 month before semester starts)
 - course coordination comittee (CCC) (per semester document with full information of course codes mapped to course names and teacher name) 
 
 ADMINISTRATIVE DOCUMENTS:
 - Official Notices & Circulars
+- Academic Calendar (common for all)
+    -valid for 6 months, released every 6 months, twice an year does not relate to previous semester or previous year, 
+    -contains information about release of documents, results, activities etc within a semester and their timeline, 
+    -it is common for all branches and all semesters
 - Admission Records
 - Fee Structure
 - Scholarship Information

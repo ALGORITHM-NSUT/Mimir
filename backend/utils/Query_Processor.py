@@ -52,14 +52,18 @@ class QueryProcessor:
         doc_queries = plan[step - 1]["document_queries"]
         deviation = step
         for iteration in range(max_iter):
-            if step != -1:
-                doc_queries = plan[step - 1]["document_queries"]
+            # if step != -1:
+            #     step = min(step, len(plan) - 1)
+            #     doc_queries = plan[step - 1]["document_queries"]
             doc_ids = await self._search_docs(doc_queries) if doc_queries else []
             chunk_results, current_docids, seen_ids = await self._search_in_chunks(queries, seen_ids, doc_ids, iteration + 1)
             iteration_context = self._format_context(chunk_results, current_docids)
             context_entries.append(iteration_context)
+            start = time.time()
             ans = await self._generate_answer(question, iteration_context, self.current_date, plan, knowledge, max_iter - 1, iteration, user_knowledge, step, deviation)  
-            if ans["final_step_answer"]:
+            end = time.time()
+            print("gemini response time : ", end - start)
+            if ans["final_answer"]:
                 print(f"Stopping early at iteration {iteration+1}")
                 return ans
             else:
@@ -350,8 +354,8 @@ class QueryProcessor:
         for attempt in range(5):  # Retry up to 5 times
             try:
                 cursor = self.chunks.aggregate(pipeline)
-                docs = [doc async for doc in cursor]
-                return await self._rerank(docs, query, ["text", "table_summary"])
+                return [doc async for doc in cursor]
+                # return await self._rerank(docs, query, ["text", "table_summary"])
             
             except OperationFailure as e:
                 print(f"MongoDB OperationFailure: {e}, retrying...")
@@ -480,6 +484,7 @@ class QueryProcessor:
         if step != deviation:
             previous_step_knowledge = f"the action plan was abandoned last time at step f{step}"
         if step != -1:
+            step = min(step, len(plan) - 1)
             specific_queries = plan[step - 1]["specific_queries"]
         else:
             specific_queries = ["abandoned action plan in previous step directly searching user queries"]

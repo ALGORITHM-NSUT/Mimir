@@ -38,7 +38,7 @@ class expand(BaseModel):
     action_plan: list[step]
 
 class answer(BaseModel):
-    final_step_answer: bool
+    final_answer: bool
     current_step_answer: bool
     queries: list[query]
     document_queries: list[str]
