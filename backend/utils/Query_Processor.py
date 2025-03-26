@@ -14,7 +14,6 @@ import asyncio
 from pymongo.errors import OperationFailure
 import random
 from google.api_core.exceptions import GoogleAPIError, ResourceExhausted
-from models.chat_model import expand, answer
 from google import genai
 from google.genai import types
 from google.genai.types import EmbedContentConfig
@@ -25,10 +24,10 @@ MONGO_URI_MIMIIR = os.getenv("MONGO_URI_MIMIR")
 JINA_API_KEY = os.getenv("JINA_API_KEY")
 mongoDb_client = AsyncIOMotorClient(MONGO_URI_MIMIIR)
 
-llm = "gemini-2.0-flash"
+llm = "gemini-2.0-flash-thinking-exp-01-21"
 client = genai.Client(api_key=GEMINI_API_KEY)
 
-MAX_RETRIES = 5
+MAX_RETRIES = 3
 
 def _retry_on_error(func):
     async def wrapper(*args, **kwargs):
@@ -79,7 +78,7 @@ class QueryProcessor:
             #     doc_queries = plan[step - 1]["document_queries"]
             doc_ids = await self._search_docs(doc_queries) if doc_queries else []
             chunk_results, current_docids, seen_ids = await self._search_in_chunks(queries, seen_ids, doc_ids, iteration + 1)
-            iteration_context = self._format_context(chunk_results, current_docids)
+            iteration_context = self._format_context(chunk_results)
             context_entries.append(iteration_context)
             start = time.time()
             ans = await self._generate_answer(question, iteration_context, self.current_date, plan, knowledge, max_iter - 1, iteration, user_knowledge, step, deviation)  
@@ -93,7 +92,7 @@ class QueryProcessor:
             if iteration == max_iter - 1:
                 print(f"could not find ans, returning relevant info")
                 return ans
-            knowledge += ans["partial_answer"]
+            knowledge += ans["partial_answer"] + "\n" + ans["answer"]
             if "links" in ans and len(ans["links"]) != 0:
                 knowledge = knowledge + " " + json.dumps(ans["links"], indent=2)
             if (ans["step"] == -1):
@@ -101,7 +100,7 @@ class QueryProcessor:
             step = ans["step"]
             doc_queries = ans["document_queries"]
             print("next step", step)
-            queries = ans["queries"]
+            queries = ans["specific_queries"]
 
         return ans  
         
@@ -148,7 +147,7 @@ class QueryProcessor:
         return sorted_documents
 
 
-    def _format_context(self, items: list, docs: set) -> str:
+    def _format_context(self, items: list) -> str:
         """Structure context for LLM comprehension"""
         context = "Document Chunks: \n\n"
         for doc in items:
@@ -361,9 +360,6 @@ class QueryProcessor:
             {"$sort": {"score": -1}},
             {"$limit": limit}
         ]
-        # if keywords:
-        #     pipeline[8]["$unionWith"]["pipeline"][0]["$search"]["compound"]["must"].append({"phrase": {"query": keywords, "path": "text"}})
-        # else:
         pipeline[8]["$unionWith"]["pipeline"][0]["$search"]["compound"]["must"].append({"text": {"query": query, "path": "text"}})
         
         if doc_ids:
@@ -444,18 +440,6 @@ class QueryProcessor:
         except Exception as e:
             print(f"Reranking failed: {e}, returning original documents.")
             return docs
-        # response = self.Together_client.rerank.create(
-        #     model="Salesforce/Llama-Rank-V1",
-        #     query=question,
-        #     documents=docs,
-        #     rank_fields=fields,
-        #     top_n=50
-        # )
-        # for result in response.results:
-        #     if result.relevance_score >= 0.4:
-        #         reranked.append(docs[result.index])
-
-        # return reranked
     
     async def _expand_query(self, query: str, user_knowledge: str) -> list:
         """Generate initial query variations with API quota handling"""
@@ -468,8 +452,8 @@ class QueryProcessor:
                     contents=[prompt],
                     config=types.GenerateContentConfig(
                         system_instruction=GEMINI_PROMPT,
-                        response_mime_type='application/json',
-                        response_schema=expand,
+                        # response_mime_type='application/json',
+                        # response_schema=expand,
                         temperature=0.2)).text
                 match = re.search(r'\{.*\}', response, re.DOTALL)
                 if not match:
@@ -524,8 +508,8 @@ class QueryProcessor:
                         deviation = previous_step_knowledge)],
                     config=types.GenerateContentConfig(
                         system_instruction=GEMINI_PROMPT,
-                        response_mime_type='application/json',
-                        response_schema=answer,
+                        # response_mime_type='application/json',
+                        # response_schema=answer,
                         temperature=0.2)
                     ).text
                 

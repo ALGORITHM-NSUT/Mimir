@@ -1,19 +1,20 @@
 Query_expansion_prompt = """Given the following query: "{query}" and the current date "{current_date}" (for reference in this session), your task is to create an **action plan** to retrieve information step by step, based on your system knowledge of where different types of data are stored.  
 
 🚨 **STRICT RULES TO FOLLOW:**  
-1. **DO NOT** go beyond what user has asked, stay limited to the query scope.
-1️⃣ **Break down the query into logical steps.**  
-2️⃣ **Each step consists of at least one specific query (no maximum limit).**  
-3️⃣ **For "AND" queries (multiple pieces of information needed), create multiple specific queries per step.**  
-4️⃣ **Determine if specific queries can be resolved using document-level searches or require direct retrieval.**  
-5️⃣ **An action plan can have a minimum of 1 step and a maximum of 4 steps.**  
-6️⃣ **If required, use previously known user knowledge to refine queries.**  
-7. **Before making queries, think very carefully about the timeline, what date is today, what date is the query asking for, and what date documents are typically released to determine accurately what documents you would have in the database and reason correctly.**
-8. **If user mentions past, think how much documents would have been released after it**
-9. **ALWAYS Use both full form and abbreviation in both document queries and specific queries in every single query, no need to make multiple queries just to have both abbrevation and full form** if given.
-10. **Make as minimum and contextually unique document queries as possible, no 2 document queries should retreive similar type of data**.
-11. **NEVER assume previous year, unless stated, always assume current year, do not use wordings like 2023-2024, ONLY use 2023 or 2024**.
-12. **DO NOT add nsut or netaji subhas university of technology in queries, all documents are from the same university, so it is not required**.
+1. **DO NOT** go beyond what user has asked, stay limited to the query scope. make simple queries dont go too complex.
+2. **Break down the query into logical steps.** 
+    -Try to do in as little steps as possible without making complex queries.
+3. **Each step consists of at least one specific query (no maximum limit).**  
+4. **For "AND" queries (multiple pieces of information needed), create multiple specific queries per step.**  
+5. **Determine if specific queries can be resolved using document-level searches or require direct retrieval.**  
+6. **An action plan can have a minimum of 1 step and a maximum of 4 steps.**  
+7. **If required, use previously known user knowledge to refine queries.**  
+8. **Before making queries, think very carefully about the timeline, what date is today, what date is the query asking for, and what date documents are typically released to determine accurately what documents you would have in the database and reason correctly.**
+9. **If user mentions past, think how much documents would have been released after it**
+10. **ALWAYS Use both full form and abbreviation in both document queries and specific queries in every single query, no need to make multiple queries just to have both abbrevation and full form** if given.
+11. **Make as minimum and contextually unique document queries as possible, no 2 document queries should retreive similar type of data, they should NOT just be rewords of each other**.
+12. **NEVER assume previous year, unless stated, always assume current year, do not use wordings like 2023-2024, ONLY use 2023 or 2024**.
+13. **DO NOT add nsut or netaji subhas university of technology in queries, all documents are from the same university, so it is not required**.
 ---
 
 ## **📌 Action Plan Structure**
@@ -24,8 +25,7 @@ Query_expansion_prompt = """Given the following query: "{query}" and the current
 - **Each specific query must have a specificity score (`0.0 - 1.0`) and expansivity score (`0.0 - 1.0`)**  
 - **Ensure the action plan is structured for efficient retrieval.**
 - **DO NOT include a step that does not require more data retreival, if a step can be resolved with the information already known, it should be removed.**
-- **May create (optional step) if the data retreived may not be confirmed to follow the action plan assumptions**.
-- **If no specific year given , use the current year as a default. unless according to docuemnt release timelines from system information, that document wouldnt have been released**
+- **If no specific year given, use the current year as a default. unless according to docuemnt release timelines from system information, that document wouldnt have been released**
 ---
 
 ## **📌 Guidelines for Query Expansion**
@@ -37,7 +37,6 @@ Query_expansion_prompt = """Given the following query: "{query}" and the current
   - If timeframe is missing, **infer a reasonable session** (but never predict future years).  
 - **ALWAYS Use both full form and abbreviation in both document queries and specific queries in every single query, no need to make multiple queries just to have both abbrevation and full form** if given.  
 - **Maintain original query intent**—no unnecessary generalization. 
-- **For document queries that are for data of specific people, too generic Document queries can have negative effect on the action plan and correct data retreival, if you are unsure and sufficient data is not available especially for the branch or semester, it is better to ask for more data, if even 1 is available, you may create it**.
 - **Both Document and specific queries should be sufficiently unique
 - **Specific queries should be as specific as possible based on type of data required, they should contain batch, semester, department, roll number etc if available, for data that depends on it, for common data that does not depend on such fields as per knowledge given to you below, it is not required**.
 - **In each specific query if there is a name, always provide that full name in double quotes**. 
@@ -60,6 +59,9 @@ Query_expansion_prompt = """Given the following query: "{query}" and the current
 - **`0.0` → Very small** (e.g., `"Tell me about the student X's roll number?"`)
 ---
 
+### **🔹Special instruction**
+- For any information gathered through academic calendar, make an extra step to verify the information by searching for that particular information revision.
+
 ## **📌 JSON Output Format (STRICT)**
 ```json
 {{
@@ -80,6 +82,7 @@ Query_expansion_prompt = """Given the following query: "{query}" and the current
         }}
     ]
 }}
+IN ANY CASE YOU MUST NOT DEVIATE FROM THIS ANSWER FORMAT
 
 📌 Rules:
 **At least one "specific query" per step each should be very unqiue do not make more than required but no max limit, without specific queries NO DATA will be returned.**
@@ -139,7 +142,7 @@ CAMPUS INFORMATION:
 
 - East Campus:
     B.Tech:
-        CSDA(**Big** Data Analytics), (The B is not present in the full form) 
+        CSDA(**Big** Data Analytics), (The B is not present in the full form, it is strictly NOT just data analytics) 
         ECAM(artificial intelligence and machine learning), 
         CIOT(Internet of things).  
 
@@ -188,10 +191,11 @@ ADMISSIONS:
 • student welfare and other documents can be released whenever
 • seating arrangements and exact datesheet for exams(both theoretical and practical) are relased a week before exams, tentative dates are released with academic calendar
 
+
+
 ### *Query Augmentation*
 You can use information from this knowledge to augment and enrich the query, add as much as you can from this knowledge to query
 You can also use this knowledge to determine next steps
-
 
 📌 Example 1: Query for Occasion-Based Holiday
 🔍 Query: "Is there a holiday on Diwali in NSUT?"
