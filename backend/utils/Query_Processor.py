@@ -49,22 +49,17 @@ class QueryProcessor:
         ans = {}
         step = 1
         queries = plan[step - 1]["specific_queries"]
+        doc_queries = plan[step - 1]["document_queries"]
         deviation = step
         for iteration in range(max_iter):
-            doc_queries = []
-            if (step != -1):
-                deviation = step
-                step = max(step, 1)
-                step = min(step, len(plan))
+            if step != -1:
                 doc_queries = plan[step - 1]["document_queries"]
-            doc_ids = await self._search_docs(doc_queries) if len(doc_queries) != 0 else []
-
+            doc_ids = await self._search_docs(doc_queries) if doc_queries else []
             chunk_results, current_docids, seen_ids = await self._search_in_chunks(queries, seen_ids, doc_ids, iteration + 1)
-
             iteration_context = self._format_context(chunk_results, current_docids)
             context_entries.append(iteration_context)
             ans = await self._generate_answer(question, iteration_context, self.current_date, plan, knowledge, max_iter - 1, iteration, user_knowledge, step, deviation)  
-            if ans["final_answer"]:
+            if ans["final_step_answer"]:
                 print(f"Stopping early at iteration {iteration+1}")
                 return ans
             else:
@@ -78,14 +73,15 @@ class QueryProcessor:
             if (ans["step"] == -1):
                 deviation = step
             step = ans["step"]
+            doc_queries = ans["document_queries"]
             print("next step", step)
             queries = ans["queries"]
 
         return ans  
         
 
-    def _process_chunks(self, docs: set, all_results: list, chunk_query_mapping: dict) -> list:
-        processed = []
+    def _process_chunks(self, docs: set, all_results: list) -> list:
+        doc_metadata_map = {}
         for doc in docs:
             metadata = {}
             content = ""
@@ -106,16 +102,11 @@ class QueryProcessor:
                     page = chunk["page"]
                     # Add page summary only once per page.
                     if page not in pages_added and (page - 1) < len(page_summaries):
-                        content += (
-                            f"page summary for page {page}: {page_summaries[page - 1]}\n\n"
-                        )
+                        content += f"page : {page} \n summary for page : {page_summaries[page - 1]}\n\n"
                         pages_added.add(page)
                         
                     # Append chunk details.
-                    content += (
-                        f"chunk number: {chunk['chunk_num']}\n"
-                        f"{chunk['text']}\n"
-                    )
+                    content += f"chunk number: {chunk['chunk_num']}\n" + f"{chunk['text']}\n"
                     if "table_summary" in chunk and chunk["table_summary"]:
                         content += f"table summary: {chunk['table_summary']}\n"
 
@@ -123,8 +114,12 @@ class QueryProcessor:
                     
             if content and metadata:
                 metadata["content"] = content
-            processed.append(metadata)
-        return processed
+                doc_metadata_map[doc] = metadata
+
+        sorted_documents = sorted(
+            doc_metadata_map.values(), key=lambda x: x["Publish Date"], reverse=True
+        )
+        return sorted_documents
 
 
     def _format_context(self, items: list, docs: set) -> str:
@@ -156,7 +151,7 @@ class QueryProcessor:
         ]
         result = self.documents.aggregate(pipeline)
         docs = [{"_id" : doc["_id"], "summary" : doc["summary"], "Publish Date": doc["Publish Date"].date().isoformat()} async for doc in result]
-        reranked = await self._rerank(docs, query, "summary")
+        reranked = await self._rerank(docs, query, ["summary"])
         return reranked
 
     async def _search_docs(self, queries: list) -> list:
@@ -173,7 +168,7 @@ class QueryProcessor:
             resultset.add(item["_id"])
         return list(resultset)
 
-    async def _search_query(self, query_vector, seen_ids: set, minscore: float, vector_weight: float, full_text_weight: float, limit: int, keywords: list, doc_ids: list, query: str) -> list:
+    async def _search_query(self, query_vector, seen_ids: set, minscore: float, vector_weight: float, full_text_weight: float, limit: int, doc_ids: list, query: str) -> list:
         """Search query with MongoDB quota handling"""
         pipeline = [
             {
@@ -334,17 +329,16 @@ class QueryProcessor:
                     "doc_info.entities": 0,
                     "doc_info.doc_id": 0,
                     "doc_info._id": 0,
-                    "doc_info.page_summaries": 0,
                     "chunk_id": 0,
                 }
             },
             {"$sort": {"score": -1}},
             {"$limit": limit}
         ]
-        if keywords:
-            pipeline[8]["$unionWith"]["pipeline"][0]["$search"]["compound"]["must"].append({"phrase": {"query": keywords, "path": "text"}})
-        else:
-            pipeline[8]["$unionWith"]["pipeline"][0]["$search"]["compound"]["must"].append({"text": {"query": query, "path": "text"}})
+        # if keywords:
+        #     pipeline[8]["$unionWith"]["pipeline"][0]["$search"]["compound"]["must"].append({"phrase": {"query": keywords, "path": "text"}})
+        # else:
+        pipeline[8]["$unionWith"]["pipeline"][0]["$search"]["compound"]["must"].append({"text": {"query": query, "path": "text"}})
         
         if doc_ids:
             pipeline[8]["$unionWith"]["pipeline"][0]["$search"]["compound"]["must"].append({"in": {"path": "doc_id", "value": doc_ids}})
@@ -356,7 +350,8 @@ class QueryProcessor:
         for attempt in range(5):  # Retry up to 5 times
             try:
                 cursor = self.chunks.aggregate(pipeline)
-                return [doc async for doc in cursor]
+                docs = [doc async for doc in cursor]
+                return await self._rerank(docs, query, ["text", "table_summary"])
             
             except OperationFailure as e:
                 print(f"MongoDB OperationFailure: {e}, retrying...")
@@ -370,14 +365,12 @@ class QueryProcessor:
 
     async def _search_in_chunks(self, queries: list, seen_ids: set, doc_ids: list, iteration: int) -> list:
         minscore = 0.75
-        
-        query_results = {}
 
         async def search_query(query):
             limit = int(max(10, 25 * query["expansivity"]))
             vector_weight = min(0.7, max(0.3, 1 - query["specificity"]))
             full_text_weight = 1 - vector_weight
-            return await self._search_query(query["embedding"], seen_ids, minscore, vector_weight, full_text_weight, limit, query["keywords"], doc_ids, query["query"])
+            return await self._search_query(query["embedding"], seen_ids, minscore, vector_weight, full_text_weight, limit, doc_ids, query["query"])
         
         query_embedlist = []
         for query in queries:
@@ -393,38 +386,42 @@ class QueryProcessor:
         results = {query: result for query, result in zip(tasks.keys(), results_list)}
 
         all_results = []
-        chunk_query_mapping = {}
         for query, result in results.items():
-            query_results[query] = []
             for chunk in result:
                 chunk_id = chunk["_id"]
                 if chunk_id not in seen_ids:
-                    query_results[query].append(chunk)
                     seen_ids.add(chunk_id)
                     all_results.append(chunk)
-                    chunk_query_mapping[chunk_id] = query
         all_results.sort(key= lambda chunk: chunk["chunk_num"])
         docs = {str(chunk["doc_id"]) for chunk in all_results}
-        processed = self._process_chunks(docs, all_results, chunk_query_mapping)
+        processed = self._process_chunks(docs, all_results)
         return processed, docs, seen_ids
     
-    async def _rerank(self, docs: list, question: str, field: str) -> list:
+    async def _rerank(self, docs: list, question: str, fields: list) -> list:
         """Generate reranking"""
         url = 'https://api.jina.ai/v1/rerank'
         headers = {
             'Content-Type': 'application/json',
             'Authorization': 'Bearer ' + JINA_API_KEY
         }
+        searchspace = []
+        for doc in docs:
+            chunk = ""
+            for field in fields:
+                if field in doc and doc[field] is not None:
+                    chunk += doc[field] + "\n"
+            searchspace.append(chunk)
         data = {
             "model": "jina-reranker-v2-base-multilingual",
             "query": question,
-            "top_n": 20,
-            "documents": [doc[field] for doc in docs]
+            "top_n": min(20, len(docs)),
+            "documents": searchspace
         }
         reranked = []
         response = requests.post(url, headers=headers, json=data)
         for result in json.loads(response.text)["results"]:
-            reranked.append(docs[result["index"]])
+            if result["relevance_score"] > 0.3:
+                reranked.append(docs[result["index"]])
         # response = self.Together_client.rerank.create(
         #     model="Salesforce/Llama-Rank-V1",
         #     query=question,
@@ -451,7 +448,7 @@ class QueryProcessor:
                         system_instruction=GEMINI_PROMPT,
                         response_mime_type='application/json',
                         response_schema=expand,
-                        temperature=0)).text
+                        temperature=0.2)).text
                 match = re.search(r'\{.*\}', response, re.DOTALL)
                 if not match:
                     raise ValueError("Failed to extract JSON from model response")
@@ -503,7 +500,7 @@ class QueryProcessor:
                 system_instruction=GEMINI_PROMPT,
                 response_mime_type='application/json',
                 response_schema=answer,
-                temperature=0.1)
+                temperature=0.2)
             ).text
         
         match = re.search(r'\{.*\}', response, re.DOTALL)  # Extract JSON safely

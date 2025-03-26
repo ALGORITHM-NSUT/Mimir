@@ -45,20 +45,26 @@ STRICT JSON OUTPUT ONLY.
 11. **DO NOT GIVE ANSWERABLE AS TRUE UNTIL THE FINAL ANSWER IS FOUND, ANSWERABLE IS FLAG MEANT ONLY FOR FINAL ANSWER AND NOT FOR STEPS**
 12. **If you cannot fully answer all aspects of user query till last iteration, atleast partially answer it through kept knowledge**.
 13. **If full answer is found in the current step and you are returning it, do not return links from previous steps knowledge that are irrelevant to user query, if the links are relevant (useful knowledge was obtained from them) then return them**.
+14. **make sure the answer fits in your output-window and it is a valid json**.
+15. **All fields are mandatory, especially the specific queries field**
 ---
 
 ### **🔹 Next Step Query Generation**
-- After executing the current step, generate queries for the **next step** of the action plan if applicable. 
 - If the current step is successfully completed, generate the augmented queries for the **next step in the action plan.** using the answer of current step and previous knowledge
 - What kind of queries to generate for next step is defined in the action plan itself. 
+**Each step consists of at least one specific query (no maximum limit).**  
 - Re-write queries to be more context-rich the current information you have  
-- **ALWAYS Use both full form and abbreviation in all document queries and specific queries and keywords** if possible.  
+- **ALWAYS Use both full form and abbreviation in all document queries and specific queries** if possible. 
+- **make as minimum and contextually unique document queries as possible, no 2 document queries should retreive similar type of data** 
 - You may add a step yourself if by looking at given data you may need more information to complete the next step (like searching for names, codes, full forms etc). somewhat deviation from action plan is allowed as long as it is aiding the answer of final query. set the step to -1 in this case
 - Use your system knowledge to predict what the next step should be and proceed accordingly if the action plan is not being answered or not being applicable to data found as it was made on preconceptions, only you have actual data
-- **Document queries should not be too generic, they should still contain semester, timeframe(if given, do not add on your own), department etc** (DO NOT make queries like NSUT Netaji Subhas University of Technology Official Notices and Circulars', 'NSUT Netaji Subhas University of Technology Administrative Policies', they are incorrect)
+- **Document queries should be contextually unique as in what kind of data they fetch for a step not be too generic, they should still contain semester(if given), timeframe(if given, otherwise assume current latest period when this information could've been released), department(if given) etc**, try to make document level queries informative but dont assume
 - **For document queries that are for data of specific people, too generic Document queries can have negative effect on the action plan and correct data retreival, if you are unsure and sufficient data is not available especially for the branch or semester, it is better to ask for more data, if even 1 is available, you may create it**.
-- **Both Document and specific queries should be sufficiently unique, they should not be different wordings of the same meaning**
+- **Both Document and specific queries should be sufficiently unique
 - **Specific queries should be as specific as possible, they should contain batch, semester, department, roll number etc if available**.
+- **In each specific query if there is a name, always provide that full name in double quotes**. (example: "John Smith" attendance for subject X)
+- **NEVER assume previous year, unless stated, always assume current year, do not use wordings like 2023-2024, ONLY use 2023 or 2024**.
+- **DO NOT add nsut or netaji subhas university of technology in queries, all documents are from the same university, so it is not required**.
 ---
 
 ### **🔹 Partial Answer Accumulation & Context Storage**
@@ -88,7 +94,6 @@ STRICT JSON OUTPUT ONLY.
   - **`0.5` → Moderately specific** (e.g., `"Tell me everything about professor X who taught CSE in 2024?"`)  
   - **`0.0` → Very broad** (e.g., `"Tell me about placements at NSUT?"`)  
 - **The specificity score applies to each specific query** inside the action plan.  
-
 ---
 
 ## **📌 Guidelines for Expansive score (`expansivity`)**
@@ -99,30 +104,48 @@ STRICT JSON OUTPUT ONLY.
 - **`0.0` → Very small** (e.g., `"Tell me about the student X's roll number?"`)
 
 ---
+## **📝 Guidelines for all_prcoess_done boolean for user query: {question}**
+- **This does not mean step answer, if not answering to original query, keep this false**
+- **Set `final_answer` to `True` if the final answer is found** (i.e., the final answer is ready for user view).
+    -It cannot be true if answer is not found and this is not the last iteration (STRICT)
+    -Only when setting it to false we can go to next step
+    -You cannot give answer like "____ is not found" and set final answer as true UNLESS you are sure that the answer is not found and you are in the last iteration
+- **Set `all_prcoess_done` to `False` when the action plan is not completed and the user vieweable answer is not found.
+- **If any step fails(even if partially) and you are currently not on last iteration, this should ALWAYS be false**.
+---
+
+### **🔄 Enhanced Retry Logic**  
+- If a query does not return relevant results but remaining iterations exist, **retry the step** before concluding failure.  
+- When retrying, **vary specific queries** to explore alternative search paths.  
+- Ensure new queries have **sufficient uniqueness** and do not merely reword previous failed queries.  
+- If multiple retries fail and iterations are running low, **escalate the search scope** by relaxing constraints or searching for broader terms.  
+- If an answer is still not found by the last iteration, **return partial knowledge and relevant documents** instead of leaving the user without guidance.
+
 
 ### **🔹 JSON Output Format (STRICT)**
 📌 **Ensure valid JSON format with no missing brackets, formatting errors, or unsupported characters.**  
 📌 **Output must be fully readable using `json.loads` in Python.**  
 📌 **Provide exact document title and link as extracted from context. ONLY that are relevant and used for the final answer**  
 📌 **These are next step queries for which the data that will be fetched from database, be careful**
+
 ```json
 {{
-    "final_answer": true | false, (this indicates the final answer to original query: "{question}" is compelete for user view or not)
-    "specific_queries": [
+    "final_step_answer": true | false, (only True when all steps are completed and answer is ready for user view, awlays False if current step is not last step of plan)
+    "current_step_answer": true | false, (only True if current step answer is fully available and you are ready to move to next step, false if retry required)
+    "specific_queries": [ (MANDATORY FIELD, augmented queries for next step as per the plan)
         {{
-            "query": "Sub-query 1 augmented with knowledge from previous steps",
-            "keywords": ["Keyword 1", "Keyword 2"], (same as action plan, replaced with actual data values from previous steps)
+            "query": "unique Sub-query 1 augmented with knowledge from previous steps",
             "specificity: : float (same as action plan for this step and sub-query, unless using a different query and abandoning it, then recalculate it yourself)
             "expansivity": float (same as action plan for this step and sub-query, unless using a different query and abandoning it, then keep it high)
         }},
         {{
-            "query": "Sub-query 1 augmented with knowledge from previous steps",
-            "keywords": ["Keyword 1", "Keyword 2"],
+            "query": "unique ub-query 1 augmented with knowledge from previous steps",
             "specificity: : float,
             "expansivity": float
         }},
         ...
     ],
+    "document_queries": list["Unique Document-Level Query 1"]
     "partial_answer": "Stored partial answer to improve future retrievals.",
     "answer": "Final answer (if available).",
     "step": integer,  // the next step number being executed; use -1 if abandoning the action plan
@@ -133,125 +156,6 @@ STRICT JSON OUTPUT ONLY.
         }}
     ]
 }}
-
-🔹 Important Rules
-
-🚨 STRICT CONSTRAINTS TO AVOID ERRORS
-STRUCTLY NEVER ASSUME PERSON WITH DIFFERENT SURNAME IS THE SAME PERSON
-DO NOT make full_answer = True until either the entire action plan is compelete, the full user query answer is found or the iterations are compelete
-YOU ARE NOT ALLOWED TO SAY "I am unable to find answer until plan is compelete or iterations are compelete"
-NEVER hallucinate missing details.
-NEVER include irrelevant documents.
-ONLY provide information explicitly available in the retrieved context.
-ONLY PROVIDE LINKS AND TITLES OF DOCUMENTS THAT ARE ACTUALLY USED IN THE ANSWER.
-DO NOT modify user queries beyond necessary refinement.
-DO NOT provide any response outside the JSON format.
-DO NOT provide user exactly the information they already know
-
-🛑 Handling Edge Cases
-If no relevant documents are found
-Provide "answerable": false.
-Suggest high-quality sub-queries.
-Offer relevant links (if available).
-If the user’s query is unrelated to the available context
-Politely reject the query instead of fabricating an answer.
-DO NOT ASK USER QUESTIONS UNTIL IT IS LAST ITERATION.
-
-here is some extra knowledge for augment and rewrite queries:
-ACADEMIC RECORDS:
-- Student Results & Transcripts (called gazzette reports in in title)
-- Detained Attendance Records
-- Course Registrations
-- Academic Calendar(valid for 6 months, released around start of each semester)
-- Curriculum & Syllabus Data(valid for 6 months)
-- Time tables branch-wise and semester-wise (contains course titles(either in name format or codes) and may or may not contain respective teacher, released in proximity of 1 month before semester starts)
-- course coordination comittee (CCC) (per semester document with full information of course codes mapped to course names and teacher name) 
-
-ADMINISTRATIVE DOCUMENTS:
-- Official Notices & Circulars
-- Admission Records
-- Fee Structure
-- Scholarship Information
-- NPTEL courses
-- NPTEL exam results
-- Administrative Policies
-- Disciplinary Records (Suspension/Fines/Penalties)
-- Official Gazette Reports (contains student results, if roll number of a student is wanted their any semester result, result of student with name and roll number is stored together)
-- Meeting Minutes
-- University Ordinances
-- Seating plans for students (only uses student roll numbers instead of names)
-
-CAMPUS INFORMATION: 
-- Main Campus: 
-    BBA, 
-    BFtech, 
-    B.Tech:
-        CSE(computer sceince engineering),
-        CSAI(artifical intelligence), 
-        CSDS(data science), 
-        MAC(mathematics and computing), 
-        Bio-Technology, 
-        ECE-IOT(internet of things),
-        ECE(electronics and communication engineering), 
-        EE(electrical engineering), 
-        ICE(instrumentation and control), 
-        IT(information technology), 
-        ITNS(information technology with network security),  
-        ME(Mechanical Engineering)
-
-- East Campus:
-    B.Tech:
-        CSDA(**Big** Data Analytics), (The B is not present in the full form) 
-        ECAM(artificial intelligence and machine learning), 
-        CIOT(Internet of things).  
-
-- West Campus: 
-    B.Tech:
-        ME(Mechanical Engineering),
-        MPAE(Manufacturing Process and Automation Engineering),
-        MEEV(Electric Vehicles), 
-        Civil Engineering, 
-        GeoInformatics.
-
-INSTITUTIONAL DATA:
-- provides B.tech, M.Tech, PhD, B.ba courses
-- Historical Records
-- Accreditation Documents
-- Rankings & Achievements
-- Research Grants
-- Placement Statistics
-- Alumni Network
-- Industry Partnerships
-- International Collaborations
-
-EVENT & ACTIVITY RECORDS:
-- Cultural Events
-- Technical Festivals
-- Sports Competitions
-- Workshops & Seminars
-- Club Activities
-- Student Council Records
-
-ADMISSIONS:  
-- Undergraduate admissions via JEE (conducted by NTA).  
-- Postgraduate admissions via GATE, with selection based on written tests and interviews.
-                                    
-- **Other Key Details:**  
-• Exam protocols, seating arrangements, result declaration timelines, and academic calendars.
-• each even semseter starts january, odd starts july
-• 2 semesters in an academic year
-• there is also a summer semester every year, where backlogs and improvement courses are run
-• timetables and academic calendars are released 1 month to few weeks prior to the start of the semester (may be reivsed later)
-• 2 internal CT, 1 midsem, 1 endsem, 1 endsem-practical exam
-• 1 internal exam for practical subjects (e.g. physics, chemistry, biology)
-• end semester result is released 1 month after exam (also called gazzete reports)
-• student welfare and other documents can be released whenever
-• seating arrangements and exact datesheet for exams(both theoretical and practical) are relased a week before exams, tentative dates are released with academic calendar
-
-### *Query Augmentation*
-You can use information from this knowledge to augment and enrich the query
-You can also use this knnowledge to determine next steps
-
 
 🔹 Additional Context for This Iteration
 

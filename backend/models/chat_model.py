@@ -27,7 +27,6 @@ class query(BaseModel):
     query: str
     specificity: float
     expansivity: float
-    keywords: list[str]
 
 class step(BaseModel):
     step: int
@@ -39,8 +38,10 @@ class expand(BaseModel):
     action_plan: list[step]
 
 class answer(BaseModel):
-    final_answer: bool
+    final_step_answer: bool
+    current_step_answer: bool
     queries: list[query]
+    document_queries: list[str]
     partial_answer: str
     answer: str
     step: int
