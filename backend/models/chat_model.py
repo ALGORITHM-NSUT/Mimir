@@ -20,17 +20,29 @@ class response(BaseModel):
     retrieve: bool
     query: str
     answer: str
-    links: list[link]
-
-
-class answer(BaseModel):
-    answerable: bool
-    queries: list[str]
     knowledge: str
-    answer: str
     links: list[link]
+
+class query(BaseModel):
+    query: str
+    specificity: float
+    expansivity: float
+
+class step(BaseModel):
+    step: int
+    reason: str
+    specific_queries: list[query]
+    document_queries: list[str]
 
 class expand(BaseModel):
-    queries: list[str]
-    keywords: list[str]
-    specifity: float
+    action_plan: list[step]
+
+class answer(BaseModel):
+    final_answer: bool
+    current_step_answer: bool
+    specific_queries: list[query]
+    document_queries: list[str]
+    partial_answer: str
+    answer: str
+    step: int
+    links: list[link]

@@ -49,8 +49,8 @@ async def response_strategy(message: str, chat):
             json_data = json.loads(bot_reply)
             answer = {}
             print(json_data)
-            if json_data.get("retrieve") == True:
-                answer = await qp.process_query(json_data["query"])
+            if json_data.get("retrieve"):
+                answer = await qp.process_query(json_data["query"], json_data["knowledge"])
                 answer["retrieve"] = True
                 chat.record_history(
                     user_input = "",

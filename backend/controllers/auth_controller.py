@@ -70,6 +70,7 @@ async def login_user(request: Request, response: Response):
         httponly=True,
         secure=True, 
         samesite= "None",
+        expires=2592000
     )
 
     return {"message": "Login successful", "user": {"userId": str(user["_id"]), "name": user["name"], "email": user["email"]}}

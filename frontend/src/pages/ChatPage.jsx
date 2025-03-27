@@ -96,7 +96,7 @@ const ChatPage = () => {
   const handleSendMessage = async (message) => {
     const updatedHistory = [
       ...chatHistory,
-      { query: message, response: "Processing...", references: [], status: "Processing" },
+      { messageId: null, query: message, response: "Processing...", references: [], status: "Processing" },
     ];
 
     setChatHistory(updatedHistory);
@@ -109,15 +109,20 @@ const ChatPage = () => {
       const { chatId: newChatId, messageId } = response.data;
 
       setMessageId(messageId);  
-      sessionStorage.setItem("chatHistory", JSON.stringify({ chatId: newChatId, messageId, history: updatedHistory }));
+      setChatHistory((prevHistory) =>
+        prevHistory.map((item, index) =>
+          index === prevHistory.length - 1  
+            ? { ...item, messageId } 
+            : item
+        )
+      );
+      sessionStorage.setItem("chatHistory", JSON.stringify({ chatId: newChatId, messageId, history: chatHistory }));
 
 
       if (isNewChat) {
         navigate(`/chat/${newChatId}`);
         return;
       }
-
-      setChatId(newChatId);
       pollForUpdatedResponse(userId, messageId);
     } catch (error) {
       setChatHistory((prevHistory) => {
@@ -128,6 +133,7 @@ const ChatPage = () => {
             response: "Error fetching response. Try again.",
             references: [],
             status: "failed",
+            messageId : messageId
           },
         ];
 
@@ -154,7 +160,7 @@ const ChatPage = () => {
         
           setChatHistory((prevHistory) =>
             prevHistory.map((item) =>
-              item.query === message
+              item.messageId === messageId
                 ? {
                     ...item,
                     response: botResponse,
