@@ -44,7 +44,13 @@ const ChatPage = () => {
     }
   }, [chatHistory]);
 
-
+  useEffect(() => {
+    const handleMouseMove = (e) => {
+      if (e.clientX <= 20) setIsSidebarOpen(true);
+    };
+    window.addEventListener("mousemove", handleMouseMove);
+    return () => window.removeEventListener("mousemove", handleMouseMove);
+  }, []);
 
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -94,95 +100,110 @@ const ChatPage = () => {
   };
 
   const handleSendMessage = async (message) => {
+    const tempMessageId = `temp-${new Date().getTime()}`; // Temporary ID for UI update
+  
     const updatedHistory = [
       ...chatHistory,
-      { messageId: null, query: message, response: "Processing...", references: [], status: "Processing" },
+      {
+        messageId: tempMessageId, // Assign temp ID initially
+        query: message,
+        response: "Processing...",
+        references: [],
+        status: "Processing",
+      },
     ];
-
+  
     setChatHistory(updatedHistory);
+  
     try {
       const response = await axios.post(
         `${import.meta.env.VITE_BACKEND_URL}/api/chat`,
         { chatId, message, userId, chatHistory }
       );
-
+  
       const { chatId: newChatId, messageId } = response.data;
-
-      setMessageId(messageId);  
-      setChatHistory((prevHistory) =>
-        prevHistory.map((item, index) =>
-          index === prevHistory.length - 1  
-            ? { ...item, messageId } 
-            : item
-        )
+  
+      setChatId(newChatId);
+  
+      // Update chat history by replacing tempMessageId with actual messageId
+      const finalHistory = updatedHistory.map((item) =>
+        item.messageId === tempMessageId ? { ...item, messageId } : item
       );
-      sessionStorage.setItem("chatHistory", JSON.stringify({ chatId: newChatId, messageId, history: chatHistory }));
-
-
+  
+      setChatHistory(finalHistory);
+      sessionStorage.setItem(
+        "chatHistory",
+        JSON.stringify({ chatId: newChatId, messageId, history: finalHistory })
+      );
+  
       if (isNewChat) {
         navigate(`/chat/${newChatId}`);
         return;
       }
+  
       pollForUpdatedResponse(userId, messageId);
     } catch (error) {
-      setChatHistory((prevHistory) => {
-        const updatedHistory = [
-          ...prevHistory,
-          {
-            query: message,
-            response: "Error fetching response. Try again.",
-            references: [],
-            status: "failed",
-            messageId : messageId
-          },
-        ];
-
-        return updatedHistory;
-      });
+      setChatHistory((prevHistory) =>
+        prevHistory.map((item) =>
+          item.messageId === tempMessageId
+            ? {
+                ...item,
+                response: "Error fetching response. Try again.",
+                references: [],
+                status: "failed",
+              }
+            : item
+        )
+      );
     }
   };
-
+  
   const pollForUpdatedResponse = (userId, messageId) => {
     const interval = setInterval(async () => {
       try {
-        console.log("making api call");
+        console.log("Making API call");
         const response = await axios.post(
           `${import.meta.env.VITE_BACKEND_URL}/api/chat/response/${userId}`,
           { messageId }
         );
-
-        console.log("Polling Response:", response.data); // Debugging
-
-        const { query: message, response: botResponse, references } = response.data;
-
+  
+        console.log("Polling Response:", response.data);
+  
+        const { response: botResponse, references } = response.data;
+  
         if (botResponse && botResponse !== "Processing") {
-          const timestamp = new Date().getTime(); // Add timestamp
-        
-          setChatHistory((prevHistory) =>
-            prevHistory.map((item) =>
+          const timestamp = new Date().getTime();
+  
+          setChatHistory((prevHistory) => {
+            const newHistory = prevHistory.map((item) =>
               item.messageId === messageId
                 ? {
                     ...item,
                     response: botResponse,
                     references: references || [],
                     status: "resolved",
-                    timestamp: timestamp, // Add timestamp here
+                    timestamp,
                   }
                 : item
-            )
-          );
-        
-          sessionStorage.removeItem("chatHistory");
+            );
+  
+            // Ensure sessionStorage is updated
+            sessionStorage.setItem(
+              "chatHistory",
+              JSON.stringify({ chatId, messageId, history: newHistory })
+            );
+  
+            return newHistory;
+          });
+  
           clearInterval(interval);
         }
-        
-        
       } catch (error) {
         console.error("Error polling for response:", error);
       }
     }, 4000);
   };
-
+  
   useEffect(() => {
     const handleScroll = () => {
       if (chatContainerRef.current) {
