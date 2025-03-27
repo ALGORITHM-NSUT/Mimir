@@ -23,8 +23,9 @@ Query_expansion_prompt = """Given the following query: "{query}" and the current
 - **Do not make unnecessary steps that go beyond user query**
 - **Document queries should be contextually unique as in what kind of data they fetch for a step not be too generic, they should still contain semester(if given), timeframe(if given, otherwise assume current latest period when this information could've been released), department(if given) etc**, try to make document level queries informative but dont assume
 - **"Document queries" can be 0 or more per step. DO NOT make more than required. DO NOT make Document queries that are very similar to each other, keep them minimum in number and unique** 
+    -High amount of document queries hampers the speed of the system which is crucial.
 - **0 Document queries are for cases when you want a broad unfocused search, it gives variety of data but maybe inaccurate to the specific query** (use it only in case you don't know what documents to search in or you want to search in wide variety of docuuments at once)
-- NEVER make document_queries like: 'Official Notices & Circulars 2025' because all documents will fir this criteria and no filtering will be possible
+- NEVER make document_queries like: 'Official Notices & Circulars 2025' because all documents will for this criteria and no filtering will be possible
 - **Each specific query must have a specificity score (`0.0 - 1.0`) and expansivity score (`0.0 - 1.0`)**  
 - **Ensure the action plan is structured for efficient retrieval.**
 - **DO NOT include a step that does not require more data retreival, if a step can be resolved with the information already known, it should be removed.**
@@ -48,6 +49,7 @@ Query_expansion_prompt = """Given the following query: "{query}" and the current
 
 ## **📌 Guidelines for Specificity Score (`specificity`)**
 - Assign a **float value between `0.0` and `1.0`** to indicate how specific the original query is.  
+- This specificity score will be used to set text search weightage over vector search weightage, high specificity score means more weightage to text search.
 - **Use the following reference scale:**  
   - **`1.0` → Very specific** (e.g., `"What was student X's SGPA in 5th semester?"`)  
   - **`0.5` → Moderately specific** (e.g., `"Tell me everything about professor X who taught CSE in 2024?"`)  
@@ -61,8 +63,12 @@ Query_expansion_prompt = """Given the following query: "{query}" and the current
 - **`0.5` → Moderately large** (e.g., `"Tell me about all the professors in CSE department?"`)
 - **`0.0` → Very small** (e.g., `"Tell me about the student X's roll number?"`)
 ---
+
 ### **🔹Special instruction**
-- For any information gathered through academic calendar, add an extra docuemnt query for the information by searching for that particular information revision
+- For any information gathered through academic calendar as a document query, 
+    - **Always use the latest available academic calendar** unless otherwise specified.
+    - one of the specific query should target the entire academic calendar, and the rest of the specific queries should target specific information from the calendar.
+    - add 1 extra document query directed at that particular information revision seperate from academic calendar *DO NOT make a seperate step for this, just add it as a document query in the same step.
 
 ## **📌 JSON Output Format (STRICT)**
 ```json
@@ -307,6 +313,11 @@ Step 2: Use that roll number to search for seating arrangements in the official 
                     "query": "Summer semester start date for 2025 at NSUT",
                     "specificity": 0.6,
                     "expansivity": 0.3
+                }},
+                {{
+                    "query": "academic caldendar 2025",
+                    "specificity": 0.3,
+                    "expansivity": 0.8
                 }}
             ],
             "document_queries": [
