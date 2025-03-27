@@ -7,8 +7,8 @@ const Navbar = ({ scrollToSection, featuresRef, faqRef, getStartedRef }) => {
 
   return (
     <motion.nav
-    className="sticky top-0 left-0 w-full bg-gray-950 sm:bg-transparent backdrop-blur-sm text-black py-4 z-50 transition-transform duration-300"
-    initial={{ y: -50, opacity: 0 }}
+      className="sticky top-0 left-0 w-full bg-gray-950 sm:bg-transparent sm:backdrop-blur-xs text-black py-4 z-50 transition-transform duration-300"
+      initial={{ y: -50, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       transition={{ duration: 0.1, ease: "easeOut" }}
     >

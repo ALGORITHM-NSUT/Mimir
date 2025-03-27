@@ -40,13 +40,13 @@ const SharedChatPage = () => {
       </header>
 
 
-      <div
-        className="flex-grow flex sm:max-h-[90vh] max-h-[85vh] flex-col px-4 sm:px-10 overflow-y-auto pb-24 sm:pb-28"
-      >
-        
-        <ChatHistory chatHistory={chatHistory} />
+     
+        <div className="flex justify-center">
 
-      </div>
+          <ChatHistory chatHistory={chatHistory} />
+
+        </div>
+      
 
 
     </div>

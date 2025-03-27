@@ -14,7 +14,7 @@ const LoginButton = () => {
       const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        credentials: "include", // Important for sending cookies
+        credentials: "include", 
         body: JSON.stringify({ credential }),
       });
 

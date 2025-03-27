@@ -1,5 +1,7 @@
 from datetime import datetime
 from fastapi import HTTPException
+import asyncio
+import threading
 from pymongo import ASCENDING
 from utils.db import db
 from utils.token_utils import generate_secure_token
@@ -17,6 +19,7 @@ from constants.Semantic_cache_prompt import Semantic_cache_prompt
 messages_collection = db["messages"]
 user_chats_collection = db["user_chats"]
 GEMINI_API_KEY = os.getenv("GOOGLE_API_KEY")
+client = genai.Client(api_key=GEMINI_API_KEY)
 
 async def prepare_chat_data(data: dict) -> dict:
     chatId = data.get("chatId")
@@ -40,7 +43,6 @@ async def prepare_chat_data(data: dict) -> dict:
     )
 
     return data
-
 
 async def handle_chat_request(data: dict):
     chatId = data.get("chatId")
@@ -118,6 +120,7 @@ async def handle_chat_request(data: dict):
         }, code
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
 
 async def get_all_chats(userId: str):
     if not userId:
