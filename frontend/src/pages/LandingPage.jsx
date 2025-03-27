@@ -13,7 +13,6 @@ const LandingPage = () => {
   const featuresRef = useRef(null);
   const faqRef = useRef(null);
   const getStartedRef = useRef(null);
-  const [isNavbarVisible, setIsNavbarVisible] = useState(false);
 
   useEffect(() => {
     if (user?.userId) {
@@ -25,18 +24,9 @@ const LandingPage = () => {
     ref.current?.scrollIntoView({ behavior: "smooth" });
   };
 
-  useEffect(() => {
-    const handleScroll = () => {
-      setIsNavbarVisible(window.scrollY > 50);
-    };
-
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
-
   return (
-    <div className="relative bg-[#faf9f5]">
-      <Navbar scrollToSection={scrollToSection} featuresRef={featuresRef} faqRef={faqRef} getStartedRef={getStartedRef} isVisible={isNavbarVisible} />
+    <div className="relative bg-gray-950">
+      <Navbar scrollToSection={scrollToSection} featuresRef={featuresRef} faqRef={faqRef} getStartedRef={getStartedRef}  />
 
       <section ref={getStartedRef}>
         <GetStarted />

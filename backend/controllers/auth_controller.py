@@ -65,7 +65,7 @@ async def login_user(request: Request, response: Response):
         key="access_token",
         value=token,
         httponly=True,
-        secure=True, #i will flip it later
+        secure=True, 
         samesite= "None",
     )
 
@@ -73,7 +73,7 @@ async def login_user(request: Request, response: Response):
 
 
 async def logout_user(response: Response):
-    response.delete_cookie("access_token", httponly=True, samesite="Lax", secure=True)
+    response.delete_cookie("access_token", httponly=True, samesite="None", secure=True, path="/"  )
     return {"message": "Logged out successfully"}
 
 async def get_current_user(request: Request):

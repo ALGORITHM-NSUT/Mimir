@@ -58,8 +58,6 @@ async def handle_chat_request(data: dict):
     if not userId:
         raise HTTPException(status_code=400, detail="User ID is required")
 
-    print(data)
-
     if chatHistory:
         for chat in chatHistory:
             try:
@@ -97,6 +95,7 @@ async def handle_chat_request(data: dict):
         full_response = await response_strategy(message, chats)
         response_text = full_response["response"]
         references = full_response["references"]
+        code = full_response["code"]
 
         message_data = {
             "chatId": chatId,
@@ -116,7 +115,7 @@ async def handle_chat_request(data: dict):
             "messageId": message_id,
             "response": response_text,
             "references": references,
-        }
+        }, code
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

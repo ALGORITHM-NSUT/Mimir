@@ -4,6 +4,7 @@ import { UserContext } from "../../Context/UserContext";
 
 const LoginButton = () => {
   const { setUser } = useContext(UserContext);
+  const navigate = useNavigate()
 
 
   const handleCredentialResponse = async (response) => {
@@ -22,6 +23,8 @@ const LoginButton = () => {
 
       if (res.ok) {
         setUser(data.user)
+        sessionStorage.setItem("user", JSON.stringify(data.user));
+        setTimeout(() => navigate("/new"), 300);
       } else {
         console.error("Login failed:", data.detail);
       }
@@ -35,21 +38,26 @@ const LoginButton = () => {
       window.google.accounts.id.initialize({
         client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID,
         callback: handleCredentialResponse,
-        auto_select: true,
-        itp_support: true,
-        setCookie: true
+        auto_select: false
       });
 
-      window.google.accounts.id.renderButton(
-        document.getElementById("google-signin-btn"),
-        { theme: "outline", size: "large" }
-      );
+     google.accounts.id.renderButton(
+  document.getElementById("google-signin-btn"),
+  {
+    type: "standard",
+    theme: "filled_blue", 
+    size: "extra large", 
+    shape: "pill", 
+    
+  }
+);
     } else {
       console.error("Google Sign-In script not loaded");
     }
   }, []);
+  
 
-  return <div id="google-signin-btn"></div>;
+  return <div className="align-center" id="google-signin-btn"></div>;
 };
 
 export default LoginButton;

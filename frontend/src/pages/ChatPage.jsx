@@ -156,16 +156,27 @@ const ChatPage = () => {
         const { query: message, response: botResponse, references } = response.data;
 
         if (botResponse && botResponse !== "Processing") {
+          const timestamp = new Date().getTime(); // Add timestamp
+        
           setChatHistory((prevHistory) =>
             prevHistory.map((item) =>
               item.query === message
-                ? { ...item, response: botResponse, references: references || [], status: "resolved" }
+                ? {
+                    ...item,
+                    response: botResponse,
+                    references: references || [],
+                    status: "resolved",
+                    timestamp: timestamp, // Add timestamp here
+                  }
                 : item
             )
-          );  
+          );
+        
           sessionStorage.removeItem("chatHistory");
           clearInterval(interval);
         }
+        
+        
       } catch (error) {
         console.error("Error polling for response:", error);
       }

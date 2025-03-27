@@ -49,8 +49,8 @@ async def response_strategy(message: str, chat):
             json_data = json.loads(bot_reply)
             answer = {}
             print(json_data)
-            if json_data.get("retrieve") == True:
-                answer = await qp.process_query(json_data["query"])
+            if json_data.get("retrieve"):
+                answer = await qp.process_query(json_data["query"], json_data["knowledge"])
                 answer["retrieve"] = True
                 chat.record_history(
                     user_input = "",
@@ -63,20 +63,20 @@ async def response_strategy(message: str, chat):
                 answer["answer"] = json_data.get("answer", "No answer found.")
                 answer["links"] = json_data.get("links", [])
             
-            return {"response": answer["answer"], "references": answer["links"]}
+            return {"response": answer["answer"], "references": answer["links"], "code": 200}
 
         return await interactive_chat(message)
     except google.api_core.exceptions.ResourceExhausted:
         return {
             "response": "Quota limit exceeded. Please wait before trying again.",
             "references": [],
-            "chatHistory": conversation
+            "code": 429
         }
     except Exception as e:
         detailed_error = traceback.format_exc()
         print("Detailed error:", detailed_error)
         return {
-            "response": f"Error generating AI response: {str(e)}",
+            "response": f"Error generating response, please try again later.",
             "references": [],
-            "chatHistory": conversation
+            "code": 400
         }
