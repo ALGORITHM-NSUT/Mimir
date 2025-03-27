@@ -99,7 +99,7 @@ const ChatPage = () => {
     }
   };
 
-  const handleSendMessage = async (message) => {
+  const handleSendMessage = async (message, isDeepSearch = false) => {
     const tempMessageId = `temp-${new Date().getTime()}`; // Temporary ID for UI update
   
     const updatedHistory = [
@@ -118,7 +118,7 @@ const ChatPage = () => {
     try {
       const response = await axios.post(
         `${import.meta.env.VITE_BACKEND_URL}/api/chat`,
-        { chatId, message, userId, chatHistory }
+        { chatId, message, userId, chatHistory, isDeepSearch }
       );
   
       const { chatId: newChatId, messageId } = response.data;

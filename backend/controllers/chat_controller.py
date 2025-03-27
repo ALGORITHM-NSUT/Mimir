@@ -50,6 +50,8 @@ async def handle_chat_request(data: dict):
     userId = data.get("userId")
     chatHistory = data.get("chatHistory")
     messageId = data.get("messageId")
+    isDeepSearch = data.get("isDeepSearch", False)  # Get the deep search flag
+    
     client = genai.Client(api_key=GEMINI_API_KEY)
     chats = client.chats.create(model="gemini-2.0-flash-lite", 
         config=types.GenerateContentConfig(
@@ -94,7 +96,7 @@ async def handle_chat_request(data: dict):
                 print(f"Error processing chat entry: {e}")
 
     try:
-        full_response = await response_strategy(message, chats)
+        full_response = await response_strategy(message, chats, isDeepSearch)
         response_text = full_response["response"]
         references = full_response["references"]
         code = full_response["code"]
