@@ -72,6 +72,7 @@ class QueryProcessor:
         queries = plan[step - 1]["specific_queries"]
         doc_queries = plan[step - 1]["document_queries"]
         deviation = step
+        retrycnt = 0
         for iteration in range(max_iter):
             # if step != -1:
             #     step = min(step, len(plan) - 1)
@@ -81,7 +82,7 @@ class QueryProcessor:
             iteration_context = self._format_context(chunk_results)
             context_entries.append(iteration_context)
             start = time.time()
-            ans = await self._generate_answer(question, iteration_context, self.current_date, plan, knowledge, max_iter - 1, iteration, user_knowledge, step, deviation)  
+            ans = await self._generate_answer(question, iteration_context, self.current_date, plan, knowledge, max_iter - 1, iteration, user_knowledge, step, deviation, retrycnt)  
             end = time.time()
             print("gemini response time : ", end - start)
             if ans["final_answer"]:
@@ -92,11 +93,18 @@ class QueryProcessor:
             if iteration == max_iter - 1:
                 print(f"could not find ans, returning relevant info")
                 return ans
-            knowledge += ans["partial_answer"] + "\n" + ans["answer"]
+            if "partial_answer" in ans and ans["partial_answer"] is not None:
+                knowledge += ans["partial_answer"] + "\n" 
+            if "answer" in ans and ans["answer"] is not None:
+                knowledge += ans["answer"] + "\n"
             if "links" in ans and len(ans["links"]) != 0:
                 knowledge = knowledge + " " + json.dumps(ans["links"], indent=2)
             if (ans["step"] == -1):
                 deviation = step
+            if (ans["step"] == step):
+                retrycnt += 1
+            else:
+                retrycnt = 0
             step = ans["step"]
             doc_queries = ans["document_queries"]
             print("next step", step)
@@ -438,8 +446,7 @@ class QueryProcessor:
             response.raise_for_status()
             return [docs[result["index"]] for result in response.json()["results"] if result["relevance_score"] > 0.3]
         except Exception as e:
-            print(f"Reranking failed: {e}, returning original documents.")
-            return docs
+            raise Exception(f"Reranking failed, quota limit exceeded")
     
     async def _expand_query(self, query: str, user_knowledge: str) -> list:
         """Generate initial query variations with API quota handling"""
@@ -480,7 +487,7 @@ class QueryProcessor:
 
         raise Exception("Failed after multiple retries due to API quota limits.")
 
-    async def _generate_answer(self, question: str, context: str, current_date: str, plan: dict, knowledge: str, max_iter: int, iteration: int, user_knowledge: str, step: int, deviation: int) -> dict:
+    async def _generate_answer(self, question: str, context: str, current_date: str, plan: dict, knowledge: str, max_iter: int, iteration: int, user_knowledge: str, step: int, deviation: int, retrycnt: int) -> dict:
         """Generate and format final response"""
         specific_queries = []
         previous_step_knowledge = ""
@@ -491,6 +498,11 @@ class QueryProcessor:
             specific_queries = plan[step - 1]["specific_queries"]
         else:
             specific_queries = ["abandoned action plan in previous step directly searching user queries"]
+        stepknowledge = ""
+        if retrycnt != 0:
+            stepknowledge += f"This is retry for step {step} of plan"
+        else:
+            stepknowledge += f"{step}"
         for attempt in range(MAX_RETRIES):
             try:
                 response = client.models.generate_content(
@@ -503,7 +515,7 @@ class QueryProcessor:
                         max_iter=max_iter,
                         iteration=iteration,
                         user_knowledge=user_knowledge,
-                        step=step,
+                        step=stepknowledge,
                         specific_queries=specific_queries,
                         deviation = previous_step_knowledge)],
                     config=types.GenerateContentConfig(

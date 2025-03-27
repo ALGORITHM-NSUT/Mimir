@@ -4,16 +4,17 @@ Query_expansion_prompt = """Given the following query: "{query}" and the current
 1. **DO NOT** go beyond what user has asked, stay limited to the query scope. make simple queries dont go too complex.
 2. **Break down the query into logical steps.** 
     -Try to do in as little steps as possible without making complex queries.
+    -Breakdown in such a way that steps are dependant on information from each other. for information that does not require data from anywhere else, don't make it a separate sequential step. all such information can be included in the first step.
 3. **Each step consists of at least one specific query (no maximum limit).**  
 4. **For "AND" queries (multiple pieces of information needed), create multiple specific queries per step.**  
 5. **Determine if specific queries can be resolved using document-level searches or require direct retrieval.**  
-6. **An action plan can have a minimum of 1 step and a maximum of 4 steps.**  
+6. **An action plan can have a minimum of 1 step and a maximum of 3 steps.**  
 7. **If required, use previously known user knowledge to refine queries.**  
 8. **Before making queries, think very carefully about the timeline, what date is today, what date is the query asking for, and what date documents are typically released to determine accurately what documents you would have in the database and reason correctly.**
 9. **If user mentions past, think how much documents would have been released after it**
 10. **ALWAYS Use both full form and abbreviation in both document queries and specific queries in every single query, no need to make multiple queries just to have both abbrevation and full form** if given.
 11. **Make as minimum and contextually unique document queries as possible, no 2 document queries should retreive similar type of data, they should NOT just be rewords of each other**.
-12. **NEVER assume previous year, unless stated, always assume current year, do not use wordings like 2023-2024, ONLY use 2023 or 2024**.
+12. **NEVER assume year unless stated or is very clear by the kind of query user asks, do not use wordings like 2023-2024, ONLY use 2023 or 2024**, for year assumption use your system knowledge, odd semester cannot be on-going in jan to july, even sem in aug to dec.
 13. **DO NOT add nsut or netaji subhas university of technology in queries, all documents are from the same university, so it is not required**.
 ---
 
@@ -22,6 +23,8 @@ Query_expansion_prompt = """Given the following query: "{query}" and the current
 - **Do not make unnecessary steps that go beyond user query**
 - **Document queries should be contextually unique as in what kind of data they fetch for a step not be too generic, they should still contain semester(if given), timeframe(if given, otherwise assume current latest period when this information could've been released), department(if given) etc**, try to make document level queries informative but dont assume
 - **"Document queries" can be 0 or more per step. DO NOT make more than required. DO NOT make Document queries that are very similar to each other, keep them minimum in number and unique** 
+- **0 Document queries are for cases when you want a broad unfocused search, it gives variety of data but maybe inaccurate to the specific query** (use it only in case you don't know what documents to search in or you want to search in wide variety of docuuments at once)
+- NEVER make document_queries like: 'Official Notices & Circulars 2025' because all documents will fir this criteria and no filtering will be possible
 - **Each specific query must have a specificity score (`0.0 - 1.0`) and expansivity score (`0.0 - 1.0`)**  
 - **Ensure the action plan is structured for efficient retrieval.**
 - **DO NOT include a step that does not require more data retreival, if a step can be resolved with the information already known, it should be removed.**
@@ -58,9 +61,8 @@ Query_expansion_prompt = """Given the following query: "{query}" and the current
 - **`0.5` → Moderately large** (e.g., `"Tell me about all the professors in CSE department?"`)
 - **`0.0` → Very small** (e.g., `"Tell me about the student X's roll number?"`)
 ---
-
 ### **🔹Special instruction**
-- For any information gathered through academic calendar, make an extra step to verify the information by searching for that particular information revision.
+- For any information gathered through academic calendar, add an extra docuemnt query for the information by searching for that particular information revision
 
 ## **📌 JSON Output Format (STRICT)**
 ```json
