@@ -3,7 +3,6 @@ from datetime import datetime
 import time
 from constants.Gemini_search_prompt import Gemini_search_prompt
 from constants.Query_expansion import Query_expansion_prompt
-from langchain_google_genai import GoogleGenerativeAIEmbeddings
 import os
 from dotenv import load_dotenv
 import json
@@ -16,15 +15,18 @@ import random
 from google.api_core.exceptions import GoogleAPIError, ResourceExhausted
 from google import genai
 from google.genai import types
+from google.genai.errors import ServerError
 from google.genai.types import EmbedContentConfig
 import requests
+from models.chat_model import answer, expand
+
 load_dotenv()
 GEMINI_API_KEY = os.getenv("GOOGLE_API_KEY")
 MONGO_URI_MIMIIR = os.getenv("MONGO_URI_MIMIR")
 JINA_API_KEY = os.getenv("JINA_API_KEY")
 mongoDb_client = AsyncIOMotorClient(MONGO_URI_MIMIIR)
 
-llm = "gemini-2.0-flash-thinking-exp-01-21"
+llm = "gemini-2.0-flash"
 client = genai.Client(api_key=GEMINI_API_KEY)
 
 MAX_RETRIES = 3
@@ -51,7 +53,6 @@ def _retry_on_error(func):
 
 class QueryProcessor:
     def __init__(self):
-        self.embeddings = GoogleGenerativeAIEmbeddings(model="models/text-embedding-004")
         self.client = mongoDb_client
         self.db = self.client["Docs"]
         self.documents = self.db.documents
@@ -66,12 +67,12 @@ class QueryProcessor:
         seen_ids.add(ObjectId("aaaaaaaaaaaaaaaaaaaaaaaa"))
         plan = await self._expand_query(question, user_knowledge)
         knowledge = ""
-        max_iter = 5
+        max_iter = 4
         ans = {}
         step = 1
         queries = plan[step - 1]["specific_queries"]
         doc_queries = plan[step - 1]["document_queries"]
-        deviation = step
+        retrycnt = 1
         for iteration in range(max_iter):
             # if step != -1:
             #     step = min(step, len(plan) - 1)
@@ -81,7 +82,7 @@ class QueryProcessor:
             iteration_context = self._format_context(chunk_results)
             context_entries.append(iteration_context)
             start = time.time()
-            ans = await self._generate_answer(question, iteration_context, self.current_date, plan, knowledge, max_iter - 1, iteration, user_knowledge, step, deviation)  
+            ans = await self._generate_answer(question, iteration_context, self.current_date, plan, knowledge, max_iter - retrycnt, iteration + 1, user_knowledge, step, retrycnt)  
             end = time.time()
             print("gemini response time : ", end - start)
             if ans["final_answer"]:
@@ -92,11 +93,16 @@ class QueryProcessor:
             if iteration == max_iter - 1:
                 print(f"could not find ans, returning relevant info")
                 return ans
-            knowledge += ans["partial_answer"] + "\n" + ans["answer"]
+            if "partial_answer" in ans and ans["partial_answer"] is not None:
+                knowledge += str(ans["partial_answer"]) + "\n" 
+            if "answer" in ans and ans["answer"] is not None:
+                knowledge += str(ans["answer"]) + "\n"
             if "links" in ans and len(ans["links"]) != 0:
                 knowledge = knowledge + " " + json.dumps(ans["links"], indent=2)
-            if (ans["step"] == -1):
-                deviation = step
+            
+            if (ans["step"] == step):
+                retrycnt -= 1
+            
             step = ans["step"]
             doc_queries = ans["document_queries"]
             print("next step", step)
@@ -253,14 +259,14 @@ class QueryProcessor:
                                     "must": [
                                         
                                     ],
-                                    # "mustNot": [
-                                    #     {
-                                    #         "in": {
-                                    #         "path": "_id",
-                                    #         "value": list(seen_ids)
-                                    #         }
-                                    #     }
-                                    # ]
+                                    "mustNot": [
+                                        {
+                                            "in": {
+                                            "path": "_id",
+                                            "value": list(seen_ids)
+                                            }
+                                        }
+                                    ]
                                 }
                             }
                         },
@@ -364,9 +370,9 @@ class QueryProcessor:
         
         if doc_ids:
             pipeline[8]["$unionWith"]["pipeline"][0]["$search"]["compound"]["must"].append({"in": {"path": "doc_id", "value": doc_ids}})
-        #     pipeline[0]["$vectorSearch"]["filter"] = {"_id": {"$nin": list(seen_ids)}, "doc_id": {"$in": doc_ids}}
-        # else:
-        #     pipeline[0]["$vectorSearch"]["filter"] = {"_id": {"$nin": list(seen_ids)}}
+            pipeline[0]["$vectorSearch"]["filter"] = {"_id": {"$nin": list(seen_ids)}, "doc_id": {"$in": doc_ids}}
+        else:
+            pipeline[0]["$vectorSearch"]["filter"] = {"_id": {"$nin": list(seen_ids)}}
 
 
         for attempt in range(5):  # Retry up to 5 times
@@ -389,7 +395,7 @@ class QueryProcessor:
         minscore = 0.75
 
         async def search_query(query):
-            limit = int(max(10, 25 * query["expansivity"]))
+            limit = int(max(10, query["expansivity"] * 25))
             vector_weight = min(0.7, max(0.3, 1 - query["specificity"]))
             full_text_weight = 1 - vector_weight
             return await self._search_query(query["embedding"], seen_ids, minscore, vector_weight, full_text_weight, limit, doc_ids, query["query"])
@@ -436,10 +442,9 @@ class QueryProcessor:
         try:
             response = requests.post(url, headers=headers, json=data)
             response.raise_for_status()
-            return [docs[result["index"]] for result in response.json()["results"] if result["relevance_score"] > 0.3]
+            return [docs[result["index"]] for result in response.json()["results"] if result["relevance_score"] > 0.5]
         except Exception as e:
-            print(f"Reranking failed: {e}, returning original documents.")
-            return docs
+            raise Exception(f"Reranking failed, quota limit exceeded")
     
     async def _expand_query(self, query: str, user_knowledge: str) -> list:
         """Generate initial query variations with API quota handling"""
@@ -452,8 +457,8 @@ class QueryProcessor:
                     contents=[prompt],
                     config=types.GenerateContentConfig(
                         system_instruction=GEMINI_PROMPT,
-                        # response_mime_type='application/json',
-                        # response_schema=expand,
+                        response_mime_type='application/json',
+                        response_schema=expand,
                         temperature=0.2)).text
                 match = re.search(r'\{.*\}', response, re.DOTALL)
                 if not match:
@@ -470,7 +475,7 @@ class QueryProcessor:
             except (json.JSONDecodeError, ValueError) as e:
                 print(f"Error parsing response: {e}, retrying...")
 
-            except ResourceExhausted:
+            except ResourceExhausted or ServerError:
                 print(f"Quota exceeded, retrying after delay...")
                 time.sleep(2 ** attempt + random.uniform(0, 1))  # Exponential backoff
 
@@ -480,17 +485,19 @@ class QueryProcessor:
 
         raise Exception("Failed after multiple retries due to API quota limits.")
 
-    async def _generate_answer(self, question: str, context: str, current_date: str, plan: dict, knowledge: str, max_iter: int, iteration: int, user_knowledge: str, step: int, deviation: int) -> dict:
+    async def _generate_answer(self, question: str, context: str, current_date: str, plan: dict, knowledge: str, max_iter: int, iteration: int, user_knowledge: str, step: int, retrycnt: int) -> dict:
         """Generate and format final response"""
         specific_queries = []
-        previous_step_knowledge = ""
-        if step != deviation:
-            previous_step_knowledge = f"the action plan was abandoned last time at step f{step}"
         if step != -1:
             step = min(step, len(plan) - 1)
             specific_queries = plan[step - 1]["specific_queries"]
         else:
             specific_queries = ["abandoned action plan in previous step directly searching user queries"]
+        stepknowledge = ""
+        if retrycnt == 0:
+            stepknowledge += f"This is retry for step {step} of plan"
+        else:
+            stepknowledge += f"{step}"
         for attempt in range(MAX_RETRIES):
             try:
                 response = client.models.generate_content(
@@ -503,13 +510,13 @@ class QueryProcessor:
                         max_iter=max_iter,
                         iteration=iteration,
                         user_knowledge=user_knowledge,
-                        step=step,
+                        step=stepknowledge,
                         specific_queries=specific_queries,
-                        deviation = previous_step_knowledge)],
+                        retries_left = retrycnt)],
                     config=types.GenerateContentConfig(
                         system_instruction=GEMINI_PROMPT,
-                        # response_mime_type='application/json',
-                        # response_schema=answer,
+                        response_mime_type='application/json',
+                        response_schema=answer,
                         temperature=0.2)
                     ).text
                 
@@ -528,6 +535,10 @@ class QueryProcessor:
 
             except ResourceExhausted:
                 print(f"Quota exceeded, retrying after delay...")
+                time.sleep(2 ** attempt + random.uniform(0, 1))  # Exponential backoff
+
+            except ServerError:
+                print(f"Server error, retrying...")
                 time.sleep(2 ** attempt + random.uniform(0, 1))  # Exponential backoff
 
             except GoogleAPIError as e:
