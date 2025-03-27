@@ -2,10 +2,6 @@ import os
 import google.generativeai as genai
 from dotenv import load_dotenv
 import asyncio
-import langchain_core
-from langchain_groq import ChatGroq
-from langchain.memory import ConversationBufferMemory
-from langchain.chains import ConversationChain
 import json
 from constants.Gemini_system_prompt import GEMINI_PROMPT
 from constants.Semantic_cache_prompt import Semantic_cache_prompt
@@ -14,29 +10,16 @@ import re
 import time
 import google.api_core.exceptions
 import traceback
+from google.genai.types import Content
 
 load_dotenv()
-
-GEMINI_API_KEY = os.getenv("GOOGLE_API_KEY")
-chat_model = ChatGroq(model_name="llama-3.3-70b-specdec")
-
-genai.configure(api_key=GEMINI_API_KEY)
-model = genai.GenerativeModel("gemini-2.0-flash", system_instruction=GEMINI_PROMPT)
 qp = QueryProcessor()
 
-async def response_strategy(message: str, chatHistory: list):
+async def response_strategy(message: str, chat):
     try:
-        memory = ConversationBufferMemory(memory_key="history", return_messages=True)
-        conversation = ConversationChain(llm=chat_model, memory=memory)
-        conversation.memory.clear()
-        conversation.memory.chat_memory.add_messages(chatHistory)
-
-        system_prompt = Semantic_cache_prompt
-        memory.chat_memory.add_message(langchain_core.messages.SystemMessage(content=system_prompt))
-
         async def chat_with_bot(user_input):
-            bot_response = await asyncio.to_thread(conversation.predict, input=user_input)
-            return bot_response
+            response = chat.send_message(user_input)
+            return response.text
 
         async def interactive_chat(user_input=message):
             if not user_input.strip():
@@ -55,39 +38,45 @@ async def response_strategy(message: str, chatHistory: list):
                     print(f"Quota exceeded, retrying in {wait_time} seconds...")
                     time.sleep(wait_time)
             
-            def extract_json(text):
-                match = re.search(r'\{.*\}', text, re.DOTALL)
-                return match.group(0) if match else None
+            # def extract_json(text):
+            #     match = re.search(r'\{.*\}', text, re.DOTALL)
+            #     return match.group(0) if match else None
             
-            json_string = extract_json(bot_reply)
-            if not json_string:
-                raise ValueError(f"Failed to extract JSON from bot_reply: {bot_reply}")
+            # json_string = extract_json(bot_reply)
+            # if not json_string:
+            #     raise ValueError(f"Failed to extract JSON from bot_reply: {bot_reply}")
             
-            json_data = json.loads(json_string)
+            json_data = json.loads(bot_reply)
             answer = {}
-            if json_data.get("retrieve", "").lower() == "true":
-                conversation.memory.chat_memory.messages = conversation.memory.chat_memory.messages[:-1]
+            print(json_data)
+            if json_data.get("retrieve") == True:
                 answer = await qp.process_query(json_data["query"])
                 answer["retrieve"] = True
-                conversation.memory.chat_memory.add_messages([
-                    langchain_core.messages.AIMessage(
-                        answer["answer"] + "\nLinks:\n" +
-                        "\n".join(f"{link['title']}: {link['link']}" for link in answer["links"])
-                        if answer.get("links") else ""
-                    )
-                ])
+                chat.record_history(
+                    user_input = "",
+                    model_output=[Content(parts=[{"text": json.dumps(answer, indent=2)}], role="model")],
+                    is_valid=True,
+                    automatic_function_calling_history=None
+                )
             else:
                 answer["retrieve"] = False
                 answer["answer"] = json_data.get("answer", "No answer found.")
                 answer["links"] = json_data.get("links", [])
             
-            print(answer["answer"])
             return {"response": answer["answer"], "references": answer["links"]}
 
         return await interactive_chat(message)
     except google.api_core.exceptions.ResourceExhausted:
-        return {"response": "Quota limit exceeded. Please wait before trying again.", "references": []}
+        return {
+            "response": "Quota limit exceeded. Please wait before trying again.",
+            "references": [],
+            "chatHistory": conversation
+        }
     except Exception as e:
         detailed_error = traceback.format_exc()
         print("Detailed error:", detailed_error)
-        return {"response": f"Error generating AI response: {str(e)}", "references": []}
+        return {
+            "response": f"Error generating AI response: {str(e)}",
+            "references": [],
+            "chatHistory": conversation
+        }

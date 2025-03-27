@@ -5,14 +5,18 @@ from utils.db import db
 from utils.token_utils import generate_secure_token
 from utils.token_utils import verify_chat_share_token
 from utils.response_strategy import response_strategy
+from models.chat_model import response as response_format
 import os
-import langchain_core
 import secrets
 from fastapi.encoders import jsonable_encoder
+from google import genai
+from google.genai import types
+from google.genai.types import Content, UserContent
+from constants.Semantic_cache_prompt import Semantic_cache_prompt
 
 messages_collection = db["messages"]
 user_chats_collection = db["user_chats"]
-
+GEMINI_API_KEY = os.getenv("GOOGLE_API_KEY")
 
 async def prepare_chat_data(data: dict) -> dict:
     chatId = data.get("chatId")
@@ -44,8 +48,13 @@ async def handle_chat_request(data: dict):
     userId = data.get("userId")
     chatHistory = data.get("chatHistory")
     messageId = data.get("messageId")
-    chats = []
-
+    client = genai.Client(api_key=GEMINI_API_KEY)
+    chats = client.chats.create(model="gemini-2.0-flash-lite", 
+        config=types.GenerateContentConfig(
+        system_instruction=Semantic_cache_prompt,
+        response_mime_type='application/json',
+        response_schema=response_format)
+    )
     if not userId:
         raise HTTPException(status_code=400, detail="User ID is required")
 
@@ -58,8 +67,6 @@ async def handle_chat_request(data: dict):
                 query = chat.get("query")
                 if not isinstance(query, str):
                     raise ValueError(f"Invalid query format in chat: {chat}")
-
-                chats.append(langchain_core.messages.human.HumanMessage(query))
 
                 # Handle missing or malformed references
                 references = ""
@@ -77,7 +84,11 @@ async def handle_chat_request(data: dict):
                 if not isinstance(response, str):
                     raise ValueError(f"Invalid response format in chat: {chat}")
 
-                chats.append(langchain_core.messages.AIMessage(response + references))
+                chats.record_history(user_input=UserContent(parts=[{"text": query}]),
+                    model_output=[Content(parts=[{"text": response + references}], role="model")],
+                    is_valid=True,
+                    automatic_function_calling_history=None
+                )
 
             except Exception as e:
                 print(f"Error processing chat entry: {e}")
@@ -100,7 +111,6 @@ async def handle_chat_request(data: dict):
         inserted_message = await messages_collection.insert_one(message_data)
         message_id = str(inserted_message.inserted_id)
         
-
         return {
             "chatId": chatId,
             "messageId": message_id,
