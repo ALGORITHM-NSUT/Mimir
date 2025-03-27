@@ -22,6 +22,7 @@ const ChatMessage = ({ query, response, references,timestamp }) => {
 
       </div>
     </div>
+    </div>
   );
 };
 

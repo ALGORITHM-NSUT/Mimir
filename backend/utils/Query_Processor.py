@@ -20,11 +20,15 @@ from google.genai.types import EmbedContentConfig
 import requests
 from models.chat_model import answer, expand
 
+
+
 load_dotenv()
 GEMINI_API_KEY = os.getenv("GOOGLE_API_KEY")
 MONGO_URI_MIMIIR = os.getenv("MONGO_URI_MIMIR")
 JINA_API_KEY = os.getenv("JINA_API_KEY")
 mongoDb_client = AsyncIOMotorClient(MONGO_URI_MIMIIR)
+
+llm2 = "gemini-2.0-flash-thinking-exp-01-21"
 
 llm = "gemini-2.0-flash"
 client = genai.Client(api_key=GEMINI_API_KEY)
