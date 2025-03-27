@@ -232,7 +232,7 @@ ADMISSIONS:
 • each even semseter starts january, odd starts july
 • 2 semesters in an academic year
 • timetables and academic calendars are released 1 month to few weeks prior to the start of the semester (may be reivsed later)
-• 2 internal CT, 1 midsem, 1 endsem, 1 endsem-practical exam
+• 2 internal CT (Class Test), 1 midsem, 1 endsem theory, 1 endsem practical exam
 • 1 internal exam for practical subjects (e.g. physics, chemistry, biology)
 • end semester result is released 1 month after exam (also called gazzete reports)
 • student welfare and other documents can be released whenever

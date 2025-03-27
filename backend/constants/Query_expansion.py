@@ -23,8 +23,9 @@ Query_expansion_prompt = """Given the following query: "{query}" and the current
 - **Do not make unnecessary steps that go beyond user query**
 - **Document queries should be contextually unique as in what kind of data they fetch for a step not be too generic, they should still contain semester(if given), timeframe(if given, otherwise assume current latest period when this information could've been released), department(if given) etc**, try to make document level queries informative but dont assume
 - **"Document queries" can be 0 or more per step. DO NOT make more than required. DO NOT make Document queries that are very similar to each other, keep them minimum in number and unique** 
+    -High amount of document queries hampers the speed of the system which is crucial.
 - **0 Document queries are for cases when you want a broad unfocused search, it gives variety of data but maybe inaccurate to the specific query** (use it only in case you don't know what documents to search in or you want to search in wide variety of docuuments at once)
-- NEVER make document_queries like: 'Official Notices & Circulars 2025' because all documents will fir this criteria and no filtering will be possible
+- NEVER make document_queries like: 'Official Notices & Circulars 2025' because all documents will for this criteria and no filtering will be possible
 - **Each specific query must have a specificity score (`0.0 - 1.0`) and expansivity score (`0.0 - 1.0`)**  
 - **Ensure the action plan is structured for efficient retrieval.**
 - **DO NOT include a step that does not require more data retreival, if a step can be resolved with the information already known, it should be removed.**

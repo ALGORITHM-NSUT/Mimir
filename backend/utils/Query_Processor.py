@@ -18,6 +18,8 @@ from google.genai import types
 from google.genai.errors import ServerError
 from google.genai.types import EmbedContentConfig
 import requests
+from models.chat_model import answer, expand
+
 load_dotenv()
 GEMINI_API_KEY = os.getenv("GOOGLE_API_KEY")
 MONGO_URI_MIMIIR = os.getenv("MONGO_URI_MIMIR")
@@ -257,14 +259,14 @@ class QueryProcessor:
                                     "must": [
                                         
                                     ],
-                                    # "mustNot": [
-                                    #     {
-                                    #         "in": {
-                                    #         "path": "_id",
-                                    #         "value": list(seen_ids)
-                                    #         }
-                                    #     }
-                                    # ]
+                                    "mustNot": [
+                                        {
+                                            "in": {
+                                            "path": "_id",
+                                            "value": list(seen_ids)
+                                            }
+                                        }
+                                    ]
                                 }
                             }
                         },
@@ -368,9 +370,9 @@ class QueryProcessor:
         
         if doc_ids:
             pipeline[8]["$unionWith"]["pipeline"][0]["$search"]["compound"]["must"].append({"in": {"path": "doc_id", "value": doc_ids}})
-        #     pipeline[0]["$vectorSearch"]["filter"] = {"_id": {"$nin": list(seen_ids)}, "doc_id": {"$in": doc_ids}}
-        # else:
-        #     pipeline[0]["$vectorSearch"]["filter"] = {"_id": {"$nin": list(seen_ids)}}
+            pipeline[0]["$vectorSearch"]["filter"] = {"_id": {"$nin": list(seen_ids)}, "doc_id": {"$in": doc_ids}}
+        else:
+            pipeline[0]["$vectorSearch"]["filter"] = {"_id": {"$nin": list(seen_ids)}}
 
 
         for attempt in range(5):  # Retry up to 5 times
@@ -455,8 +457,8 @@ class QueryProcessor:
                     contents=[prompt],
                     config=types.GenerateContentConfig(
                         system_instruction=GEMINI_PROMPT,
-                        # response_mime_type='application/json',
-                        # response_schema=expand,
+                        response_mime_type='application/json',
+                        response_schema=expand,
                         temperature=0.2)).text
                 match = re.search(r'\{.*\}', response, re.DOTALL)
                 if not match:
@@ -513,8 +515,8 @@ class QueryProcessor:
                         retries_left = retrycnt)],
                     config=types.GenerateContentConfig(
                         system_instruction=GEMINI_PROMPT,
-                        # response_mime_type='application/json',
-                        # response_schema=answer,
+                        response_mime_type='application/json',
+                        response_schema=answer,
                         temperature=0.2)
                     ).text
                 

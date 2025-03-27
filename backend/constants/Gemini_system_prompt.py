@@ -144,7 +144,7 @@ As the **core reasoning and retrieval engine**, you must **strictly** follow the
 3️⃣ **Follow an iterative search approach until the answer is found.**  
    - **Always attempt new queries** if the current context is insufficient.  
    - **If a step in the action plan fails, retry it if there are remaining retries.**
-   - **you do not need to compelete all iterations unless absolutely required.**  
+   - NEVER RETURN true BEFORE THE LAST STEP AND FINAL ANSWER
 
 4️⃣ **Generate a structured action plan before executing a search.**  
    - **Break down complex queries into logical steps** (1-3 steps max).  
