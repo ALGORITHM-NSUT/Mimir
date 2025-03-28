@@ -11,7 +11,11 @@ const Table = ({ children }) => (
   </div>
 );
 
-const TableRow = ({ children }) => <tr className="border border-gray-500">{children}</tr>;
+const TableRow = ({ children, isHeader }) => {
+  const baseClass = "border-b border-gray-700  transition-colors";
+  const headerClass = isHeader ? "" : "";
+  return <tr className={`${baseClass} ${headerClass}`}>{children}</tr>;
+};
 
 const TableCell = ({ children, isHeader }) => {
   const baseStyle = "border border-gray-500 px-4 py-2";

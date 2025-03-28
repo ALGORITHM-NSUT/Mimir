@@ -1,5 +1,6 @@
 import React from "react";
 import { BsFileEarmarkTextFill } from "react-icons/bs";
+import { motion } from "framer-motion";
 
 const References = ({ references }) => {
   const BACKEND_URL = import.meta.env.VITE_BACKEND_URL; 
