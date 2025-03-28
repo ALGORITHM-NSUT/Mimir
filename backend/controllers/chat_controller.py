@@ -16,9 +16,25 @@ from google.genai import types
 from google.genai.types import Content, UserContent
 from constants.Semantic_cache_prompt import Semantic_cache_prompt
 
+from utils.redis_client import redis_client
+
+jina_workers = 3
+
+def get_next_index():
+    # Get current index
+    if redis_client.get("index") is None:
+        redis_client.set("index", 0)
+        return 0
+    index = int(redis_client.get("index"))
+    # Increment index (loop back to 0 after 19)
+    next_index = (index + 1) % jina_workers
+    redis_client.set("index", next_index)
+    return index
+
+index = get_next_index()
 messages_collection = db["messages"]
 user_chats_collection = db["user_chats"]
-GEMINI_API_KEY = os.getenv("GOOGLE_API_KEY")
+GEMINI_API_KEY = os.getenv("GOOGLE_API_KEY").split(" | ")[index % 2].strip()
 client = genai.Client(api_key=GEMINI_API_KEY)
 
 async def prepare_chat_data(data: dict) -> dict:

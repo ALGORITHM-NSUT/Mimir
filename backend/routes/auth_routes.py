@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Response, Request
-from controllers.auth_controller import login_user, logout_user, get_current_user, get_current_user_cache
+from controllers.auth_controller import login_user, logout_user, get_current_user
 
 router = APIRouter()
 
