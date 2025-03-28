@@ -9,6 +9,7 @@ import { UserContext } from "../Context/UserContext";
 import Alert from "@mui/material/Alert";
 import { motion, AnimatePresence } from "framer-motion";
 import ScrollCue from "../components/ChatPage/ScrollCue";
+import { useTheme } from "../Context/ThemeContext";
 
 const ChatPage = () => {
   const { chatId: urlChatId } = useParams();
@@ -25,6 +26,7 @@ const ChatPage = () => {
   const [alert, setAlert] = useState(null);
   const [isNewChat, setIsNewChat] = useState(location.pathname === "/new");
   const [showScrollButton, setShowScrollButton] = useState(false);
+  const { currentTheme } = useTheme();
 
   useEffect(() => {
     if (alert) {
@@ -99,7 +101,7 @@ const ChatPage = () => {
     }
   };
 
-  const handleSendMessage = async (message) => {
+  const handleSendMessage = async (message, isDeepSearch = false) => {
     const tempMessageId = `temp-${new Date().getTime()}`; // Temporary ID for UI update
   
     const updatedHistory = [
@@ -118,7 +120,7 @@ const ChatPage = () => {
     try {
       const response = await axios.post(
         `${import.meta.env.VITE_BACKEND_URL}/api/chat`,
-        { chatId, message, userId, chatHistory }
+        { chatId, message, userId, chatHistory, isDeepSearch }
       );
   
       const { chatId: newChatId, messageId } = response.data;
@@ -224,7 +226,7 @@ const ChatPage = () => {
   }, []);
 
   return (
-    <div className="relative h-screen w-full bg-[#1b1c1d] text-white text-[16px] flex flex-col overflow-hidden">
+    <div className={`relative h-screen w-full bg-[${currentTheme.background}] ${currentTheme.text} text-[16px] flex flex-col overflow-hidden`}>
       <Sidebar
         isOpen={isSidebarOpen}
         toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}

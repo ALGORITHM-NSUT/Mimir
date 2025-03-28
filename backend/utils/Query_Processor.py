@@ -20,13 +20,31 @@ from google.genai.types import EmbedContentConfig
 import requests
 from models.chat_model import answer, expand
 
+
+# config_quick_search = types.GenerateContentConfig(
+#                         system_instruction=GEMINI_PROMPT,
+#                         response_mime_type='application/json',
+#                         response_schema=expand,
+#                         temperature=0.2)
+
+# config_thinking  = types.GenerateContentConfig(
+#                         system_instruction=GEMINI_PROMPT,
+#                         temperature=0.2)
+
+
 load_dotenv()
 GEMINI_API_KEY = os.getenv("GOOGLE_API_KEY")
 MONGO_URI_MIMIIR = os.getenv("MONGO_URI_MIMIR")
 JINA_API_KEY = os.getenv("JINA_API_KEY")
 mongoDb_client = AsyncIOMotorClient(MONGO_URI_MIMIIR)
 
+
+# Thinking Model
+
+llm2 = "gemini-2.0-flash-thinking-exp-01-21"
+# Action Model for quick search
 llm = "gemini-2.0-flash"
+
 client = genai.Client(api_key=GEMINI_API_KEY)
 
 MAX_RETRIES = 3
@@ -60,32 +78,54 @@ class QueryProcessor:
         self.current_date = datetime.now().date().isoformat()
         self.search_prompt = Gemini_search_prompt
 
-    async def process_query(self, question: str, user_knowledge: str):
+    async def process_query(self, question: str, user_knowledge: str, is_deep_search: bool = False):
         """Iterative retrieval process with dynamic query adjustment"""
+        
+        # Select model based on deep search flag
+        
+        model_to_use = llm2 if is_deep_search else llm
+        
+        print( " model to use  : ", model_to_use)
+        
+        retrycnt = 1
+        
+        
         context_entries = []
         seen_ids = set()
         seen_ids.add(ObjectId("aaaaaaaaaaaaaaaaaaaaaaaa"))
-        plan = await self._expand_query(question, user_knowledge)
+        plan = await self._expand_query(question, user_knowledge, model_to_use)
         knowledge = ""
         max_iter = 4
         ans = {}
         step = 1
         queries = plan[step - 1]["specific_queries"]
         doc_queries = plan[step - 1]["document_queries"]
-        retrycnt = 1
+        
+        
+
         for iteration in range(max_iter):
-            # if step != -1:
-            #     step = min(step, len(plan) - 1)
-            #     doc_queries = plan[step - 1]["document_queries"]
             doc_ids = await self._search_docs(doc_queries) if doc_queries else []
             chunk_results, current_docids, seen_ids = await self._search_in_chunks(queries, seen_ids, doc_ids, iteration + 1)
             iteration_context = self._format_context(chunk_results)
             context_entries.append(iteration_context)
             start = time.time()
-            ans = await self._generate_answer(question, iteration_context, self.current_date, plan, knowledge, max_iter - retrycnt, iteration + 1, user_knowledge, step, retrycnt)  
+            ans = await self._generate_answer(
+                question, 
+                iteration_context, 
+                self.current_date, 
+                plan, 
+                knowledge, 
+                max_iter - retrycnt, 
+                iteration + 1, 
+                user_knowledge, 
+                step, 
+                retrycnt,
+                model_to_use  # Pass the selected model
+            )  
             end = time.time()
             print("gemini response time : ", end - start)
-            if ans["final_answer"]:
+            
+            if "final_answer" in ans and ans["final_answer"] :
                 print(f"Stopping early at iteration {iteration+1}")
                 return ans
             else:
@@ -446,20 +486,16 @@ class QueryProcessor:
         except Exception as e:
             raise Exception(f"Reranking failed, quota limit exceeded")
     
-    async def _expand_query(self, query: str, user_knowledge: str) -> list:
+    async def _expand_query(self, query: str, user_knowledge: str, model_to_use: str) -> list:
         """Generate initial query variations with API quota handling"""
         prompt = Query_expansion_prompt.format(query=query, current_date=self.current_date, user_knowledge=user_knowledge)
 
-        for attempt in range(5):  # Retry up to 5 times
+        for attempt in range(5):
             try:
                 response = client.models.generate_content(
-                    model = llm, 
+                    model=model_to_use, 
                     contents=[prompt],
-                    config=types.GenerateContentConfig(
-                        system_instruction=GEMINI_PROMPT,
-                        response_mime_type='application/json',
-                        response_schema=expand,
-                        temperature=0.2)).text
+                    config=self._get_config(model_to_use, 'expand')).text
                 match = re.search(r'\{.*\}', response, re.DOTALL)
                 if not match:
                     raise ValueError("Failed to extract JSON from model response")
@@ -485,7 +521,9 @@ class QueryProcessor:
 
         raise Exception("Failed after multiple retries due to API quota limits.")
 
-    async def _generate_answer(self, question: str, context: str, current_date: str, plan: dict, knowledge: str, max_iter: int, iteration: int, user_knowledge: str, step: int, retrycnt: int) -> dict:
+        
+
+    async def _generate_answer(self, question: str, context: str, current_date: str, plan: dict, knowledge: str, max_iter: int, iteration: int, user_knowledge: str, step: int, retrycnt: int, model_to_use: str = llm) -> dict:
         """Generate and format final response"""
         specific_queries = []
         if step != -1:
@@ -501,8 +539,9 @@ class QueryProcessor:
         for attempt in range(MAX_RETRIES):
             try:
                 response = client.models.generate_content(
-                    model = llm,
-                    contents = [self.search_prompt.format(question=question,
+                    model=model_to_use,
+                    contents=[self.search_prompt.format(
+                        question=question,
                         context=context,
                         current_date=current_date,
                         action_plan=plan,
@@ -512,13 +551,9 @@ class QueryProcessor:
                         user_knowledge=user_knowledge,
                         step=stepknowledge,
                         specific_queries=specific_queries,
-                        retries_left = retrycnt)],
-                    config=types.GenerateContentConfig(
-                        system_instruction=GEMINI_PROMPT,
-                        response_mime_type='application/json',
-                        response_schema=answer,
-                        temperature=0.2)
-                    ).text
+                        retries_left=retrycnt)],
+                    config=self._get_config(model_to_use, 'answer')
+                ).text
                 
                 match = re.search(r'\{.*\}', response, re.DOTALL)  # Extract JSON safely
                 if not match:
@@ -556,3 +591,35 @@ class QueryProcessor:
             config=EmbedContentConfig(task_type="RETRIEVAL_DOCUMENT")
         )
         return [embedding.values for embedding in response.embeddings]
+
+    def _get_config(self, model_to_use: str, schema_type: str) -> types.GenerateContentConfig:
+        """
+        Get configuration for model generation with appropriate schema
+        
+        Args:
+            model_to_use (str): Model identifier
+            schema_type (str): Type of schema to use ('expand' or 'answer')
+            
+        Returns:
+            types.GenerateContentConfig: Configuration object
+        """
+        from models.chat_model import expand, answer
+        if model_to_use == llm2:
+            config = types.GenerateContentConfig(
+            system_instruction=GEMINI_PROMPT,
+            temperature=0.2
+            )
+            return config
+            
+        # Select schema based on type
+        schema = expand if schema_type == 'expand' else answer
+        
+        # Create config with appropriate schema
+        config = types.GenerateContentConfig(
+            system_instruction=GEMINI_PROMPT,
+            response_mime_type='application/json',
+            response_schema=schema,
+            temperature=0.2
+        )
+        
+        return config

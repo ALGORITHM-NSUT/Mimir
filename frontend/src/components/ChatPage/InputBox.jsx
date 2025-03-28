@@ -1,9 +1,13 @@
 // InputBox.jsx
 import React, { useState, useRef, useEffect } from "react";
 import { IoSend } from "react-icons/io5";
-import { RiRobot2Line } from "react-icons/ri";
+import { RiRobot2Line, RiSearchEyeLine ,RiSearchFill} from "react-icons/ri";
+import { BsLightning, BsLightningCharge } from "react-icons/bs";
+import { HiLightBulb } from "react-icons/hi";
+import { MdTravelExplore } from "react-icons/md";
 import SpeechButton from "./SpeechButton";
 import { motion, AnimatePresence } from "framer-motion";
+import DeepSearchModal from "./DeepSearchModal";
 
 const MAX_CHAR_LIMIT = 500;
 
@@ -11,7 +15,10 @@ const InputBox = ({ onSendMessage, setAlert }) => {
   const [message, setMessage] = useState("");
   const [isListening, setIsListening] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
+  const [isDeepSearch, setIsDeepSearch] = useState(false);
   const textAreaRef = useRef(null);
+  const [showDeepSearchModal, setShowDeepSearchModal] = useState(false);
+  const [pendingDeepSearch, setPendingDeepSearch] = useState(false);
 
   useEffect(() => {
     if (textAreaRef.current && window.innerWidth > 768) {
@@ -21,7 +28,7 @@ const InputBox = ({ onSendMessage, setAlert }) => {
 
   const handleSend = () => {
     if (message.trim()) {
-      onSendMessage(message);
+      onSendMessage(message, isDeepSearch);
       setMessage("");
       adjustTextAreaHeight();
     } else {
@@ -66,6 +73,35 @@ const InputBox = ({ onSendMessage, setAlert }) => {
     'ring-1 ring-cyan-500/50 shadow-sm shadow-cyan-500/20' : 
     'hover:shadow-xs hover:shadow-cyan-500/10';
 
+  const handleDeepSearchToggle = () => {
+    if (!isDeepSearch) {
+      setShowDeepSearchModal(true);
+      setPendingDeepSearch(true);
+    } else {
+      setIsDeepSearch(false);
+      setAlert({
+        type: "info",
+        text: "Switched to Quick Search mode"
+      });
+    }
+  };
+
+  const handleDeepSearchConfirm = () => {
+    setShowDeepSearchModal(false);
+    setIsDeepSearch(true);
+    setPendingDeepSearch(false);
+    setAlert({
+      type: "info",
+      text: "Switched to Deep Search mode - Responses may take longer but will be more comprehensive"
+    });
+  };
+
+  const handleDeepSearchCancel = () => {
+    setShowDeepSearchModal(false);
+    setPendingDeepSearch(false);
+    setIsDeepSearch(false);
+  };
+
   return (
     <motion.div
       initial="initial"
@@ -107,7 +143,7 @@ const InputBox = ({ onSendMessage, setAlert }) => {
             >
               <div className="h-1 w-20 bg-gray-700 rounded-full overflow-hidden">
                 <motion.div
-                  className="h-full bg-cyan-500"
+                  className="h-full bg-[#582EA6]"
                   initial={{ width: 0 }}
                   animate={{ width: `${(message.length / MAX_CHAR_LIMIT) * 100}%` }}
                 />
@@ -122,6 +158,32 @@ const InputBox = ({ onSendMessage, setAlert }) => {
 
       {/* Action Buttons */}
       <div className="flex items-center gap-2">
+        <motion.button
+          className={`p-3 text-gray-50 rounded-full 
+            bg-[#404040] hover:bg-[#505050] transition-all
+            ${isDeepSearch ? 
+              'text-yellow-400 ring-1 ring-yellow-400/30 shadow-[0_0_10px_rgba(250,204,21,0.2)]' : 
+              'text-gray-400'
+            }
+            hover:shadow-yellow-500/30 relative`}
+          onClick={handleDeepSearchToggle}
+          whileHover="hover"
+          whileTap="tap"
+          variants={buttonVariants}
+          title={isDeepSearch ? "Deep Search Mode" : "Quick Search Mode"}
+        >
+          <MdTravelExplore size={22} />
+          {isDeepSearch && (
+            <motion.div
+              className="absolute inset-0 rounded-full bg-yellow-400/10"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.3 }}
+            />
+          )}
+        </motion.button>
+
         <motion.div
           whileHover="hover"
           whileTap="tap"
@@ -135,9 +197,14 @@ const InputBox = ({ onSendMessage, setAlert }) => {
         </motion.div>
 
         <motion.button
-          className={`p-3 ml-2 text-gray-50 hover:text-gray-400 rounded-full bg-[#404040] hover:bg-[#505050] transition-all shadow-md ${
-            message.trim() ? 'hover:shadow-cyan-500/50' : 'opacity-50 cursor-not-allowed'
-          }`}
+          className={`p-3 ml-2 text-gray-50 rounded-full transition-all shadow-md
+            ${message.trim() ? 
+              `${isDeepSearch ? 
+                'bg-[#404040] hover:bg-[#505050]' : 
+                ''
+                
+              }` : 
+              'opacity-50 cursor-not-allowed bg-[#404040]'}`}
           onClick={handleSend}
           disabled={!message.trim()}
           whileHover="hover"
@@ -163,11 +230,37 @@ const InputBox = ({ onSendMessage, setAlert }) => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 20 }}
-            className="absolute -top-8 right-0 text-xs text-cyan-400 
+            className="absolute -top-8 right-0 text-xs text-[#582EA6]
               bg-[#1a1a2e] px-3 py-1 rounded-t-lg shadow-lg"
           >
             Approaching character limit
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Add a small indicator for search mode */}
+      <AnimatePresence>
+        {message.trim() && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 10 }}
+            className={`absolute -bottom-6 left-4 text-xs ${
+              isDeepSearch ? 'text-yellow-400' : 'text-gray-400'
+            }`}
+          >
+            {isDeepSearch ? 'Deep Search Mode' : 'Quick Search Mode'}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Deep Search Modal */}
+      <AnimatePresence>
+        {showDeepSearchModal && (
+          <DeepSearchModal
+            onConfirm={handleDeepSearchConfirm}
+            onClose={handleDeepSearchCancel}
+          />
         )}
       </AnimatePresence>
     </motion.div>

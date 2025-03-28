@@ -1,5 +1,5 @@
 import os
-import jwt
+import jwt as pyjwt
 import requests
 from datetime import datetime, timedelta
 from fastapi import APIRouter, Response, HTTPException, Request, Depends
@@ -22,8 +22,7 @@ CACHE_TTL = int(os.getenv("REDIS_TTL"))
 def create_jwt_token(user_id: str):
     expiration = datetime.utcnow() + timedelta(minutes=TOKEN_EXPIRY)
     payload = {"userId": user_id, "exp": expiration}
-    return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
-
+    return pyjwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
 
 def verify_google_token(token: str):
     GOOGLE_TOKEN_VERIFY_URL = "https://oauth2.googleapis.com/tokeninfo"
@@ -80,7 +79,6 @@ async def logout_user(response: Response):
     response.delete_cookie("access_token", httponly=True, samesite="None", secure=True, path="/"  )
     return {"message": "Logged out successfully"}
 
-
 async def get_current_user(request: Request):
     token = request.cookies.get("access_token")
 
@@ -88,7 +86,7 @@ async def get_current_user(request: Request):
         raise HTTPException(status_code=401, detail="Not authenticated")
 
     try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        payload = pyjwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         user = await users_collection.find_one({"_id": payload["userId"]})
 
         if not user:
@@ -134,5 +132,5 @@ async def get_current_user_cache(request: Request):
 
     except jwt.ExpiredSignatureError:
         raise HTTPException(status_code=401, detail="Token expired")
-    except jwt.InvalidTokenError:
+    except pyjwt.InvalidTokenError:
         raise HTTPException(status_code=401, detail="Invalid token")

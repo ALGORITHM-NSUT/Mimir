@@ -15,7 +15,7 @@ from google.genai.types import Content
 load_dotenv()
 qp = QueryProcessor()
 
-async def response_strategy(message: str, chat):
+async def response_strategy(message: str, chat, is_deep_search=False):
     try:
         async def chat_with_bot(user_input):
             response = chat.send_message(user_input)
@@ -23,7 +23,7 @@ async def response_strategy(message: str, chat):
 
         async def interactive_chat(user_input=message):
             if not user_input.strip():
-                return {"response": "Empty input", "references": []}
+                return {"response": "Empty input", "references": [], "code": 200}
             
             retries = 3  # Number of retries for quota errors
             base_delay = 2  # Initial delay in seconds
@@ -33,24 +33,18 @@ async def response_strategy(message: str, chat):
                     break
                 except google.api_core.exceptions.ResourceExhausted:
                     if attempt == retries - 1:
-                        return {"response": "Service unavailable due to quota limits. Please try again later.", "references": []}
+                        return {"response": "Service unavailable due to quota limits. Please try again later.", "references": [], "code": 429}
                     wait_time = base_delay * (2 ** attempt)
                     print(f"Quota exceeded, retrying in {wait_time} seconds...")
                     time.sleep(wait_time)
             
-            # def extract_json(text):
-            #     match = re.search(r'\{.*\}', text, re.DOTALL)
-            #     return match.group(0) if match else None
-            
-            # json_string = extract_json(bot_reply)
-            # if not json_string:
-            #     raise ValueError(f"Failed to extract JSON from bot_reply: {bot_reply}")
-            
             json_data = json.loads(bot_reply)
-            answer = {}
+
             print(json_data)
+            answer = {}  # Initialize answer dictionary here
+            
             if json_data.get("retrieve"):
-                answer = await qp.process_query(json_data["query"], json_data["knowledge"])
+                answer = await qp.process_query(json_data["query"], json_data["knowledge"], is_deep_search)
                 answer["retrieve"] = True
                 chat.record_history(
                     user_input = "",

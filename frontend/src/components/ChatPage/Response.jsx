@@ -60,7 +60,7 @@ const Response = ({ text, timestamp }) => {
 
   useEffect(() => {
     const now = Date.now();
-    setShouldAnimate(now - timestamp <= 10000);
+    setShouldAnimate(now - timestamp <= 1000);
   }, [timestamp]);
 
   const splitMarkdown = (mdText) => {

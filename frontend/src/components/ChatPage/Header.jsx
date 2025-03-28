@@ -1,17 +1,36 @@
-import React from "react";
+import React, { useState, useRef, useEffect, useContext } from "react";
+
+import { FaShareAlt } from "react-icons/fa";
+import { useParams } from "react-router-dom";
 import { Link } from "react-router-dom";
 import { TbLayoutSidebarLeftExpandFilled } from "react-icons/tb";
 import { FaPencilAlt, FaUserCircle } from "react-icons/fa";
 import ProfileMenu from "../Profile/ProfileMenu";
+import ShareChatModal from "../../modals/ShareChatModal";
+import { UserContext } from "../../Context/UserContext";
 
 const Header = ({ toggleSidebar, setAlert }) => {
 
+
+  const [isShareModalOpen, setIsShareModalOpen] = React.useState(false);
+  const [alertMessage, setAlertMessage] = React.useState(null);
+  const { chatId } = useParams();
+  const { user, logoutUser } = useContext(UserContext);
+  const userId = user?.userId;
 
   const handleNewChatClick = (e) => {
     if (location.pathname === "/new") {
       e.preventDefault(); 
       setAlert({ type: "error", text: "Already on New Chat Page." });
     }
+  };
+
+  const handleShareChat = () => {
+    if (!chatId) {
+      setAlert({ type: "error", text: "Please start a conversation" });
+      return;
+    }
+    setIsShareModalOpen(true);
   };
 
   return (
@@ -31,10 +50,26 @@ const Header = ({ toggleSidebar, setAlert }) => {
       <span className="text-xl sm:text-2xl font-semibold bg-white text-transparent bg-clip-text text-center">
         Mimir
       </span>
-
-      {/* Right Section - Profile Icon */}
-      <ProfileMenu />
+      
+      {/* Right Section - Profile and Share */}
+      <div className="flex items-center justify-end gap-2">
+        <div className="px-3 py-2 flex items-center gap-2 hover:bg-gray-700 cursor-pointer rounded-md transition-all"
+          onClick={handleShareChat}>
+          <FaShareAlt className="text-lg" />
+        </div>
+        <ProfileMenu />
+      </div>
+      
+      <ShareChatModal
+        isOpen={isShareModalOpen}
+        onClose={() => setIsShareModalOpen(false)}
+        chatId={chatId}
+        userId={userId}
+        setAlertMessage={setAlertMessage}
+      />
     </header>
+
+    
   );
 };
 
