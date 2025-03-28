@@ -48,7 +48,6 @@ STRICT JSON OUTPUT ONLY.
 11. **All fields are mandatory, especially the specific queries field**.
 12. **If more data is required to answer the question, ask the user for it. by adding it to the answer field and making final_answer = true**.(only ask user if you don't know where or how to get answer)
 13. **No need to verify data is the action plan doesn't say so**.
-14. **Sometimes data may be poorly formatted and non-readable, in that case just present a summary and tell user to check in the given docuemnts**.
 ---
 
 ### **🔹 Next Step Query Generation**
