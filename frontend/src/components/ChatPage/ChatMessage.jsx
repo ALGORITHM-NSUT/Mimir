@@ -12,6 +12,7 @@ const ChatMessage = ({ query, response, references,timestamp }) => {
       </div>
 
       <div className="bg-[#2A2A2A]   p-6 rounded-3xl rounded-tl-none shadow-[0px_5px_5px_rgba(0,0,0,0.3)] flex flex-col gap-6">
+      <div className="bg-transparent p-6 rounded-3xl rounded-tl-none flex flex-col gap-6">
         <div className="flex-1 min-w-0">
           <Response text={response} timestamp={timestamp} />
         </div>
@@ -20,6 +21,7 @@ const ChatMessage = ({ query, response, references,timestamp }) => {
         <References references={references} />
 
       </div>
+    </div>
     </div>
   );
 };
