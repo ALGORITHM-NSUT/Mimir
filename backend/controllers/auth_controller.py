@@ -94,9 +94,9 @@ async def get_current_user(request: Request):
 
         return {"userId": str(user["_id"]), "name": user["name"], "email": user["email"]}
 
-    except jwt.ExpiredSignatureError:
+    except pyjwt.ExpiredSignatureError:
         raise HTTPException(status_code=401, detail="Token expired")
-    except jwt.InvalidTokenError:
+    except pyjwt.InvalidTokenError:
         raise HTTPException(status_code=401, detail="Invalid token")
     
 
