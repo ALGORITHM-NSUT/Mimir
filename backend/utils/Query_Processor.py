@@ -563,6 +563,9 @@ class QueryProcessor:
                     return json_data
                 except:
                     print("Retrying JSON extraction in _generate_answer...")
+                    print("-------------------")
+                    print(response)
+                    print("-------------------")
                     raise ValueError("Failed to extract JSON from model response")
 
             except (json.JSONDecodeError, ValueError) as e:
