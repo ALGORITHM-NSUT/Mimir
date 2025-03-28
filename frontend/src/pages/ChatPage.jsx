@@ -10,6 +10,8 @@ import Alert from "@mui/material/Alert";
 import { motion, AnimatePresence } from "framer-motion";
 import ScrollCue from "../components/ChatPage/ScrollCue";
 import { useTheme } from "../Context/ThemeContext";
+import { FaQuestionCircle } from "react-icons/fa";
+import HelpModal from "../components/ChatPage/HelpModal";
 
 const ChatPage = () => {
   const { chatId: urlChatId } = useParams();
@@ -27,6 +29,7 @@ const ChatPage = () => {
   const [isNewChat, setIsNewChat] = useState(location.pathname === "/new");
   const [showScrollButton, setShowScrollButton] = useState(false);
   const { currentTheme } = useTheme();
+  const [showHelpModal, setShowHelpModal] = useState(false);
 
   useEffect(() => {
     if (alert) {
@@ -289,7 +292,23 @@ const ChatPage = () => {
         <span>Mimir can make mistakes. Check important info.</span>
       </div>
 
+      {/* Help Icon Button */}
+      <motion.button
+        className="fixed bottom-2 right-4 text-gray-400 hover:text-cyan-400 transition-colors z-10"
+        whileHover={{ scale: 0.8, rotate: 5 }}
+        whileTap={{ scale: 0.85 }}
+        onClick={() => setShowHelpModal(true)}
+        aria-label="Help and Information"
+      >
+        <FaQuestionCircle size={17} />
+      </motion.button>
 
+      {/* Help Modal */}
+      <AnimatePresence>
+        {showHelpModal && (
+          <HelpModal onClose={() => setShowHelpModal(false)} />
+        )}
+      </AnimatePresence>
     </div>
   );
 };
