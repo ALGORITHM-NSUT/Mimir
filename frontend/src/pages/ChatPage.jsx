@@ -9,7 +9,6 @@ import { UserContext } from "../Context/UserContext";
 import Alert from "@mui/material/Alert";
 import { motion, AnimatePresence } from "framer-motion";
 import ScrollCue from "../components/ChatPage/ScrollCue";
-import { useTheme } from "../Context/ThemeContext";
 import { FaQuestionCircle } from "react-icons/fa";
 import HelpModal from "../components/ChatPage/HelpModal";
 
@@ -28,7 +27,6 @@ const ChatPage = () => {
   const [alert, setAlert] = useState(null);
   const [isNewChat, setIsNewChat] = useState(location.pathname === "/new");
   const [showScrollButton, setShowScrollButton] = useState(false);
-  const { currentTheme } = useTheme();
   const [showHelpModal, setShowHelpModal] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(isNewChat);
 
@@ -205,7 +203,7 @@ const ChatPage = () => {
             );
 
             // Ensure sessionStorage is updated
-            sessionStorage.setItem(
+            sessionStorage.removeItem(
               "chatHistory",
               JSON.stringify({ chatId, messageId, history: newHistory })
             );
@@ -246,7 +244,7 @@ const ChatPage = () => {
   };
 
   return (
-    <div className={`relative h-screen w-full bg-[${currentTheme.background}] ${currentTheme.text} text-[16px] flex flex-col overflow-hidden`}>
+    <div className={`relative h-screen w-full text-[16px] bg-[#1b1c1d] flex flex-col overflow-hidden`}>
       <Sidebar
         isOpen={isSidebarOpen}
         toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}

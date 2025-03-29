@@ -51,7 +51,7 @@ const Response = ({ text, timestamp, onFeedback }) => {
 
   return (
     <div className="mt-2 max-w-full w-full">
-      <FaMagic className="mb-4 text-white-400 text-md" />
+      <FaMagic className="mb-4 text-gray-200 text-md" />
       <div className="text-gray-300 text-sm md:text-base font-sans antialiased leading-relaxed break-words whitespace-pre-wrap w-full max-w-full">
         <div className="overflow-auto">
           <div className="prose prose-invert max-w-none break-words whitespace-pre-wrap">

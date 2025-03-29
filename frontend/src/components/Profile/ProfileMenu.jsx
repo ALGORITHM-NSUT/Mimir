@@ -67,13 +67,6 @@ const ProfileMenu = () => {
       {isOpen && (
         <div ref={menuRef} className="absolute right-0 mt-2 w-48 bg-[#2a2a2a] text-gray-100 rounded-xl shadow-lg z-50">
           <ul className="py-2">
-            {/* <li
-              className="px-4 py-2 flex items-center gap-2 hover:bg-gray-700 cursor-pointer rounded-md mx-2 transition-all"
-              onClick={handleShareChat}
-            >
-              <FaShareAlt className="text-lg" />
-              Share Chat
-            </li> */}
             <li
               className="px-4 py-2 flex items-center gap-2 hover:bg-gray-700 cursor-pointer rounded-md mx-2 transition-all"
               onClick={toggleProfileModal}

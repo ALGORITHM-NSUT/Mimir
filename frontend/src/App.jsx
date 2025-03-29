@@ -1,7 +1,6 @@
 import React, { useContext } from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import { UserContext, UserProvider } from "./Context/UserContext";
-import { ThemeProvider } from "./Context/ThemeContext";
 import LandingPage from "./pages/LandingPage";
 import ChatPage from "./pages/ChatPage";
 import SharedChatPage from "./pages/SharedChatPage";
@@ -14,13 +13,13 @@ const ProtectedRoute = ({ children }) => {
 
 const App = () => {
   return (
-    <ThemeProvider>
+    
       <UserProvider>
         <Router>
           <AppRoutes />
         </Router>
       </UserProvider>
-    </ThemeProvider>
+  
   );
 };
 

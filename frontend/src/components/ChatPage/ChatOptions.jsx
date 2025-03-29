@@ -1,7 +1,10 @@
 import { Menu } from "@headlessui/react";
 import { FaEllipsisH, FaTrash, FaShare, FaEdit } from "react-icons/fa";
+import RenameChatModal from "../../modals/RenameChatModal";
+import { useState } from "react";
 
-const ChatOptions = ({ chatId, handleDeleteChat }) => {
+const ChatOptions = ({ userId, chatId, handleDeleteChat, setChats }) => {
+  const [renameModalOpen, setRenameModalOpen] = useState(false);
   return (
     <Menu as="div" className="relative inline-block text-left">
       <Menu.Button className="p-2 rounded-full hover:bg-[#252627] transition">
@@ -23,32 +26,26 @@ const ChatOptions = ({ chatId, handleDeleteChat }) => {
           )}
         </Menu.Item>
         <Menu.Item>
-          {({ active }) => (
-            <button
-              onClick={() => console.log("Share chat", chatId)}
-              className={`${
-                active ? "bg-[#252627] text-white" : "text-gray-300"
-              } flex w-full px-4 py-2 text-sm items-center transition`}
-            >
-              <FaShare className="mr-2" />
-              Share
-            </button>
-          )}
-        </Menu.Item>
-        <Menu.Item>
-          {({ active }) => (
-            <button
-              onClick={() => console.log("Rename chat", chatId)}
-              className={`${
-                active ? "bg-[#252627] text-white" : "text-gray-300"
-              } flex w-full px-4 py-2 text-sm items-center transition`}
-            >
-              <FaEdit className="mr-2" />
-              Rename
-            </button>
-          )}
-        </Menu.Item>
+        {({ active }) => (
+          <button
+            onClick={() => setRenameModalOpen(true)} // Open modal
+            className={`${
+              active ? "bg-[#252627] text-white" : "text-gray-300"
+            } flex w-full px-4 py-2 text-sm items-center transition`}
+          >
+            <FaEdit className="mr-2" />
+            Rename
+          </button>
+        )}
+      </Menu.Item>
       </Menu.Items>
+      <RenameChatModal
+        isOpen={renameModalOpen}
+        onClose={() => setRenameModalOpen(false)}
+        chatId={chatId}
+        userId={userId}
+        setChats={setChats} 
+      />
     </Menu>
   );
 };

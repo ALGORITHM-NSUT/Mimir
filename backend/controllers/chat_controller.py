@@ -1,7 +1,6 @@
 from datetime import datetime
 from fastapi import HTTPException
-import asyncio
-import threading
+from bson import ObjectId
 from pymongo import ASCENDING
 from utils.db import db
 from utils.token_utils import generate_secure_token
@@ -15,10 +14,12 @@ from google import genai
 from google.genai import types
 from google.genai.types import Content, UserContent
 from constants.Semantic_cache_prompt import Semantic_cache_prompt
+import json
 
 from utils.redis_client import redis_client
 
 jina_workers = 3
+CACHE_TTL = int(os.getenv("REDIS_TTL")) 
 
 def get_next_index():
     # Get current index
@@ -52,7 +53,7 @@ async def prepare_chat_data(data: dict) -> dict:
     await user_chats_collection.update_one(
         {"userId": userId, "chatId": chatId},
         {
-            "$set": {"chatId": chatId, "userId": userId},  # Ensure chatId is stored
+            "$set": {"chatId": chatId, "userId": userId,"delete_for_user": False}, 
             "$setOnInsert": {"title": message, "createdAt": datetime.utcnow()}
         },
         upsert=True
@@ -67,26 +68,27 @@ async def handle_chat_request(data: dict):
     chatHistory = data.get("chatHistory")
     messageId = data.get("messageId")
     isDeepSearch = data.get("isDeepSearch", False)  # Get the deep search flag
-    
+
     client = genai.Client(api_key=GEMINI_API_KEY)
-    chats = client.chats.create(model="gemini-2.0-flash-lite", 
+    chats = client.chats.create(
+        model="gemini-2.0-flash-lite",
         config=types.GenerateContentConfig(
-        system_instruction=Semantic_cache_prompt,
-        response_mime_type='application/json',
-        response_schema=response_format)
+            system_instruction=Semantic_cache_prompt,
+            response_mime_type="application/json",
+            response_schema=response_format,
+        ),
     )
+
     if not userId:
         raise HTTPException(status_code=400, detail="User ID is required")
 
     if chatHistory:
         for chat in chatHistory:
             try:
-                # Ensure "query" exists and is a string
                 query = chat.get("query")
                 if not isinstance(query, str):
                     raise ValueError(f"Invalid query format in chat: {chat}")
 
-                # Handle missing or malformed references
                 references = ""
                 if "references" in chat and isinstance(chat["references"], list):
                     references_list = [
@@ -97,15 +99,15 @@ async def handle_chat_request(data: dict):
                     if references_list:
                         references = "\nLinks:\n" + " \n ".join(references_list)
 
-                # Ensure "response" exists and is a string
                 response = chat.get("response")
                 if not isinstance(response, str):
                     raise ValueError(f"Invalid response format in chat: {chat}")
 
-                chats.record_history(user_input=UserContent(parts=[{"text": query}]),
+                chats.record_history(
+                    user_input=UserContent(parts=[{"text": query}]),
                     model_output=[Content(parts=[{"text": response + references}], role="model")],
                     is_valid=True,
-                    automatic_function_calling_history=None
+                    automatic_function_calling_history=None,
                 )
 
             except Exception as e:
@@ -124,18 +126,40 @@ async def handle_chat_request(data: dict):
             "query": message,
             "response": response_text,
             "references": references,
-            "timestamp": datetime.utcnow(),
+            "timestamp": datetime.utcnow().isoformat(),  # Convert datetime to string
         }
 
         inserted_message = await messages_collection.insert_one(message_data)
-        message_id = str(inserted_message.inserted_id)
-        
+
+        # Convert all ObjectId fields to strings before storing in Redis
+        def convert_objectid_to_str(data):
+            if isinstance(data, dict):
+                return {key: convert_objectid_to_str(value) for key, value in data.items()}
+            elif isinstance(data, list):
+                return [convert_objectid_to_str(item) for item in data]
+            elif isinstance(data, ObjectId):
+                return str(data)  # Convert ObjectId to string
+            return data
+
+        message_data = convert_objectid_to_str(message_data)
+
+        try:
+            redis_value = json.dumps(message_data)
+            redis_key = f"message:{messageId}"
+            print("Redis Connected:", redis_client.ping()) 
+            redis_client.setex(redis_key, 60, redis_value)
+
+            print(redis_key)
+        except Exception as e:
+            print(f"Error storing in Redis: {e}")
+
         return {
             "chatId": chatId,
-            "messageId": message_id,
+            "messageId": messageId,
             "response": response_text,
             "references": references,
         }, code
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -144,7 +168,10 @@ async def get_all_chats(userId: str):
     if not userId:
         raise HTTPException(status_code=400, detail="userId is required")
 
-    chat_cursor = user_chats_collection.find({"userId": userId}, {"_id": 0, "chatId": 1, "title": 1})
+    chat_cursor = user_chats_collection.find(
+        {"userId": userId,  "delete_for_user": {"$ne": True}},
+        {"_id": 0, "chatId": 1, "title": 1, }
+    )
     chat_list = await chat_cursor.to_list(None)
 
     return {"chats": chat_list}
@@ -153,9 +180,10 @@ async def get_chat(chatId: str, data: dict):
     messageId = data.get("messageId")
     userId = data.get("userId")
     chat_cursor = messages_collection.find(
-        {"chatId": chatId, "userId": userId},
+        {"chatId": chatId, "userId": userId}, 
         {"_id": 0}
     ).sort("timestamp", ASCENDING)
+
 
     chat_history = await chat_cursor.to_list(None)
 
@@ -189,7 +217,10 @@ async def get_shared_chat(token: str):
 
     print(chatId)
 
-    chat_cursor = messages_collection.find({"chatId": chatId}, {"_id": 0}).sort("timestamp", 1)
+    chat_cursor = messages_collection.find(
+        {"chatId": chatId},
+        {"_id": 0}
+    ).sort("timestamp", 1)
     chat_history = await chat_cursor.to_list(None)
 
     if not chat_history:
@@ -200,12 +231,47 @@ async def get_shared_chat(token: str):
 
 async def get_response(userId: str, data: dict):
     messageId = data.get("messageId")
-    message_data = await messages_collection.find_one(
-        {"messageId": messageId, "userId": userId},
-        {"_id": 0}
-    )
-    
+    redis_key = f"message:{messageId}"
 
-    if not message_data:
-        return {"response" : "Processing"}
-    return jsonable_encoder(message_data)
+    print(redis_key )
+
+    # Check Redis first
+    cached_message = redis_client.get(redis_key)
+    if cached_message:
+        message_data = json.loads(cached_message)
+        return jsonable_encoder(message_data)
+
+    # If not found in Redis, return "Processing" (don't check MongoDB)
+    return {"response": "Processing"}
+
+
+async def user_chat_delete(chatId: str, data: dict):
+    userId = data["userId"]
+
+    result = await user_chats_collection.update_many(
+        {"chatId": chatId, "userId": userId},
+        {"$set": {"delete_for_user": True}}
+    )
+
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="No messages found to delete.")
+
+    return {"message": "Chat marked as deleted for user."}
+
+
+async def change_title(chatId: str, data: dict):
+    userId = data.get("userId")
+    new_title = data.get("newTitle")
+
+    if not userId or not new_title:
+        raise HTTPException(status_code=400, detail="Missing userId or title")
+
+    result = await user_chats_collection.update_one(
+        {"chatId": chatId, "userId": userId},
+        {"$set": {"title": new_title}}
+    )
+
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Chat not found or unauthorized")
+
+    return {"message": "Title updated successfully"}
