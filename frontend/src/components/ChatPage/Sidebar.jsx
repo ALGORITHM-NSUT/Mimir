@@ -2,7 +2,7 @@ import React, { useState, useEffect, useContext } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
 import { IoChatboxOutline } from "react-icons/io5";
-import { FaPlus } from "react-icons/fa";
+import { FaPlus, FaTrash } from "react-icons/fa";
 import { TbLayoutSidebarRightExpandFilled } from "react-icons/tb";
 import { UserContext } from "../../Context/UserContext.jsx";
 
@@ -56,6 +56,27 @@ const Sidebar = ({ isOpen, toggleSidebar, sidebarRef, setAlert }) => {
     }
   };
 
+  const handleDeleteChat = (chatId) => {
+    if (window.confirm("Are you sure you want to delete this chat?")) {
+      fetch(`${import.meta.env.VITE_BACKEND_URL}/api/chats/${chatId}`, {
+        method: "DELETE",
+        credentials: "include",
+      })
+        .then((res) => {
+          if (res.ok) {
+            console.log("Chat deleted successfully");
+            setChats((prevChats) => prevChats.filter((chat) => chat.chatId !== chatId));
+          } else {
+            console.error("Failed to delete chat");
+            alert("Failed to delete chat. Please try again.");
+          }
+        })
+        .catch((error) => {
+          console.error("Error deleting chat:", error);
+          alert("An error occurred while deleting the chat. Please try again.");
+        });
+    }
+  };
 
   const handleNewChatClick = (e) => {
     if (location.pathname === "/new") {
@@ -95,15 +116,22 @@ const Sidebar = ({ isOpen, toggleSidebar, sidebarRef, setAlert }) => {
           <h2 className="text-lg font-semibold mb-2">Previous Chats</h2>
           <ul className="space-y-2 overflow-y-auto max-h-[60vh]">
             {chats?.slice().reverse().map((chat) => (
-              <li key={chat.chatId} className="w-full ">
+              <li key={chat.chatId} className="w-full flex">
                 <button
                   onClick={() => navigateToChat(chat.chatId)}
-                  className={`flex items-center gap-2 p-2 w-full transition-all duration-300 ease-in-out ${chat.chatId == chatId ? "bg-[#555] text-white rounded-3xl" : "hover:bg-[#333] hover:rounded-3xl"}`}
+                  className={`flex items-center gap-2 p-2 w-[80%] transition-all duration-300 ease-in-out ${chat.chatId == chatId ? "bg-[#555] text-white rounded-3xl" : "hover:bg-[#333] hover:rounded-3xl"}`}
                 >
                   <IoChatboxOutline />
                   <span className="truncate w-[200px] text-left ">
                     {chat.title}
                   </span>
+                </button>
+
+                <button
+                  onClick={() => handleDeleteChat(chat.chatId)}
+                  className="p-2 rounded-full hover:bg-red-500 transition flex-shrink-0"
+                >
+                  <FaTrash className="text-gray-100 hover:text-white" />
                 </button>
               </li>
             ))}
