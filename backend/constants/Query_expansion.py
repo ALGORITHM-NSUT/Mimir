@@ -120,28 +120,14 @@ You can also use this knowledge to determine next steps
                 }}
             ],
             "document_queries": [
-                "Academic Calendar for 2025"
-            ]
-        }},
-        {{
-            "step": 2,
-            "reason": "Verify if Diwali specifically is listed as a holiday using event-specific documents.",
-            "specific_queries": [
-                {{
-                    "query": "Diwali holiday notification from NSUT administration 2025",
-                    "specificity": 0.6,
-                    "expansivity": 0.5
-                }}
-            ],
-            "document_queries": [
-                "Official Notices & Circulars for considering Diwali 2025",
+                "Academic Calendar for 2025",
+                "Official Notices & Circulars for considering Diwali 2025"
             ]
         }}
     ]
 }}
 📌 Reasoning Explanation:
 Step 1: First, search the Academic Calendar for all listed holidays.
-Step 2: If Diwali isn't explicitly listed, verify with notices or circulars.
 
 📌 Example 2: Query for Seating Arrangement of Students
 🔍 Query: "were rohit singla and rajeev chauhan seated together in same room for 6th sem midsem exams? they are in csda"

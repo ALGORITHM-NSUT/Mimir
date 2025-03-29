@@ -182,6 +182,82 @@ If none apply → full_action_plan_compelete=false
     - one of the specific query should target the entire academic calendar, and the rest of the specific queries should target specific information from the calendar.
     - add 1 extra document query directed at that particular information revision seperate from academic calendar *DO NOT make a seperate step for this, just add it as a document query in the same step.
 
+### Example of how to use this prompt:
+step = 1
+question = "were rohit singla and rajeev chauhan seated together in same room for 6th sem midsem exams? they are in csda branch"
+current_date = "March 25, 2025"
+iteration = 1
+max_iter = 3
+Step of Action Plan: 1
+Retries Left: 2
+{{
+  "original user question": "were rohit singla and rajeev chauhan seated together in same room for 6th sem midsem exams? they are in csda branch"
+  'action_plan': [
+    {{
+      'step': 1,
+      'reason': 'since User did not provide roll number like (2023UCS6654), to find the seating arrangement, we need the roll numbers of the students. Since the user is asking for the midsem exam seating arrangement for the 6th semester, and the current date is March 25, 2025, the 6th semester is ongoing. Therefore, the 5th-semester results are the most recent available to retrieve the roll numbers.',
+      'specific_queries': [
+        {{
+          'query': 'Find the 5th semester result of "rohit singla" in Computer Science and Big Data Analytics (CSDA) branch',
+          'specificity': 0.9,
+          'expansivity': 0.4,
+        }},
+        {{
+          'query': 'Find the 5th semester result of "rajeev chauhan" in Computer Science and Big Data Analytics (CSDA) branch',
+          'specificity': 0.9,
+          'expansivity': 0.4
+        }}
+      ],
+      'document_queries': [
+        'Official Gazette Report for 5th semester East Campus Computer Science and Data Analytics (CSDA) branch'
+      ]
+    }},
+    {{
+      'step': 2,
+      'reason': "Now that we have the roll numbers of both students, we can find their seating arrangement for the 6th-semester midsem exams. Since the query is for midsem exams, and the current date is March 25, 2025, it's likely that the seating arrangement has been released.",
+      'specific_queries': [
+        {{
+          'query': 'Seating arrangement for "rohit singla" (roll number X) for 6th semester midsem exams in Computer Science and Big Data Analytics (CSDA) branch',
+          'specificity': 0.95,
+          'expansivity': 0.6
+        }},
+        {{
+          'query': 'Seating arrangement for "rajeev chauhan" (roll number Y) for 6th semester midsem exams in Computer Science and Big Data Analytics (CSDA) branch',
+          'specificity': 0.95,
+          'expansivity': 0.6
+        }}
+      ],
+      'document_queries': [
+        'Seating plan for 6th semester midsem exams for Computer Science and Big Data Analytics (CSDA) branch'
+      ]
+    }}
+  ]
+}}
+Context: rohit singla's 5th semester result is 2024UCD6604 and rajeev chauhan's 5th semester result is 2024UCS6605.
+
+Answer:
+{{
+    "full_action_plan_compelete": false,
+    "specific_queries": [ 
+        {{
+            "query": "Seating arrangement for 2024UCD6604 for 6th semester midsem exams in Computer Science and Big Data Analytics (CSDA) branch",
+            "specificity": 0.8,
+            "expansivity": 0.4
+        }},
+        {{
+            "query": "Seating arrangement for 2024UCS6605 for 6th semester midsem exams in Computer Science and Big Data Analytics (CSDA) branch",
+            "specificity": 0.8,
+            "expansivity": 0.4
+        }}
+    ],
+    "document_queries": ["Seating plan for 6th semester midsem exams for Computer Science and Big Data Analytics (CSDA) branch"],
+    "partial_answer": "roll number for rohit singla is 2024UCD6604 and for rajeev chauhan is 2024UCS6605",
+    "answer": "",
+    "step": 2,
+    "links": []
+}}
+Reason: The system has found the roll numbers of both students and new we can find their seating arrangement for the 6th semester midsem exams. setting full_action_plan_compelete to false as this is not the last step of action plan. which will help us to get the final answer in next iteration.
+
 🔹 Context for This Iteration
 
 user known information (if any) 
