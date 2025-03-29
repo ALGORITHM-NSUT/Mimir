@@ -176,7 +176,7 @@ Step 1: First, search the Academic Calendar for all listed holidays.
   ]
 }}
 📌 Reasoning Explanation:
-Step 1: Retrieve the student’s roll number because it was not given from their semester result (Gazette Report).
+Step 1: Retrieve the student’s roll number because it was not given, retreive it from their semester result (Gazette Report) of previous semester.
 Step 2: Use that roll number to search for seating arrangements in the official Seating Plan document.
 
 📌 Example 3: Query for Fee Structure

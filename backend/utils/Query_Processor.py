@@ -137,6 +137,7 @@ class QueryProcessor:
                 logging.info(f"Stopping early at iteration {iteration+1}")
                 return ans
             else:
+                print(ans)
                 logging.info(ans)
             if iteration == max_iter - 1:
                 logging.info(f"Could not find answer, returning relevant info")
@@ -518,6 +519,7 @@ class QueryProcessor:
                 try:
                     json_data = json.loads(match.group(0), strict = False)
                     logging.info(json_data)
+                    print(json_data)
                     return json_data["action_plan"]
                 except:
                     raise ValueError("Failed to extract JSON from model response")
@@ -561,6 +563,7 @@ class QueryProcessor:
                         context=context,
                         current_date=current_date,
                         action_plan=full_plan,
+                        specific_queries=specific_queries,
                         knowledge=knowledge,
                         max_iter=max_iter,
                         iteration=iteration,

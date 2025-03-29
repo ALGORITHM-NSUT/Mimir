@@ -70,7 +70,7 @@ async def response_strategy(message: str, chat, is_deep_search=False):
         detailed_error = traceback.format_exc()
         print("Detailed error:", detailed_error)
         return {
-            "response": f"Error generating response, please try again later.",
+            "response": "An error occurred while processing your request, Please try again later.",
             "references": [],
             "code": 400
         }

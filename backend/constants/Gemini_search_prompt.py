@@ -18,6 +18,9 @@ when you set full_action_plan_compelete = true, your answer output will be shown
 📚 **Full Action Plan:**  
 {action_plan}  
 
+# Current Specific Queries:
+{specific_queries}
+
 # Strict JSON Output Format
 ```json
 {{
@@ -69,6 +72,21 @@ STRICT: UNDER ANY CIRCUMSTANCE full_action_plan_compelete MUST NOT BE TRUE IF IT
 12. **You can not set original_answer_queries to true if you are not at the LAST step of plan**.
 ---
 
+### **🔹 Next Step Query Generation**
+- If the current step is successfully completed, generate the context rich queries for the **next step in the action plan.** using the answer of current step and previous knowledge.
+- queries in which you have to augment actually obtained data is defined in the action plan itself. 
+- **Each step consists of at least 1 specific query (no maximum limit and cannot be empty).**   
+- **ALWAYS Use both full form and abbreviation in all document queries and specific queries** if possible. 
+- You may add a step yourself if by looking at given data you may need more information to complete the next step and you have iterations lefts (like searching for names, codes, full forms etc). somewhat deviation from action plan is allowed as long as it is aiding the answer of final query. set the step to -1 in this case
+- If more steps than the plan is rquired, Use your system knowledge to predict what the next step should be and proceed accordingly if the action plan is not being answered or not being applicable to data found as it was made on preconceptions, only you have actual data
+- **Document queries should be MIMINUM in number and contextually unique as in what kind of data they fetch for a step not be too generic, they should still contain semester(if given), timeframe(if given, otherwise assume current latest period when this information could've been released), department(if given) etc**, try to make document level queries informative but dont assume
+    -High amount of document queries hampers the speed of the system which is crucial.
+- **Specific queries should be as specific as possible based on type of data required, they should contain batch, semester, department, roll number etc. (if available) and required to get data that depends on it, don't include it for common data that does not depend on such fields as per your system knowledge**.
+- **In each specific query if there is a name, always provide that full name in double quotes**. (example: "John Smith" attendance for subject X)
+- **NEVER assume year unless stated or is very clear by the kind of query user is asksing, do not use wordings like 2023-2024, ONLY use 2023 or 2024**, for year assumption use your system knowledge, odd semester cannot be on-going in jan to july, even sem cannot be ongoing in aug to dec.
+- **DO NOT add nsut or netaji subhas university of technology in queries, all documents are from the same university, so it is not required**.
+---
+
 ### **🔹 Guidelines for full_action_plan_compelete:**
 - **Set to true only if:**
  1. **All steps in the action plan are complete.**
@@ -76,24 +94,6 @@ STRICT: UNDER ANY CIRCUMSTANCE full_action_plan_compelete MUST NOT BE TRUE IF IT
  3. **Current step is the last step of the action plan.**
  - **Set to false otherwise.**
 ---
-
-## QUERY GENERATION RULES
-
-### Next Step Query Creation
-1. **Base Requirements**
-   - Generate **1+ data augmented specific queries** as per action plan per step (MANDATORY)
-   - Always include both **full forms** and **abbreviations** (e.g., "SGPA" and "Semester Grade Point Average")
-   
-2. **Content Requirements**
-   - Specific queries MUST include:
-     - Batch/Semester numbers (if provided)
-     - Department names (if relevant)
-     - Always Full names in quotes (e.g., `"Rajesh Kumar" attendance records, the roll number for "john doe" is 2021UCD6645`)
-   - Document queries MUST include:
-     - Timeframe (use exact years, never ranges like 2023-2024)
-     - Document type (notice, calendar, etc.)
-     - Specificity markers (course codes, notice numbers)
-     - High amount of document queries hampers the speed of the system which is crucial. so keep it minimum
 
 You will be called upon multiple times here is how you proceed:
 
@@ -256,7 +256,7 @@ Answer:
     "step": 2,
     "links": []
 }}
-Reason: The system has found the roll numbers of both students and new we can find their seating arrangement for the 6th semester midsem exams. setting full_action_plan_compelete to false as this is not the last step of action plan. which will help us to get the final answer in next iteration.
+Reason: The system has found the roll numbers of both students and new we can find their seating arrangement for the 6th semester midsem exams. setting full_action_plan_compelete to false as this is not the last step of action plan it is 1st step.
 
 🔹 Context for This Iteration
 

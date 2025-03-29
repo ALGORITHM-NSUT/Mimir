@@ -30,7 +30,7 @@ This system should be able to handle queries related to:
 - Current Developments
 
 
-## knowledge for rewriting queries and creating a robust action plan:
+## **knowledge for rewriting queries and creating a robust action plan**: (you must remeber this knowledge and use it to create action plan and queries)
 
 
 ACADEMIC RECORDS:
