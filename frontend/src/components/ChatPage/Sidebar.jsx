@@ -5,6 +5,7 @@ import { IoChatboxOutline } from "react-icons/io5";
 import { FaPlus, FaTrash } from "react-icons/fa";
 import { TbLayoutSidebarRightExpandFilled } from "react-icons/tb";
 import { UserContext } from "../../Context/UserContext.jsx";
+import ChatOptions from "./ChatOptions.jsx";
 
 const Sidebar = ({ isOpen, toggleSidebar, sidebarRef, setAlert }) => {
   const navigate = useNavigate();
@@ -114,7 +115,7 @@ const Sidebar = ({ isOpen, toggleSidebar, sidebarRef, setAlert }) => {
         {/* Previous Chats List */}
         <div className="mt-4">
           <h2 className="text-lg font-semibold mb-2">Previous Chats</h2>
-          <ul className="space-y-2 overflow-y-auto max-h-[60vh]">
+          <ul className="space-y-2 overflow-y-auto min-h-[100vh]">
             {chats?.slice().reverse().map((chat) => (
               <li key={chat.chatId} className="w-full flex">
                 <button
@@ -127,12 +128,8 @@ const Sidebar = ({ isOpen, toggleSidebar, sidebarRef, setAlert }) => {
                   </span>
                 </button>
 
-                <button
-                  onClick={() => handleDeleteChat(chat.chatId)}
-                  className="p-2 rounded-full hover:bg-red-500 transition flex-shrink-0"
-                >
-                  <FaTrash className="text-gray-100 hover:text-white" />
-                </button>
+                <ChatOptions chatId={chat.chatId} handleDeleteChat={handleDeleteChat} />
+
               </li>
             ))}
           </ul>
