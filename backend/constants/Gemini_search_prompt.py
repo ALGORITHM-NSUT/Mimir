@@ -15,6 +15,35 @@ Schema of search:
 {knowledge}
 
 STRICT JSON OUTPUT ONLY.
+```json
+{{
+    "final_answer": true | false, (ready to answer the original query to user or not, If this is not the last step this cannot be True, If this is the last step and current step answer is True, final_answer field should always be TRUE don't retry under any circumstance)
+    "current_step_answer": true | false, (only True if current step specific query answer is fully available and you are ready to move to next step, false if retry required)
+    "specific_queries": [ (MANDATORY FIELD, NEVER EMPTY, augmented queries for next step as per the plan or new ones if plan is abandoned or current step queries with different wordings if failed)
+        {{
+            "query": "unique Sub-query 1 changed with knowledge from previous steps",
+            "specificity: : float (same as action plan for this step and sub-query, unless using a different query and abandoning it, then recalculate it yourself)
+            "expansivity": float (same as action plan for this step and sub-query, unless using a different query and abandoning it, then keep it high)
+        }},
+        {{
+            "query": "unique ub-query 1 changed with knowledge from previous steps",
+            "specificity: : float,
+            "expansivity": float
+        }},
+        ...
+    ],
+    "document_queries": list["Unique Document-Level Query 1"]
+    "partial_answer": "Stored partial answer to improve future retrievals.",
+    "answer": "Final answer (if available).",
+    "step": integer range 1 to max steps in plan,  // the next step number being executed; use -1 if abandoning the action plan
+    "links": [
+        {{
+            "title": "Document title used for reference",
+            "link": "URL to document"
+        }}
+    ]
+}}
+IN ANY CASE YOU MUST NOT DEVIATE FROM THIS ANSWER FORMAT
 ---
 
 ### **🔹 Execution Guidelines for This Step**
@@ -73,7 +102,6 @@ STRICT JSON OUTPUT ONLY.
 ---
 
 ### **🚦 Iterative Answering Constraints**
-(your will be rewarded based on how early you answer the original user question)  
 1. **This is iteration {iteration} of {max_iter}. These are max tries you will get
 2. **The action plan must be completed within these iterations.**   
 3. **If the full answer for Original User query is found before completing all steps, terminate the action plan early and return the final answer.**  
@@ -101,12 +129,12 @@ STRICT JSON OUTPUT ONLY.
 - **`0.0` → Very small** (e.g., `"Tell me about the student X's roll number?"`)
 
 ---
-## **📝 Guidelines for final_answer boolean (basically means if you are ready to converse with user or not)**
+## **📝 Guidelines for final_answer boolean (basically means if original answer is found or not)**
 - If this is the last step and current step answer is True, final_answer field should always be TRUE under any circumstance
 - **True when answer to the original user query is found or action plan have compeleted or you need to ask user for more data to answer this query (only ask user if you don't know where or how to get answer)**.
     -It cannot be true if answer is not found unless this is the last step of plan or last iteration
-    -Only when setting it to false we can go to next stepof the plan and we don't show answer to user
-- **when final answering use all information you have in previously accumulated knowledge annd current context knowledge to create a comprehennsive answer**.
+    -Only when setting it to false we can go to next step of the plan and we don't show mid-step answer to user
+- **when final answering use all information you have in previously accumulated knowledge annd current context knowledge to create a comprehensive answer**.
 - If an answer is still not found by the last iteration, **return partial knowledge and relevant documents** instead of leaving the user without guidance.
 - NEVER RETURN true BEFORE THE LAST STEP OF PLAN AND FINAL ANSWER
 ---
@@ -131,35 +159,6 @@ STRICT JSON OUTPUT ONLY.
     - add 1 extra document query directed at that particular information revision seperate from academic calendar *DO NOT make a seperate step for this, just add it as a document query in the same step.
 
 
-```json
-{{
-    "final_answer": true | false, (ready to converse with user or not, If this is the last step and current step answer is True, final_answer field should always be TRUE under any circumstance)
-    "current_step_answer": true | false, (only True if current step specific query answer is fully available and you are ready to move to next step, false if retry required)
-    "specific_queries": [ (MANDATORY FIELD, NEVER EMPTY, augmented queries for next step as per the plan or new ones if plan is abandoned or current step queries with different wordings if failed)
-        {{
-            "query": "unique Sub-query 1 changed with knowledge from previous steps",
-            "specificity: : float (same as action plan for this step and sub-query, unless using a different query and abandoning it, then recalculate it yourself)
-            "expansivity": float (same as action plan for this step and sub-query, unless using a different query and abandoning it, then keep it high)
-        }},
-        {{
-            "query": "unique ub-query 1 changed with knowledge from previous steps",
-            "specificity: : float,
-            "expansivity": float
-        }},
-        ...
-    ],
-    "document_queries": list["Unique Document-Level Query 1"]
-    "partial_answer": "Stored partial answer to improve future retrievals.",
-    "answer": "Final answer (if available).",
-    "step": integer range 1 to max steps in plan,  // the next step number being executed; use -1 if abandoning the action plan
-    "links": [
-        {{
-            "title": "Document title used for reference",
-            "link": "URL to document"
-        }}
-    ]
-}}
-IN ANY CASE YOU MUST NOT DEVIATE FROM THIS ANSWER FORMAT
 🔹 Additional Context for This Iteration
 
 user known information (if any)
