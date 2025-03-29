@@ -41,7 +41,7 @@ class answer(BaseModel):
     full_action_plan_compelete: bool
     specific_queries: list[query]
     document_queries: list[str]
-    partial_answer: str
-    answer: str
     step: int
     links: list[link]
+    partial_answer: str
+    answer: str

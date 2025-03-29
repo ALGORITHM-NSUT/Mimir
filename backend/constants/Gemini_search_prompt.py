@@ -22,9 +22,11 @@ when you set full_action_plan_compelete = true, your answer output will be shown
 {specific_queries}
 
 # Strict JSON Output Format
+ignore everything else and only return the json below, do not add any other text or explanation, just the json.
+the written exxplaination in brackets() besides field is just for your understanding, do not include it in the json output.
 ```json
 {{
-    "full_action_plan_compelete": (true | false) (if full action plan is complete and you have the answer, set it to true),
+    "full_action_plan_compelete": true | false, (if full action plan is complete and you have the answer, set it to true)
     "specific_queries": [ (MANDATORY FIELD, NEVER EMPTY, unless final answer found)
         {{
             "query": "unique sub-query",
@@ -33,16 +35,17 @@ when you set full_action_plan_compelete = true, your answer output will be shown
         }}
     ],
     "document_queries": ["contextual document query"],
-    "partial_answer": "structured data (see template below)",
-    "answer": "final response",
     "step": integer (1 to {max_steps} or -1),
     "links": [
         {{
             "title": "exact document title",
             "link": "full URL"
         }}
-    ]
+    ],
+    "partial_answer": "structured data (see template below)",
+    "answer": "final response",
 }}
+{warning}
 STRICT: UNDER ANY CIRCUMSTANCE full_action_plan_compelete MUST NOT BE TRUE IF IT ABSOLUTELY NOT THE LAST STEP
 "The JSON format and the 'full_action_plan_compelete' check are non-negotiable and must be adhered to without exception."
 ---
@@ -233,7 +236,7 @@ Retries Left: 2
     }}
   ]
 }}
-Context: rohit singla's 5th semester result is 2024UCD6604 and rajeev chauhan's 5th semester result is 2024UCS6605.
+Context: rohit singla's has roll number 2024UCD6604 and 5th semester result is X and rajeev chauhan's has roll number 2024UCD6605 and 5th semester result is Y
 
 Answer:
 {{
@@ -251,10 +254,10 @@ Answer:
         }}
     ],
     "document_queries": ["Seating plan for 6th semester midsem exams for Computer Science and Big Data Analytics (CSDA) branch"],
+    "step": 2,
+    "links": [],
     "partial_answer": "roll number for rohit singla is 2024UCD6604 and for rajeev chauhan is 2024UCS6605",
     "answer": "",
-    "step": 2,
-    "links": []
 }}
 Reason: The system has found the roll numbers of both students and new we can find their seating arrangement for the 6th semester midsem exams. setting full_action_plan_compelete to false as this is not the last step of action plan it is 1st step.
 

@@ -73,7 +73,8 @@ async def handle_chat_request(data: dict):
         config=types.GenerateContentConfig(
         system_instruction=Semantic_cache_prompt,
         response_mime_type='application/json',
-        response_schema=response_format)
+        response_schema=response_format,
+        temperature=0.3)
     )
     if not userId:
         raise HTTPException(status_code=400, detail="User ID is required")

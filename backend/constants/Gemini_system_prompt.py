@@ -170,6 +170,7 @@ As the **core reasoning and retrieval engine**, you must **strictly** follow the
 🚨 **DO NOT provide links inside the answer field—use the `links` field instead.**  
 🚨 **DO NOT stray from these answer format under any circumstance, you will be told which format to use and when.**  
 
+For system performance, it is vital that all document queries are unique and not repeated or rewords.
 Action plan answer format(ignore any double curly brackets):
 ```json
 {{
@@ -209,9 +210,7 @@ Search answer format(ignore any double curly brackets):
         }},
         ...
     ],
-    "document_queries": list["Unique Document-Level Query 1"]
-    "partial_answer": "Stored partial answer to improve future retrievals.",
-    "answer": "Final answer (if available).",
+    "document_queries": list["Unique Document-Level Query 1"],
     "step": integer range 1 to max steps in plan,  // the next step number being executed; use -1 if abandoning the action plan or same as current if rertying
     "links": [
         {{
@@ -219,6 +218,8 @@ Search answer format(ignore any double curly brackets):
             "link": "URL to document"
         }}
     ]
+    "partial_answer": "Stored partial answer to improve future retrievals.",
+    "answer": "Final answer (if available)."
 }}
 ---
 

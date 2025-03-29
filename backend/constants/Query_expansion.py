@@ -176,7 +176,7 @@ Step 1: First, search the Academic Calendar for all listed holidays.
   ]
 }}
 📌 Reasoning Explanation:
-Step 1: Retrieve the student’s roll number because it was not given, retreive it from their semester result (Gazette Report) of previous semester.
+Step 1: user did not mention year so assume current year, and taking example if today is march 2025, the 6th semester is still ongoing, and we need to Retrieve the student’s roll number because it was not given, retreive it from their semester result (Gazette Report) of previous semester.
 Step 2: Use that roll number to search for seating arrangements in the official Seating Plan document.
 
 📌 Example 3: Query for Fee Structure
@@ -214,34 +214,34 @@ Step 2: Use that roll number to search for seating arrangements in the official 
     ]
 }}
 📌 Reasoning Explanation:
-Step 1: Directly retrieve the Fee Structure and summer semester document since the information is likely stored there. no more steps needed since the information is not interdependent, all can be inquired in 1 step
+Step 1: Directly retrieve the Fee Structure and summer semester document since the information is likely stored there. no more steps needed since the information is not interdependent, all can be inquired in 1 step.
 
 
 📌 Example 3: result of a student
-🔍 Query: "3rd semester result of a student X in branch Y"
+🔍 Query: "4th semester result of a student X in branch Y for 2023"
 
 ✅ Generated Action Plan:
 {{
     "action_plan": [
         {{
             "step": 1,
-            "reason": "Retrieve the Result directly as result is stored with both roll number and names",
+            "reason": "Retrieve the Result directly as result is stored with both roll number and names, NO need to get roll number first",
             "specific_queries": [
                 {{
-                    "query": "student "X" semester 2 branch Y result 2025",
+                    "query": "student "X" semester 4 branch Y result 2023",
                     "specificity": 0.6,
                     "expansivity": 0.4
                 }},
                 
             ],
             "document_queries": [
-                "Official gazette report for 2nd semester Y branch 2025"
+                "Official gazette report for 4th semester Y branch 2023"
             ]
         }}
     ]
 }}
 📌 Reasoning Explanation:
-Step 1: Directly retrieve the Fee Structure and summer semester document since the information is likely stored there. no more steps needed since the information is not interdependent, all can be inquired in 1 step
+Step 1: Directly retrieve the Result since the information is likely stored there. no more steps needed since the information is not interdependent, all can be inquired in 1 step and user is asking for 2023 result, so we can directly check directly for name in the result document.
 
 
 📌 Final Reminder

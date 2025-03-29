@@ -1,7 +1,6 @@
 import logging
 from bson import ObjectId
 from datetime import datetime
-import time
 from constants.Gemini_search_prompt import Gemini_search_prompt
 from constants.Query_expansion import Query_expansion_prompt
 import os
@@ -21,6 +20,25 @@ from google.genai.types import EmbedContentConfig
 import requests
 from models.chat_model import answer, expand
 from utils.redis_client import redis_client
+from models.chat_model import expand, answer
+
+class QueryProcessorError(Exception):
+    """Base exception for QueryProcessor errors"""
+    def __init__(self, message: str, original_error: Exception = None):
+        super().__init__(message)
+        self.original_error = original_error
+
+class ModelAPIError(QueryProcessorError):
+    """Errors related to model API calls"""
+    pass
+
+class DatabaseError(QueryProcessorError):
+    """Errors related to database operations"""
+    pass
+
+class rerankerError(QueryProcessorError):
+    """Errors related to reranker operations"""
+    pass
 
 # Configure logging
 logging.basicConfig(
@@ -30,23 +48,29 @@ logging.basicConfig(
     filemode='a'  # Append to the file instead of overwriting
 )
 
-def get_next_index():
+def get_next_index() -> int:
     # Get current index
-    if redis_client.get("index") is None:
-        redis_client.set("index", 0)
+    try:
+        if redis_client.get("index") is None:
+            redis_client.set("index", 0)
+            return 0
+        index = int(redis_client.get("index"))
+        # Increment index (loop back to 0 after 19)
+        next_index = (index + 1) % 3
+        redis_client.set("index", next_index)
+        logging.info(f"Next index set to: {next_index}")
+        return index
+    except Exception as e:
+        logging.error(f"Error getting next index {e}, defaulting to 0")
         return 0
-    index = int(redis_client.get("index"))
-    # Increment index (loop back to 0 after 19)
-    next_index = (index + 1) % 3
-    redis_client.set("index", next_index)
-    logging.info(f"Next index set to: {next_index}")
-    return index
+    
 
 load_dotenv()
+max_keys = 20
 index = get_next_index()
 GEMINI_API_KEY = os.getenv("GOOGLE_API_KEY").split(" | ")[index % 2].strip()
 MONGO_URI_MIMIIR = os.getenv("MONGO_URI_MIMIR")
-JINA_API_KEY = os.getenv("JINA_API_KEY").split(" | ")[index].strip()
+
 mongoDb_client = AsyncIOMotorClient(MONGO_URI_MIMIIR)
 # Thinking Model
 llm2 = "gemini-2.0-flash-thinking-exp-01-21"
@@ -55,26 +79,6 @@ llm = "gemini-2.0-flash"
 client = genai.Client(api_key=GEMINI_API_KEY)
 
 MAX_RETRIES = 3
-
-def _retry_on_error(func):
-    async def wrapper(*args, **kwargs):
-        for attempt in range(MAX_RETRIES):
-            try:
-                return await func(*args, **kwargs)
-            except (OperationFailure, ResourceExhausted) as e:
-                logging.warning(f"Error in {func.__name__}: {e}, retrying...")
-                await asyncio.sleep(2 ** attempt + random.uniform(0, 1))
-            except GoogleAPIError as e:
-                logging.error(f"Google API error in {func.__name__}: {e}")
-                return None
-            except json.JSONDecodeError:
-                logging.warning(f"JSON parsing error in {func.__name__}, retrying...")
-                await asyncio.sleep(2 ** attempt + random.uniform(0, 1))
-            except Exception as e:
-                logging.error(f"Unexpected error in {func.__name__}: {e}")
-                return None
-        raise Exception(f"{func.__name__} failed after multiple retries.")
-    return wrapper
 
 class QueryProcessor:
     def __init__(self):
@@ -88,76 +92,78 @@ class QueryProcessor:
 
     async def process_query(self, question: str, user_knowledge: str, is_deep_search: bool = False):
         """Iterative retrieval process with dynamic query adjustment"""
-        
-        # Select model based on deep search flag
-        
-        model_to_use = llm2 if is_deep_search else llm
-        
-        logging.info(f"Model to use: {model_to_use}")
-        
-        retrycnt = 1
-        
-        print(question)
-        context_entries = []
-        seen_ids = set()
-        seen_ids.add(ObjectId("aaaaaaaaaaaaaaaaaaaaaaaa"))
-        plan = await self._expand_query(question, user_knowledge, model_to_use)
-        knowledge = ""
-        max_iter = 4
-        ans = {}
-        step = 1
-        queries = plan[step - 1]["specific_queries"]
-        doc_queries = plan[step - 1]["document_queries"]
-        
-        
+        try:
+            # Select model based on deep search flag
+            
+            model_to_use = llm2 if is_deep_search else llm
+            
+            logging.info(f"Model to use: {model_to_use}")
+            
+            retrycnt = 1
+            
+            context_entries = []
+            seen_ids = set()
+            seen_ids.add(ObjectId("aaaaaaaaaaaaaaaaaaaaaaaa"))
+            plan = await self._expand_query(question, user_knowledge, model_to_use)
+            knowledge = ""
+            max_iter = 4
+            ans = {}
+            step = 1
+            queries = plan[step - 1]["specific_queries"]
+            doc_queries = plan[step - 1]["document_queries"]
+            
+            
 
-        for iteration in range(max_iter):
-            doc_ids = await self._search_docs(doc_queries) if doc_queries else []
-            chunk_results, current_docids, seen_ids = await self._search_in_chunks(queries, seen_ids, doc_ids, iteration + 1)
-            iteration_context = self._format_context(chunk_results)
-            context_entries.append(iteration_context)
-            start = time.time()
-            ans = await self._generate_answer(
-                question, 
-                iteration_context, 
-                self.current_date, 
-                plan, 
-                knowledge, 
-                max_iter - retrycnt, 
-                iteration + 1, 
-                user_knowledge, 
-                step, 
-                retrycnt,
-                model_to_use  # Pass the selected model
-            )  
-            end = time.time()
-            logging.info(f"Gemini response time: {end - start}")
-            
-            if "full_action_plan_compelete" in ans and ans["full_action_plan_compelete"]:
-                logging.info(f"Stopping early at iteration {iteration+1}")
-                return ans
-            else:
-                print(ans)
-                logging.info(ans)
-            if iteration == max_iter - 1:
-                logging.info(f"Could not find answer, returning relevant info")
-                return ans
-            if "partial_answer" in ans and ans["partial_answer"] is not None:
-                knowledge += str(ans["partial_answer"]) + "\n" 
-            if "answer" in ans and ans["answer"] is not None:
-                knowledge += str(ans["answer"]) + "\n"
-            if "links" in ans and len(ans["links"]) != 0:
-                knowledge = knowledge + " " + json.dumps(ans["links"], indent=2)
-            
-            if (ans["step"] == step):
-                retrycnt -= 1
-            
-            step = ans["step"]
-            doc_queries = ans["document_queries"]
-            logging.info(f"Next step: {step}")
-            queries = ans["specific_queries"]
+            for iteration in range(max_iter):
+                doc_ids = await self._search_docs(doc_queries) if doc_queries else []
+                chunk_results, current_docids, seen_ids = await self._search_in_chunks(queries, seen_ids, doc_ids, iteration + 1)
+                iteration_context = self._format_context(chunk_results)
+                context_entries.append(iteration_context)
+                ans = await self._generate_answer(
+                    question, 
+                    iteration_context, 
+                    self.current_date, 
+                    plan, 
+                    knowledge, 
+                    max_iter - retrycnt, 
+                    iteration + 1, 
+                    user_knowledge, 
+                    step, 
+                    retrycnt,
+                    model_to_use  # Pass the selected model
+                )  
+                
+                if "full_action_plan_compelete" in ans and ans["full_action_plan_compelete"]:
+                    return ans
+                if iteration == max_iter - 1:
+                    return ans
+                if "partial_answer" in ans and ans["partial_answer"] is not None:
+                    knowledge += str(ans["partial_answer"]) + "\n" 
+                if "answer" in ans and ans["answer"] is not None:
+                    knowledge += str(ans["answer"]) + "\n"
+                if "links" in ans and len(ans["links"]) != 0:
+                    knowledge = knowledge + " " + json.dumps(ans["links"], indent=2)
+                
+                if (ans["step"] == step):
+                    retrycnt -= 1
+                
+                step = ans["step"]
+                doc_queries = ans["document_queries"]
+                queries = ans["specific_queries"]
 
-        return ans  
+            return ans  
+        except ModelAPIError as e:
+            logging.error(f"Model API error in process_query: {str(e)}", exc_info=True)
+            raise
+        except DatabaseError as e:
+            logging.error(f"Database error in process_query: {str(e)}", exc_info=True)
+            raise
+        except rerankerError as e:
+            logging.error(f"Rerank error in process_query: {str(e)}", exc_info=True)
+            raise
+        except Exception as e:
+            logging.error(f"Unexpected error in process_query: {str(e)}", exc_info=True)
+            raise QueryProcessorError(f"Query processing failed: {str(e)}", e)
         
 
     def _process_chunks(self, docs: set, all_results: list) -> list:
@@ -199,7 +205,6 @@ class QueryProcessor:
         sorted_documents = sorted(
             doc_metadata_map.values(), key=lambda x: x["Publish Date"], reverse=True
         )
-        logging.debug(f"Processed chunks for docs: {docs}")
         return sorted_documents
 
 
@@ -209,7 +214,6 @@ class QueryProcessor:
         for doc in items:
             meta = json.dumps(doc, indent=2)
             context += f"{meta}\n\n"
-        logging.debug("Formatted context for LLM comprehension")
         return context
     
     async def _doc_query(self, doc_query_vector, limit: int, query: str) -> list:
@@ -231,26 +235,40 @@ class QueryProcessor:
                 }
             }
         ]
-        result = self.documents.aggregate(pipeline)
-        docs = [{"_id" : doc["_id"], "summary" : doc["summary"], "Publish Date": doc["Publish Date"].date().isoformat()} async for doc in result]
-        reranked = await self._rerank(docs, query, ["summary"])
-        logging.info(f"Document query executed for: {query}")
-        return reranked
+        for attempt in range(MAX_RETRIES):  # Retry up to 5 times
+            try:
+                result = self.documents.aggregate(pipeline)
+                docs = [{"_id" : doc["_id"], "summary" : doc["summary"], "Publish Date": doc["Publish Date"].date().isoformat()} async for doc in result]
+                reranked = await self._rerank(docs, query, ["summary"])
+                return reranked
+                    
+            except OperationFailure as e:
+                logging.warning(f"MongoDB OperationFailure: {e}, retrying...")
+                if attempt == MAX_RETRIES - 1:
+                    raise DatabaseError(f"MongoDB search failed after {MAX_RETRIES} retries: {str(e)}")
+                await asyncio.sleep(2 ** attempt + random.uniform(0, 1))
+            
+            except asyncio.TimeoutError:
+                logging.warning(f"MongoDB Timeout, retrying attempt {attempt+1}...")
+                if attempt == MAX_RETRIES - 1:
+                    raise DatabaseError(f"MongoDB search failed after {MAX_RETRIES} retries: {str(e)}")
+                await asyncio.sleep(2 ** attempt + random.uniform(0, 1))
 
+        
     async def _search_docs(self, queries: list) -> list:
         """Search documents based on query string"""
-        limit = 50
-        async def doc_query(queryembed, query):
-            return await self._doc_query(queryembed, limit, query)
-        queryembeds = await self._get_vector(queries)
-        tasks = [asyncio.create_task(doc_query(queryembeds[i], queries[i])) for i in range(len(queryembeds))]
-        results_list = await asyncio.gather(*tasks)
-        results = [item for sublist in results_list for item in sublist]
-        resultset = set()
-        for item in results:
-            resultset.add(item["_id"])
-        logging.info(f"Search completed for queries: {queries}")
-        return list(resultset)
+        try:
+            limit = 50
+            async def doc_query(queryembed, query):
+                return await self._doc_query(queryembed, limit, query)
+            queryembeds = await self._get_vector(queries)
+            tasks = [asyncio.create_task(doc_query(queryembeds[i], queries[i])) for i in range(len(queryembeds))]
+            results_list = await asyncio.gather(*tasks)
+            results = [item for sublist in results_list for item in sublist]
+            return list({item["_id"] for item in results})
+        except Exception as e:
+            logging.error(f"Error in _search_docs: {str(e)}")
+            raise DatabaseError(f"Error in _search_docs, document searching failed: {str(e)}")
 
     async def _search_query(self, query_vector, seen_ids: set, minscore: float, vector_weight: float, full_text_weight: float, limit: int, doc_ids: list, query: str) -> list:
         """Search query with MongoDB quota handling"""
@@ -426,24 +444,26 @@ class QueryProcessor:
         #     pipeline[0]["$vectorSearch"]["filter"] = {"_id": {"$nin": list(seen_ids)}, "doc_id": {"$in": doc_ids}}
         # else:
         #     pipeline[0]["$vectorSearch"]["filter"] = {"_id": {"$nin": list(seen_ids)}}
-
-
-        for attempt in range(5):  # Retry up to 5 times
+        for attempt in range(MAX_RETRIES):  # Retry up to 5 times
             try:
                 cursor = self.chunks.aggregate(pipeline)
                 return [doc async for doc in cursor]
                 # return await self._rerank(docs, query, ["text", "table_summary"])
             
             except OperationFailure as e:
-                logging.warning(f"MongoDB OperationFailure: {e}, retrying...")
+                if attempt == MAX_RETRIES - 1:
+                    raise DatabaseError(f"MongoDB search failed after {MAX_RETRIES} retries: {str(e)}")
+                await asyncio.sleep(2 ** attempt + random.uniform(0, 1))
             
-            except asyncio.TimeoutError:
-                logging.warning(f"MongoDB Timeout, retrying attempt {attempt+1}...")
+            except asyncio.TimeoutError as e:
+                logging.error(f"MongoDB Timeout: {e}, attempt {attempt + 1}/{MAX_RETRIES}")
+                if attempt == MAX_RETRIES - 1:
+                    raise DatabaseError(f"MongoDB timeout after {MAX_RETRIES} retries")
+                await asyncio.sleep(2 ** attempt + random.uniform(0, 1))
             
-            time.sleep(2 ** attempt + random.uniform(0, 1))  # Exponential backoff
-
-        logging.error("MongoDB search failed after multiple retries.")
-        raise Exception("MongoDB search failed after multiple retries.")
+            except Exception as e:
+                logging.error(f"Unexpected error in search_query: {str(e)}")
+                raise QueryProcessorError(f"Unexpected error during search: {str(e)}")
 
     async def _search_in_chunks(self, queries: list, seen_ids: set, doc_ids: list, iteration: int) -> list:
         minscore = 0.75
@@ -477,66 +497,72 @@ class QueryProcessor:
         all_results.sort(key= lambda chunk: chunk["chunk_num"])
         docs = {str(chunk["doc_id"]) for chunk in all_results}
         processed = self._process_chunks(docs, all_results)
-        logging.info(f"Search in chunks completed for iteration {iteration}")
         return processed, docs, seen_ids
     
     async def _rerank(self, docs: list, question: str, fields: list) -> list:
         """Generate reranking"""
-        url = 'https://api.jina.ai/v1/rerank'
-        headers = {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer ' + JINA_API_KEY
-        }
-        searchspace = ["\n".join(doc[field] for field in fields if field in doc and doc[field] is not None) for doc in docs]
-        data = {
-            "model": "jina-reranker-v2-base-multilingual",
-            "query": question,
-            "top_n": min(20, len(docs)),
-            "documents": searchspace
-        }
-        try:
-            response = requests.post(url, headers=headers, json=data)
-            response.raise_for_status()
-            return [docs[result["index"]] for result in response.json()["results"] if result["relevance_score"] > 0.5]
-        except Exception as e:
-            logging.error("Reranking failed, quota limit exceeded")
-            raise Exception(f"Reranking failed, quota limit exceeded")
+        for attempt in range(MAX_RETRIES):
+            JINA_API_KEY = os.getenv("JINA_API_KEY").split(" | ")[(index + attempt) % max_keys].strip()
+            url = 'https://api.jina.ai/v1/rerank'
+            headers = {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + JINA_API_KEY
+            }
+            searchspace = ["\n".join(doc[field] for field in fields if field in doc and doc[field] is not None) for doc in docs]
+            data = {
+                "model": "jina-reranker-v2-base-multilingual",
+                "query": question,
+                "top_n": min(20, len(docs)),
+                "documents": searchspace
+            }
+            try:
+                response = requests.post(url, headers=headers, json=data)
+                
+                return [docs[result["index"]] for result in response.json()["results"] if result["relevance_score"] > 0.5]
+            except json.JSONDecodeError as e:
+                logging.error("Reranking failed, quota limit exceeded for index: " + str(index) + " " + str(e))
+                if attempt == MAX_RETRIES - 1:
+                    raise rerankerError(f"Reranking failed after {MAX_RETRIES} attempts: {str(e)}")
+            except Exception as e:
+                logging.error("Reranking failed, unexpected error for index: " + str(index) + " " + str(e))
+                if attempt == MAX_RETRIES - 1:
+                    raise rerankerError(f"Reranking failed after {MAX_RETRIES} attempts: {str(e)}")
+            await asyncio.sleep(2 ** attempt + random.uniform(0, 1))
     
     async def _expand_query(self, query: str, user_knowledge: str, model_to_use: str) -> list:
         """Generate initial query variations with API quota handling"""
         prompt = Query_expansion_prompt.format(query=query, current_date=self.current_date, user_knowledge=user_knowledge)
 
-        for attempt in range(5):
+        for attempt in range(MAX_RETRIES):
             try:
                 response = client.models.generate_content(
                     model=model_to_use, 
                     contents=[prompt],
-                    config=self._get_config(model_to_use, 'expand')).text
-                match = re.search(r'\{.*\}', response, re.DOTALL)
+                    config=self._get_config(model_to_use, 'expand')
+                )
+                response_text = response.text
+                match = re.search(r'\{.*\}', response_text, re.DOTALL)
                 if not match:
                     raise ValueError("Failed to extract JSON from model response")
-                
                 try:
-                    json_data = json.loads(match.group(0), strict = False)
-                    logging.info(json_data)
-                    print(json_data)
+                    json_data = json.loads(match.group(0), strict=False)
+                    logging.info(f"Query expansion response: {json_data}")
                     return json_data["action_plan"]
                 except:
                     raise ValueError("Failed to extract JSON from model response")
-                
-                        
             except (json.JSONDecodeError, ValueError) as e:
                 logging.warning(f"Error parsing response: {e}, retrying...")
-
-            except ResourceExhausted or ServerError:
+                if attempt == MAX_RETRIES - 1:
+                    raise ValueError(f"Failed to parse response after {MAX_RETRIES} attempts: {str(e)}")
+            except (ResourceExhausted, ServerError) as e:
                 logging.warning(f"Quota exceeded, retrying after delay...")
-                time.sleep(2 ** attempt + random.uniform(0, 1))  # Exponential backoff
-
+                if attempt == MAX_RETRIES - 1:
+                    raise ValueError(f"Failed to parse response after {MAX_RETRIES} attempts: {str(e)}")
+                await asyncio.sleep(2 ** attempt + random.uniform(0, 1))  # Exponential backoff
             except GoogleAPIError as e:
                 logging.error(f"Google API error: {e}")
-                break  # If it's an unknown API error, don't retry
-
-        raise Exception("Failed after multiple retries due to API quota limits.")
+                raise ModelAPIError(f"Failed to get response from google api: {str(e)}")
+        raise ModelAPIError(f"Failed after {MAX_RETRIES} retries due to API quota limits")
 
         
 
@@ -553,12 +579,16 @@ class QueryProcessor:
             stepknowledge += f"This is retry for step {step} of plan"
         else:
             stepknowledge += f"{step}"
+        warning = ""
+        if (model_to_use == llm2):
+            warning = "if final response is too long to fit in the output window, give as much as possible then truncate some of it and give relevant documents, but the json format shouldn't be broken."
         full_plan = {"original user question": question, "plan": plan}
         for attempt in range(MAX_RETRIES):
             try:
                 response = client.models.generate_content(
                     model=model_to_use,
                     contents=[self.search_prompt.format(
+                        warning=warning,
                         question=question,
                         context=context,
                         current_date=current_date,
@@ -576,55 +606,71 @@ class QueryProcessor:
                 
                 match = re.search(r'\{.*\}', response, re.DOTALL)  # Extract JSON safely
                 if not match:
-                    raise ValueError("Failed to extract JSON from model response")
+                    response += '"}'  # Append a closing brace to the response
+                    match = re.search(r'\{.*\}', response, re.DOTALL)
+                    if not match:
+                        raise ValueError("Failed to extract JSON from model response")
                 try:
                     json_data = json.loads(match.group(0), strict = False)
-                    logging.info(f"Answer generated for question: {question}")
                     return json_data
                 except:
-                    logging.warning("Retrying JSON extraction in _generate_answer...")
                     raise ValueError("Failed to extract JSON from model response")
 
             except (json.JSONDecodeError, ValueError) as e:
                 logging.warning(f"Error parsing response: {e}, retrying...")
+                if attempt == MAX_RETRIES - 1:
+                    raise ValueError(f"Failed to extract JSON from model response after {MAX_RETRIES} retries: {str(e)}")
 
-            except ResourceExhausted:
+            except ResourceExhausted as e:
                 logging.warning(f"Quota exceeded, retrying after delay...")
-                time.sleep(2 ** attempt + random.uniform(0, 1))  # Exponential backoff
+                if attempt == MAX_RETRIES - 1:
+                    raise ModelAPIError(f"Resource exhausted response after {MAX_RETRIES} retries: {str(e)}")
+                # Exponential backoff
+                await asyncio.sleep(2 ** attempt + random.uniform(0, 1))  # Exponential backoff
 
-            except ServerError:
+            except ServerError as e:
                 logging.warning(f"Server error, retrying...")
-                time.sleep(2 ** attempt + random.uniform(0, 1))  # Exponential backoff
+                if attempt == MAX_RETRIES - 1:
+                    raise ModelAPIError(f"API server error response after {MAX_RETRIES} retries: {str(e)}")
+                # Exponential backoff
+                await asyncio.sleep(2 ** attempt + random.uniform(0, 1))  # Exponential backoff
 
             except GoogleAPIError as e:
                 logging.error(f"Google API error: {e}")
-                break  # If it's an unknown API error, don't retry
+                raise ModelAPIError(f"API server error response after {MAX_RETRIES} retries: {str(e)}")
+                
 
 
     async def _get_vector(self, texts: list):
         if not texts:
+            logging.error("Empty texts list provided for embedding")
             raise Exception("Internal Server Error: requests must not be empty")
-        
-        response = client.models.embed_content(
-            model="text-embedding-004",
-            contents=texts,
-            config=EmbedContentConfig(task_type="RETRIEVAL_DOCUMENT")
-        )
-        logging.info(f"Generated embeddings for texts")
-        return [embedding.values for embedding in response.embeddings]
+        for attempt in range(MAX_RETRIES):
+            try:
+                response = client.models.embed_content(
+                        model="text-embedding-004",
+                        contents=texts,
+                        config=EmbedContentConfig(task_type="RETRIEVAL_DOCUMENT")
+                    )
+                return [embedding.values for embedding in response.embeddings]
+            except ResourceExhausted:
+                logging.warning(f"Quota exceeded, retrying after delay...")
+                if attempt == MAX_RETRIES - 1:
+                    raise ModelAPIError(f"Resource exhausted response after {MAX_RETRIES} retries")
+                await asyncio.sleep(2 ** attempt + random.uniform(0, 1))
+            except ServerError:
+                logging.warning(f"Server error, retrying...")
+                if attempt == MAX_RETRIES - 1:
+                    raise ModelAPIError(f"API server error response after {MAX_RETRIES} retries")
+                await asyncio.sleep(2 ** attempt + random.uniform(0, 1))
+            except Exception as e:
+                logging.error(f"Google API error: {e}")
+                raise ModelAPIError("Unexpected error occurred while generating embeddings")
+                
+        # If all attempts fail, raise an exception
 
     def _get_config(self, model_to_use: str, schema_type: str) -> types.GenerateContentConfig:
-        """
-        Get configuration for model generation with appropriate schema
-        
-        Args:
-            model_to_use (str): Model identifier
-            schema_type (str): Type of schema to use ('expand' or 'answer')
-            
-        Returns:
-            types.GenerateContentConfig: Configuration object
-        """
-        from models.chat_model import expand, answer
+        """Generate configuration for the model"""
         if model_to_use == llm2:
             config = types.GenerateContentConfig(
             system_instruction=GEMINI_PROMPT,
@@ -642,5 +688,4 @@ class QueryProcessor:
             response_schema=schema,
             temperature=0.2
         )
-        logging.debug(f"Configuration generated for model: {model_to_use}, schema: {schema_type}")
         return config
