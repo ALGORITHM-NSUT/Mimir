@@ -6,7 +6,7 @@ from fastapi import APIRouter, Response, HTTPException, Request, Depends
 from utils.db import db
 from bson import ObjectId
 from dotenv import load_dotenv
-from utils.redis_client import redis_client
+# from utils.redis_client import redis_client
 
 load_dotenv()
 
@@ -16,7 +16,7 @@ SECRET_KEY = os.getenv("JWT_SECRET", "your_secret_key")
 ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
 TOKEN_EXPIRY = int(os.getenv("JWT_EXPIRATION_MINUTES", 60))
 GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
-CACHE_TTL = int(os.getenv("REDIS_TTL")) 
+# CACHE_TTL = int(os.getenv("REDIS_TTL")) 
 
 
 def create_jwt_token(user_id: str):
@@ -94,43 +94,43 @@ async def get_current_user(request: Request):
 
         return {"userId": str(user["_id"]), "name": user["name"], "email": user["email"]}
 
-    except jwt.ExpiredSignatureError:
-        raise HTTPException(status_code=401, detail="Token expired")
-    except jwt.InvalidTokenError:
-        raise HTTPException(status_code=401, detail="Invalid token")
-    
-
-async def get_current_user_cache(request: Request):
-    token = request.cookies.get("access_token")
-    
-    if not token:
-        raise HTTPException(status_code=401, detail="Not authenticated")
-
-    # Check Redis cache first
-    cached_user = redis_client.get(token)  
-    if cached_user:
-        return eval(cached_user)  # Convert back to dictionary
-
-    try:
-        # Decode token
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        user = await users_collection.find_one({"_id": payload["userId"]})
-
-        if not user:
-            raise HTTPException(status_code=401, detail="User not found")
-
-        user_data = {
-            "userId": str(user["_id"]),
-            "name": user["name"],
-            "email": user["email"]
-        }
-
-        # Store in Redis with expiration
-        redis_client.setex(token, CACHE_TTL, str(user_data))
-
-        return user_data
-
-    except jwt.ExpiredSignatureError:
+    except pyjwt.ExpiredSignatureError:
         raise HTTPException(status_code=401, detail="Token expired")
     except pyjwt.InvalidTokenError:
         raise HTTPException(status_code=401, detail="Invalid token")
+    
+
+# async def get_current_user_cache(request: Request):
+#     token = request.cookies.get("access_token")
+    
+#     if not token:
+#         raise HTTPException(status_code=401, detail="Not authenticated")
+
+#     # Check Redis cache first
+#     cached_user = redis_client.get(token)  
+#     if cached_user:
+#         return eval(cached_user)  # Convert back to dictionary
+
+#     try:
+#         # Decode token
+#         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+#         user = await users_collection.find_one({"_id": payload["userId"]})
+
+#         if not user:
+#             raise HTTPException(status_code=401, detail="User not found")
+
+#         user_data = {
+#             "userId": str(user["_id"]),
+#             "name": user["name"],
+#             "email": user["email"]
+#         }
+
+#         # Store in Redis with expiration
+#         redis_client.setex(token, CACHE_TTL, str(user_data))
+
+#         return user_data
+
+#     except jwt.ExpiredSignatureError:
+#         raise HTTPException(status_code=401, detail="Token expired")
+#     except pyjwt.InvalidTokenError:
+#         raise HTTPException(status_code=401, detail="Invalid token")

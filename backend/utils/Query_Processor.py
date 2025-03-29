@@ -19,23 +19,25 @@ from google.genai.errors import ServerError
 from google.genai.types import EmbedContentConfig
 import requests
 from models.chat_model import answer, expand
+from utils.redis_client import redis_client
 
 
-# config_quick_search = types.GenerateContentConfig(
-#                         system_instruction=GEMINI_PROMPT,
-#                         response_mime_type='application/json',
-#                         response_schema=expand,
-#                         temperature=0.2)
-
-# config_thinking  = types.GenerateContentConfig(
-#                         system_instruction=GEMINI_PROMPT,
-#                         temperature=0.2)
-
+def get_next_index():
+    # Get current index
+    if redis_client.get("index") is None:
+        redis_client.set("index", 0)
+        return 0
+    index = int(redis_client.get("index"))
+    # Increment index (loop back to 0 after 19)
+    next_index = (index + 1) % 3
+    redis_client.set("index", next_index)
+    return index
 
 load_dotenv()
-GEMINI_API_KEY = os.getenv("GOOGLE_API_KEY")
+index = get_next_index()
+GEMINI_API_KEY = os.getenv("GOOGLE_API_KEY").split(" | ")[index % 2].strip()
 MONGO_URI_MIMIIR = os.getenv("MONGO_URI_MIMIR")
-JINA_API_KEY = os.getenv("JINA_API_KEY")
+JINA_API_KEY = os.getenv("JINA_API_KEY").split(" | ")[index].strip()
 mongoDb_client = AsyncIOMotorClient(MONGO_URI_MIMIIR)
 
 
@@ -563,6 +565,9 @@ class QueryProcessor:
                     return json_data
                 except:
                     print("Retrying JSON extraction in _generate_answer...")
+                    print("-------------------")
+                    print(response)
+                    print("-------------------")
                     raise ValueError("Failed to extract JSON from model response")
 
             except (json.JSONDecodeError, ValueError) as e:
