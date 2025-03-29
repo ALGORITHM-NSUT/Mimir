@@ -38,11 +38,10 @@ class expand(BaseModel):
     action_plan: list[step]
 
 class answer(BaseModel):
-    final_answer: bool
-    current_step_answer: bool
+    full_action_plan_compelete: bool
     specific_queries: list[query]
     document_queries: list[str]
-    partial_answer: str
-    answer: str
     step: int
     links: list[link]
+    partial_answer: str
+    answer: str

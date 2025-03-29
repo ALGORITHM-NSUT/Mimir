@@ -73,10 +73,10 @@ async def handle_chat_request(data: dict):
     chats = client.chats.create(
         model="gemini-2.0-flash-lite",
         config=types.GenerateContentConfig(
-            system_instruction=Semantic_cache_prompt,
-            response_mime_type="application/json",
-            response_schema=response_format,
-        ),
+        system_instruction=Semantic_cache_prompt,
+        response_mime_type='application/json',
+        response_schema=response_format,
+        temperature=0.3)
     )
 
     if not userId:
