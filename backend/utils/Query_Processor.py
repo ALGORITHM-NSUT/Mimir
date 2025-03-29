@@ -1,3 +1,4 @@
+import logging
 from bson import ObjectId
 from datetime import datetime
 import time
@@ -21,6 +22,13 @@ import requests
 from models.chat_model import answer, expand
 from utils.redis_client import redis_client
 
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    filename='application.log',  # Logs will be saved to this file
+    filemode='a'  # Append to the file instead of overwriting
+)
 
 def get_next_index():
     # Get current index
@@ -31,6 +39,7 @@ def get_next_index():
     # Increment index (loop back to 0 after 19)
     next_index = (index + 1) % 3
     redis_client.set("index", next_index)
+    logging.info(f"Next index set to: {next_index}")
     return index
 
 load_dotenv()
@@ -53,16 +62,16 @@ def _retry_on_error(func):
             try:
                 return await func(*args, **kwargs)
             except (OperationFailure, ResourceExhausted) as e:
-                print(f"Error in {func.__name__}: {e}, retrying...")
+                logging.warning(f"Error in {func.__name__}: {e}, retrying...")
                 await asyncio.sleep(2 ** attempt + random.uniform(0, 1))
             except GoogleAPIError as e:
-                print(f"Google API error in {func.__name__}: {e}")
+                logging.error(f"Google API error in {func.__name__}: {e}")
                 return None
             except json.JSONDecodeError:
-                print(f"JSON parsing error in {func.__name__}, retrying...")
+                logging.warning(f"JSON parsing error in {func.__name__}, retrying...")
                 await asyncio.sleep(2 ** attempt + random.uniform(0, 1))
             except Exception as e:
-                print(f"Unexpected error in {func.__name__}: {e}")
+                logging.error(f"Unexpected error in {func.__name__}: {e}")
                 return None
         raise Exception(f"{func.__name__} failed after multiple retries.")
     return wrapper
@@ -75,6 +84,7 @@ class QueryProcessor:
         self.chunks = self.db.chunks
         self.current_date = datetime.now().date().isoformat()
         self.search_prompt = Gemini_search_prompt
+        logging.info("QueryProcessor initialized")
 
     async def process_query(self, question: str, user_knowledge: str, is_deep_search: bool = False):
         """Iterative retrieval process with dynamic query adjustment"""
@@ -83,11 +93,11 @@ class QueryProcessor:
         
         model_to_use = llm2 if is_deep_search else llm
         
-        print( " model to use  : ", model_to_use)
+        logging.info(f"Model to use: {model_to_use}")
         
         retrycnt = 1
         
-        
+        print(question)
         context_entries = []
         seen_ids = set()
         seen_ids.add(ObjectId("aaaaaaaaaaaaaaaaaaaaaaaa"))
@@ -121,15 +131,15 @@ class QueryProcessor:
                 model_to_use  # Pass the selected model
             )  
             end = time.time()
-            print("gemini response time : ", end - start)
+            logging.info(f"Gemini response time: {end - start}")
             
-            if "final_answer" in ans and ans["final_answer"] :
-                print(f"Stopping early at iteration {iteration+1}")
+            if "full_action_plan_compelete" in ans and ans["full_action_plan_compelete"]:
+                logging.info(f"Stopping early at iteration {iteration+1}")
                 return ans
             else:
-                print(ans)
+                logging.info(ans)
             if iteration == max_iter - 1:
-                print(f"could not find ans, returning relevant info")
+                logging.info(f"Could not find answer, returning relevant info")
                 return ans
             if "partial_answer" in ans and ans["partial_answer"] is not None:
                 knowledge += str(ans["partial_answer"]) + "\n" 
@@ -143,7 +153,7 @@ class QueryProcessor:
             
             step = ans["step"]
             doc_queries = ans["document_queries"]
-            print("next step", step)
+            logging.info(f"Next step: {step}")
             queries = ans["specific_queries"]
 
         return ans  
@@ -188,6 +198,7 @@ class QueryProcessor:
         sorted_documents = sorted(
             doc_metadata_map.values(), key=lambda x: x["Publish Date"], reverse=True
         )
+        logging.debug(f"Processed chunks for docs: {docs}")
         return sorted_documents
 
 
@@ -197,6 +208,7 @@ class QueryProcessor:
         for doc in items:
             meta = json.dumps(doc, indent=2)
             context += f"{meta}\n\n"
+        logging.debug("Formatted context for LLM comprehension")
         return context
     
     async def _doc_query(self, doc_query_vector, limit: int, query: str) -> list:
@@ -221,6 +233,7 @@ class QueryProcessor:
         result = self.documents.aggregate(pipeline)
         docs = [{"_id" : doc["_id"], "summary" : doc["summary"], "Publish Date": doc["Publish Date"].date().isoformat()} async for doc in result]
         reranked = await self._rerank(docs, query, ["summary"])
+        logging.info(f"Document query executed for: {query}")
         return reranked
 
     async def _search_docs(self, queries: list) -> list:
@@ -235,6 +248,7 @@ class QueryProcessor:
         resultset = set()
         for item in results:
             resultset.add(item["_id"])
+        logging.info(f"Search completed for queries: {queries}")
         return list(resultset)
 
     async def _search_query(self, query_vector, seen_ids: set, minscore: float, vector_weight: float, full_text_weight: float, limit: int, doc_ids: list, query: str) -> list:
@@ -297,14 +311,14 @@ class QueryProcessor:
                                     "must": [
                                         
                                     ],
-                                    "mustNot": [
-                                        {
-                                            "in": {
-                                            "path": "_id",
-                                            "value": list(seen_ids)
-                                            }
-                                        }
-                                    ]
+                                    # "mustNot": [
+                                    #     {
+                                    #         "in": {
+                                    #         "path": "_id",
+                                    #         "value": list(seen_ids)
+                                    #         }
+                                    #     }
+                                    # ]
                                 }
                             }
                         },
@@ -408,9 +422,9 @@ class QueryProcessor:
         
         if doc_ids:
             pipeline[8]["$unionWith"]["pipeline"][0]["$search"]["compound"]["must"].append({"in": {"path": "doc_id", "value": doc_ids}})
-            pipeline[0]["$vectorSearch"]["filter"] = {"_id": {"$nin": list(seen_ids)}, "doc_id": {"$in": doc_ids}}
-        else:
-            pipeline[0]["$vectorSearch"]["filter"] = {"_id": {"$nin": list(seen_ids)}}
+        #     pipeline[0]["$vectorSearch"]["filter"] = {"_id": {"$nin": list(seen_ids)}, "doc_id": {"$in": doc_ids}}
+        # else:
+        #     pipeline[0]["$vectorSearch"]["filter"] = {"_id": {"$nin": list(seen_ids)}}
 
 
         for attempt in range(5):  # Retry up to 5 times
@@ -420,13 +434,14 @@ class QueryProcessor:
                 # return await self._rerank(docs, query, ["text", "table_summary"])
             
             except OperationFailure as e:
-                print(f"MongoDB OperationFailure: {e}, retrying...")
+                logging.warning(f"MongoDB OperationFailure: {e}, retrying...")
             
             except asyncio.TimeoutError:
-                print(f"MongoDB Timeout, retrying attempt {attempt+1}...")
+                logging.warning(f"MongoDB Timeout, retrying attempt {attempt+1}...")
             
             time.sleep(2 ** attempt + random.uniform(0, 1))  # Exponential backoff
 
+        logging.error("MongoDB search failed after multiple retries.")
         raise Exception("MongoDB search failed after multiple retries.")
 
     async def _search_in_chunks(self, queries: list, seen_ids: set, doc_ids: list, iteration: int) -> list:
@@ -461,6 +476,7 @@ class QueryProcessor:
         all_results.sort(key= lambda chunk: chunk["chunk_num"])
         docs = {str(chunk["doc_id"]) for chunk in all_results}
         processed = self._process_chunks(docs, all_results)
+        logging.info(f"Search in chunks completed for iteration {iteration}")
         return processed, docs, seen_ids
     
     async def _rerank(self, docs: list, question: str, fields: list) -> list:
@@ -482,6 +498,7 @@ class QueryProcessor:
             response.raise_for_status()
             return [docs[result["index"]] for result in response.json()["results"] if result["relevance_score"] > 0.5]
         except Exception as e:
+            logging.error("Reranking failed, quota limit exceeded")
             raise Exception(f"Reranking failed, quota limit exceeded")
     
     async def _expand_query(self, query: str, user_knowledge: str, model_to_use: str) -> list:
@@ -500,21 +517,21 @@ class QueryProcessor:
                 
                 try:
                     json_data = json.loads(match.group(0), strict = False)
-                    print(json_data)
+                    logging.info(json_data)
                     return json_data["action_plan"]
                 except:
                     raise ValueError("Failed to extract JSON from model response")
                 
                         
             except (json.JSONDecodeError, ValueError) as e:
-                print(f"Error parsing response: {e}, retrying...")
+                logging.warning(f"Error parsing response: {e}, retrying...")
 
             except ResourceExhausted or ServerError:
-                print(f"Quota exceeded, retrying after delay...")
+                logging.warning(f"Quota exceeded, retrying after delay...")
                 time.sleep(2 ** attempt + random.uniform(0, 1))  # Exponential backoff
 
             except GoogleAPIError as e:
-                print(f"Google API error: {e}")
+                logging.error(f"Google API error: {e}")
                 break  # If it's an unknown API error, don't retry
 
         raise Exception("Failed after multiple retries due to API quota limits.")
@@ -534,6 +551,7 @@ class QueryProcessor:
             stepknowledge += f"This is retry for step {step} of plan"
         else:
             stepknowledge += f"{step}"
+        full_plan = {"original user question": question, "plan": plan}
         for attempt in range(MAX_RETRIES):
             try:
                 response = client.models.generate_content(
@@ -542,13 +560,13 @@ class QueryProcessor:
                         question=question,
                         context=context,
                         current_date=current_date,
-                        action_plan=plan,
+                        action_plan=full_plan,
                         knowledge=knowledge,
                         max_iter=max_iter,
                         iteration=iteration,
                         user_knowledge=user_knowledge,
                         step=stepknowledge,
-                        specific_queries=specific_queries,
+                        max_steps=len(plan),
                         retries_left=retrycnt)],
                     config=self._get_config(model_to_use, 'answer')
                 ).text
@@ -558,24 +576,25 @@ class QueryProcessor:
                     raise ValueError("Failed to extract JSON from model response")
                 try:
                     json_data = json.loads(match.group(0), strict = False)
+                    logging.info(f"Answer generated for question: {question}")
                     return json_data
                 except:
-                    print("Retrying JSON extraction in _generate_answer...")
+                    logging.warning("Retrying JSON extraction in _generate_answer...")
                     raise ValueError("Failed to extract JSON from model response")
 
             except (json.JSONDecodeError, ValueError) as e:
-                print(f"Error parsing response: {e}, retrying...")
+                logging.warning(f"Error parsing response: {e}, retrying...")
 
             except ResourceExhausted:
-                print(f"Quota exceeded, retrying after delay...")
+                logging.warning(f"Quota exceeded, retrying after delay...")
                 time.sleep(2 ** attempt + random.uniform(0, 1))  # Exponential backoff
 
             except ServerError:
-                print(f"Server error, retrying...")
+                logging.warning(f"Server error, retrying...")
                 time.sleep(2 ** attempt + random.uniform(0, 1))  # Exponential backoff
 
             except GoogleAPIError as e:
-                print(f"Google API error: {e}")
+                logging.error(f"Google API error: {e}")
                 break  # If it's an unknown API error, don't retry
 
 
@@ -588,6 +607,7 @@ class QueryProcessor:
             contents=texts,
             config=EmbedContentConfig(task_type="RETRIEVAL_DOCUMENT")
         )
+        logging.info(f"Generated embeddings for texts")
         return [embedding.values for embedding in response.embeddings]
 
     def _get_config(self, model_to_use: str, schema_type: str) -> types.GenerateContentConfig:
@@ -619,5 +639,5 @@ class QueryProcessor:
             response_schema=schema,
             temperature=0.2
         )
-        
+        logging.debug(f"Configuration generated for model: {model_to_use}, schema: {schema_type}")
         return config

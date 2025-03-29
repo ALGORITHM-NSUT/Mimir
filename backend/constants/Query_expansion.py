@@ -1,4 +1,4 @@
-Query_expansion_prompt = """Given the following query: "{query}" and the current date "{current_date}" (for reference in this session), your task is to create an **action plan** to retrieve information step by step, based on your system knowledge of where different types of data are stored.  
+Query_expansion_prompt = """Given the following query: "{query}" and the current date "{current_date}" (for reference in this session), your task is to create an **action plan** to retrieve information step by step, based on your system-prompt knowledge of where different types of data are stored.  
 
 🚨 **STRICT RULES TO FOLLOW:**  
 1. **DO NOT** go beyond what user has asked, stay limited to the query scope. make simple queries dont go too complex.
@@ -47,21 +47,18 @@ Query_expansion_prompt = """Given the following query: "{query}" and the current
 - **whenever asking for roll number check for result of PREVIOUS semester for only specific branch given, unless asked data is of previous year then search for current result**
 ---
 
-## **📌 Guidelines for Specificity Score (`specificity`)**
-- Assign a **float value between `0.0` and `1.0`** to indicate how specific the original query is.  
-- This specificity score will be used to set text search weightage over vector search weightage, high specificity score means more weightage to text search.
-- **Use the following reference scale:**  
-  - **`1.0` → Very specific** (e.g., `"What was student X's SGPA in 5th semester?"`)  
-  - **`0.5` → Moderately specific** (e.g., `"Tell me everything about professor X who taught CSE in 2024?"`)  
-  - **`0.0` → Very broad** (e.g., `"Tell me about placements at NSUT?"`)  
-- **The specificity score applies to each specific query** inside the action plan.  
+## SCORING SYSTEM
+Specificity vs. Expansivity
 
-## **📌 Guidelines for Expansive score (`expansivity`)**
-- Assign a **float value between `0.0` and `1.0`** to indicate how large the answer of the query can be expected to be.
-- **Use the following reference scale:**
-- **`1.0` → Very large** (e.g., `"Give me the academic calendar"`)
-- **`0.5` → Moderately large** (e.g., `"Tell me about all the professors in CSE department?"`)
-- **`0.0` → Very small** (e.g., `"Tell me about the student X's roll number?"`)
+Score Type | 0.0	               |0.5 	               |1.0
+Specificity|	General inquiry    |	Targeted search    |	Exact data point
+Expansivity|	Single value needed|	Section of document|	Full document parse
+
+Scoring Examples
+
+"CS305 syllabus 2024" → Specificity=0.9, Expansivity=0.2
+"Placement reports" → Specificity=0.3, Expansivity=1.0
+
 ---
 
 ### **🔹Special instruction**
@@ -69,6 +66,7 @@ Query_expansion_prompt = """Given the following query: "{query}" and the current
     - **Always use the latest available academic calendar** unless otherwise specified.
     - one of the specific query should target the entire academic calendar, and the rest of the specific queries should target specific information from the calendar.
     - add 1 extra document query directed at that particular information revision seperate from academic calendar *DO NOT make a seperate step for this, just add it as a document query in the same step.
+    - Do not solely rely on academic calendar
 
 ## **📌 JSON Output Format (STRICT)**
 ```json
@@ -101,106 +99,6 @@ Document_queries list can contain more tha 1 type of unrelated documents, try yo
 try to make a step to get full forms of ambiguos data.
 if data gathering by document query is ambiguos and may or may not depend upon previous data, you may create an (optional step) for it and mention it in the reason.
 Ensure JSON is well-formed.
-
-
-here is some extra knowledge for augment and rewrite queries:
-ACADEMIC RECORDS:
-- Student Results & Transcripts (called gazzette reports in in title)
-- Detained Attendance Records
-- Course Registrations
-- Curriculum & Syllabus Data(valid for 6 months)
-- Time tables branch-wise and semester-wise (contains course titles(either in name format or codes) and may or may not contain respective teacher, released in proximity of 1 month before semester starts)
-- course coordination comittee (CCC) (per semester document with full information of course codes mapped to course names and teacher name) 
-
-ADMINISTRATIVE DOCUMENTS:
-- Official Notices & Circulars
-- Academic Calendar (common for all)
-    -valid for 6 months, released every 6 months, twice an year does not relate to previous semester or previous year, 
-    -contains information about release of documents, results, activities etc within a semester and their timeline, 
-    -it is common for all branches and all semesters
-- Admission Records
-- Fee Structure
-- Scholarship Information
-- NPTEL courses
-- NPTEL exam results
-- Administrative Policies
-- Disciplinary Records (Suspension/Fines/Penalties)
-- Official Gazette Reports (contains student results, if roll number of a student is wanted their any semester result, result of student with name and roll number is stored together)
-- Meeting Minutes
-- University Ordinances
-- Seating plans for students (only uses student roll numbers instead of names)
-
-CAMPUS INFORMATION: 
-- Main Campus: 
-    BBA, 
-    BFtech, 
-    B.Tech:
-        CSE(computer sceince engineering),
-        CSAI(artifical intelligence), 
-        CSDS(data science), 
-        MAC(mathematics and computing), 
-        Bio-Technology, 
-        ECE-IOT(internet of things),
-        ECE(electronics and communication engineering), 
-        EE(electrical engineering), 
-        ICE(instrumentation and control), 
-        IT(information technology), 
-        ITNS(information technology with network security),  
-        ME(Mechanical Engineering)
-
-- East Campus:
-    B.Tech:
-        CSDA(**Big** Data Analytics), (The B is not present in the full form, it is strictly NOT just data analytics) 
-        ECAM(artificial intelligence and machine learning), 
-        CIOT(Internet of things).  
-
-- West Campus: 
-    B.Tech:
-        ME(Mechanical Engineering),
-        MPAE(Manufacturing Process and Automation Engineering),
-        MEEV(Electric Vehicles), 
-        Civil Engineering, 
-        GeoInformatics.
-
-INSTITUTIONAL DATA:
-- provides B.tech, M.Tech, PhD, B.ba courses
-- Historical Records
-- Accreditation Documents
-- Rankings & Achievements
-- Research Grants
-- Placement Statistics
-- Alumni Network
-- Industry Partnerships
-- International Collaborations
-
-EVENT & ACTIVITY RECORDS:
-- Cultural Events
-- Technical Festivals
-- Sports Competitions
-- Workshops & Seminars
-- Club Activities
-- Student Council Records
-
-ADMISSIONS:  
-- Undergraduate admissions via JEE (conducted by NTA).  
-- Postgraduate admissions via GATE, with selection based on written tests and interviews.
-                                    
-- **Other Key Details:**  
-• Roll no is present in alphanumeric characters like 2024UCI6090 here the first 4 character represent the year of admission the next 3 character represent the branch code and last 4 character represents the unique number.
-• Exam protocols, seating arrangements, result declaration timelines, and academic calendars.
-• each even semseter starts january, odd starts july
-• 2 semesters in an academic year, semester starting from january and july come under current year and next year documents (example if today is 2023 year and a document for even semester will be released with name 2023 NOT 2022-2023, assume forward year unless specifically asked for backward years)
-• there is also a summer semester every year, where backlogs and improvement courses are run
-• timetables and academic calendars are released 1 month to few weeks prior to the start of the semester (may be reivsed later)
-• 2 internal CT, 1 midsem, 1 endsem, 1 endsem-practical exam
-• 1 internal exam for practical subjects (e.g. physics, chemistry, biology)
-• end semester result is released 1 month after exam (also called gazzete reports)
-• end semester result is released 1 month after exam (also called gazzete reports)
-• student welfare and other documents can be released whenever
-• seating arrangements and exact datesheet for exams(both theoretical and practical) are relased a week before exams, tentative dates are released with academic calendar
-• Your Knowledge cutoff is 1 jan 2024, you do not have knowledge of documents before that
-• Suspension is different from detainment, a student is detained when the have lower than 75%' attendance, suspension is when a student is involved in misconduct/violence and other suuch behaviours
-
 
 ### *Query Augmentation*
 You can use information from this knowledge to augment and enrich the query, add as much as you can from this knowledge to query
