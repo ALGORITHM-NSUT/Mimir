@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeSanitize from "rehype-sanitize";
-import { FaMagic } from "react-icons/fa";
+import { FaMagic, FaThumbsUp, FaThumbsDown } from "react-icons/fa";
 
 const Table = ({ children }) => (
   <div className="overflow-auto max-h-96">
@@ -11,11 +11,9 @@ const Table = ({ children }) => (
   </div>
 );
 
-const TableRow = ({ children, isHeader }) => {
-  const baseClass = "border-b border-gray-700  transition-colors";
-  const headerClass = isHeader ? "" : "";
-  return <tr className={`${baseClass} ${headerClass}`}>{children}</tr>;
-};
+const TableRow = ({ children }) => (
+  <tr className="border-b border-gray-700 transition-colors">{children}</tr>
+);
 
 const TableCell = ({ children, isHeader }) => {
   const baseStyle = "border border-gray-500 px-4 py-2";
@@ -27,16 +25,17 @@ const TableCell = ({ children, isHeader }) => {
   );
 };
 
-const Response = ({ text, timestamp }) => {
+const Response = ({ text, timestamp, onFeedback }) => {
   const [showAnimation, setShowAnimation] = useState(false);
+  const [feedback, setFeedback] = useState(null);
   const len = text.length;
-  
+
   // Detect if text contains a table (Markdown syntax) or bold Markdown (**text**)
   const containsTable = /\|\s*.+\s*\|/g.test(text) && /---/g.test(text);
   const containsBoldText = /\*\*(.*?)\*\*/.test(text);
 
   useEffect(() => {
-    if (!containsTable && !containsBoldText) { // Disable animation for tables & bold text
+    if (!containsTable && !containsBoldText) {
       const now = Date.now();
       if (timestamp && now - timestamp <= 200) {
         setShowAnimation(true);
@@ -44,6 +43,11 @@ const Response = ({ text, timestamp }) => {
       }
     }
   }, [timestamp, containsTable, containsBoldText]);
+
+  const handleFeedback = (type) => {
+    setFeedback(type);
+    if (onFeedback) onFeedback(type);
+  };
 
   return (
     <div className="mt-2 max-w-full w-full">
@@ -88,6 +92,20 @@ const Response = ({ text, timestamp }) => {
             )}
           </div>
         </div>
+      </div>
+      <div className="flex justify-end mt-4">
+        <button
+          className={`mr-2 ${feedback === "up" ? "text-gray-100" : "text-gray-500"}`}
+          onClick={() => handleFeedback("up")}
+        >
+          <FaThumbsUp />
+        </button>
+        <button
+          className={`ml-2 ${feedback === "down" ? "text-red-500" : "text-gray-500"}`}
+          onClick={() => handleFeedback("down")}
+        >
+          <FaThumbsDown />
+        </button>
       </div>
     </div>
   );
