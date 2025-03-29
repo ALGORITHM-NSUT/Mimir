@@ -30,6 +30,15 @@ const ChatPage = () => {
   const [showScrollButton, setShowScrollButton] = useState(false);
   const { currentTheme } = useTheme();
   const [showHelpModal, setShowHelpModal] = useState(false);
+  const [showSuggestions, setShowSuggestions] = useState(isNewChat);
+
+  // Suggestion examples
+  const suggestions = [
+    "What are the admission requirements for NSUT?",
+    "How do I register for courses this semester?",
+    "Tell me about the Computer Science department",
+    "What extracurricular activities are available?"
+  ];
 
   useEffect(() => {
     if (alert) {
@@ -105,6 +114,9 @@ const ChatPage = () => {
   };
 
   const handleSendMessage = async (message, isDeepSearch = false) => {
+    // Hide suggestions when a message is sent
+    setShowSuggestions(false);
+    
     const tempMessageId = `temp-${new Date().getTime()}`; // Temporary ID for UI update
   
     const updatedHistory = [
@@ -228,6 +240,11 @@ const ChatPage = () => {
     };
   }, []);
 
+  // Handler for suggestion clicks
+  const handleSuggestionClick = (suggestion) => {
+    handleSendMessage(suggestion);
+  };
+
   return (
     <div className={`relative h-screen w-full bg-[${currentTheme.background}] ${currentTheme.text} text-[16px] flex flex-col overflow-hidden`}>
       <Sidebar
@@ -244,29 +261,70 @@ const ChatPage = () => {
         {/* Chat History Section */}
         <div
           ref={chatContainerRef}
-          className="flex-grow flex sm:max-h-[80vh] max-h-[80vh] flex-col px-4 sm:px-10 overflow-y-auto pb-24 sm:pb-28 w-full "
+          className="flex-grow flex sm:max-h-[80vh] max-h-[80vh] flex-col px-4 sm:px-10 overflow-y-auto pb-24 sm:pb-28 w-full"
         >
           {isNewChat === true ? (
-            <div className="flex flex-col justify-center items-center mb-20 flex-grow">
+            <div className="flex flex-col justify-center items-center mb- flex-grow">
               <h1 className="text-center text-5xl sm:text-5xl lg:text-5xl font-semibold bg-gradient-to-r from-violet-400 via-blue-400 to-pink-400 text-transparent bg-clip-text py-2">
                 What can I help with?
               </h1>
+              
+              {/* Suggestion Chips - Redesigned */}
+              <AnimatePresence>
+                {showSuggestions && (
+                  <motion.div 
+                    className="mt-8 grid grid-cols-1 sm:grid-cols-2 gap-4 w-full max-w-2xl"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.4 }}
+                  >
+                    {suggestions.map((suggestion, index) => (
+                      <motion.div
+                        key={index}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ 
+                          delay: 0.1 * index,
+                          duration: 0.5,
+                          type: "spring",
+                          stiffness: 100
+                        }}
+                        whileHover={{ 
+                          scale: 1.03, 
+                          boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)",
+                          borderColor: "#4dabf7"
+                        }}
+                        whileTap={{ scale: 0.98 }}
+                        onClick={() => handleSuggestionClick(suggestion)}
+                        className="bg-gradient-to-br from-[#2a2a2a] to-[#303030] text-gray-200 p-5 rounded-xl cursor-pointer 
+                          border border-gray-700 shadow-lg transition-all duration-300 text-sm sm:text-base
+                          flex flex-col relative overflow-hidden group"
+                      >
+                        <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/10 to-blue-500/10 opacity-0 
+                          group-hover:opacity-100 transition-opacity duration-300"></div>
+                        <span className="relative z-10">{suggestion}</span>
+                        <div className="absolute bottom-0 left-0 w-full h-[2px] bg-gradient-to-r from-cyan-400 to-blue-500 
+                          transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left"></div>
+                      </motion.div>
+                    ))}
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
           ) : (
             <>
             <div className="flex justify-center">
               <ChatHistory chatHistory={chatHistory} />
             </div>
-
             </>
           )}
         </div>
       </div>
 
+      {/* Input Box - Adjusted position to ensure it's below suggestions */}
       <motion.div
-        className={`fixed left-0 bottom-6 right-0 ${
-          isNewChat ? "sm:bottom-48" : "sm:bottom-5"
-        } `}
+        className={`fixed left-0 bottom-6 right-0 z-10`}
         initial="initial"
         animate="animate"
         exit="exit"
@@ -284,7 +342,7 @@ const ChatPage = () => {
       )}
 
       {/* Scroll to Bottom Button */}
-      <div >
+      <div>
         <ScrollCue showScrollButton={showScrollButton} chatContainerRef={chatContainerRef}/>
       </div>
 
