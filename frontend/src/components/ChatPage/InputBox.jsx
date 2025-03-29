@@ -9,7 +9,7 @@ import SpeechButton from "./SpeechButton";
 import { motion, AnimatePresence } from "framer-motion";
 import DeepSearchModal from "./DeepSearchModal";
 
-const MAX_CHAR_LIMIT = 500;
+const MAX_CHAR_LIMIT = 150;
 
 const InputBox = ({ onSendMessage, setAlert }) => {
   const [message, setMessage] = useState("");

@@ -31,7 +31,7 @@ def verify_google_token(token: str):
         return None
     return response.json()
 
-async def login_user(request: Request, response: Response):
+async def register_user(request: Request, response: Response):
     data = await request.json()
     credential = data.get("credential")
 
@@ -46,34 +46,73 @@ async def login_user(request: Request, response: Response):
     email = google_user["email"]
     name = google_user.get("name", "User")
     google_id = google_user["sub"]
+    profile_image = google_user.get("picture", "")  # Extract profile image
 
-    user = await users_collection.find_one({"email": email})
+    existing_user = await users_collection.find_one({"email": email})
+    if existing_user:
+        raise HTTPException(status_code=400, detail="User already registered")
 
-    if not user:
-        user_id = str(ObjectId())
-        new_user = {
-            "_id": user_id,
-            "google_id": google_id,
-            "email": email,
-            "name": name,
-            "created_at": datetime.utcnow()
-        }
-        await users_collection.insert_one(new_user)
-        user = new_user
+    user_id = str(ObjectId())
+    new_user = {
+        "_id": user_id,
+        "google_id": google_id,
+        "email": email,
+        "name": name,
+        "profile_image": profile_image,  # Save profile image
+        "created_at": datetime.utcnow()
+    }
+    await users_collection.insert_one(new_user)
 
-    token = create_jwt_token(str(user["_id"]))
-
+    token = create_jwt_token(user_id)
     response.set_cookie(
         key="access_token",
         value=token,
         httponly=True,
-        secure=True, 
-        samesite= "None",
+        secure=True,
+        samesite="None",
+        expires=2592000
+    )
+
+    return {
+        "message": "Registration successful",
+        "user": {
+            "userId": user_id,
+            "name": name,
+            "email": email,
+            "profileImage": profile_image  # Send profile image to frontend
+        }
+    }
+
+async def login_user(request: Request, response: Response):
+    data = await request.json()
+    credential = data.get("credential")
+
+    if not credential:
+        raise HTTPException(status_code=400, detail="Google credential is required")
+
+    google_user = verify_google_token(credential)
+
+    if not google_user or google_user.get("aud") != GOOGLE_CLIENT_ID:
+        raise HTTPException(status_code=401, detail="Invalid Google token")
+
+    email = google_user["email"]
+
+    user = await users_collection.find_one({"email": email})
+
+    if not user:
+        raise HTTPException(status_code=404, detail="User not registered")
+
+    token = create_jwt_token(str(user["_id"]))
+    response.set_cookie(
+        key="access_token",
+        value=token,
+        httponly=True,
+        secure=True,
+        samesite="None",
         expires=2592000
     )
 
     return {"message": "Login successful", "user": {"userId": str(user["_id"]), "name": user["name"], "email": user["email"]}}
-
 
 async def logout_user(response: Response):
     response.delete_cookie("access_token", httponly=True, samesite="None", secure=True, path="/"  )
@@ -92,7 +131,12 @@ async def get_current_user(request: Request):
         if not user:
             raise HTTPException(status_code=401, detail="User not found")
 
-        return {"userId": str(user["_id"]), "name": user["name"], "email": user["email"]}
+        return {
+            "userId": str(user["_id"]),
+            "name": user["name"],
+            "email": user["email"],
+            "profileImage": user.get("profile_image", "")  # Include profile image
+        }
 
     except pyjwt.ExpiredSignatureError:
         raise HTTPException(status_code=401, detail="Token expired")

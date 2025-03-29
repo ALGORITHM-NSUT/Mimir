@@ -25,18 +25,21 @@ const DeepSearchModal = ({ onConfirm, onClose }) => {
         {/* Rest of the modal content remains the same */}
         <div className="flex items-center gap-3 mb-4">
           <RiSearchEyeLine size={24} className="text-cyan-400" />
-          <h2 className="text-xl font-semibold text-gray-100">Deep Search</h2>
+          <h2 className="text-xl font-semibold text-gray-100">Deep Search (Experimental)</h2>
         </div>
 
         <p className="text-gray-300 mb-4">
           This option performs a more comprehensive search using an advanced model,
-          which may yield different or more in-depth results.
+          which may yield different or more in-depth results. Please be aware that Deep Search can take significantly longer,
+          potentially up to 1 minute, to complete.
         </p>
         
         <div className="bg-[#404040] rounded-lg p-4 mb-6">
-          <p className="text-amber-400 text-sm">
-            Please be aware that Deep Search can take significantly longer,
-            potentially up to 1 minute, to complete.
+          <p className="text-amber-400 text-sm mb-2">
+            
+          </p>
+          <p className="text-red-400 text-smpt-2">
+            ⚠️ Warning: This is an experimental feature and may produce errors or unexpected results.
           </p>
         </div>
 

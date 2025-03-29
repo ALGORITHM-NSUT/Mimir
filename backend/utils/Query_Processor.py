@@ -72,10 +72,14 @@ GEMINI_API_KEY = os.getenv("GOOGLE_API_KEY").split(" | ")[index % 2].strip()
 MONGO_URI_MIMIIR = os.getenv("MONGO_URI_MIMIR")
 
 mongoDb_client = AsyncIOMotorClient(MONGO_URI_MIMIIR)
+
+
 # Thinking Model
+
 llm2 = "gemini-2.0-flash-thinking-exp-01-21"
 # Action Model for quick search
 llm = "gemini-2.0-flash"
+
 client = genai.Client(api_key=GEMINI_API_KEY)
 
 MAX_RETRIES = 3

@@ -1,7 +1,11 @@
 from fastapi import APIRouter, Response, Request
-from controllers.auth_controller import login_user, logout_user, get_current_user
+from controllers.auth_controller import login_user, logout_user, get_current_user, register_user
 
 router = APIRouter()
+
+@router.post("/register")
+async def google_register(response: Response, request: Request, data: dict ):
+    return await register_user(request, response)
 
 @router.post("/login")
 async def google_login(response: Response, request: Request, data: dict ):
