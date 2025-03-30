@@ -13,7 +13,7 @@ const ThreeDotsMenu = () => {
         {[0, 1, 2].map((i) => (
           <motion.span
             key={i}
-            className="w-1.5 h-1.5 bg-gray-400 rounded-full"
+            className="w-1 h-1 bg-gray-400 rounded-full"
             variants={{
               hover: {
                 y: [-3, 0], // Moves up then returns

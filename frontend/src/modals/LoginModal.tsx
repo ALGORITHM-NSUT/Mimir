@@ -18,7 +18,7 @@ const ModalWrapper = ({ children, onClose }) => (
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.9 }}
       transition={{ duration: 0.3 }}
-      className="relative bg-gray-900 text-white p-6 rounded-2xl shadow-xl w-full max-w-md max-h-[90vh] overflow-auto"
+      className="relative bg-[#1b1c1d] text-white p-6 rounded-2xl shadow-xl w-full max-w-md max-h-[90vh] overflow-auto"
       onClick={(e) => e.stopPropagation()}
     >
       <button
@@ -62,19 +62,20 @@ const TermsModal = ({ onClose }) => (
   </ModalWrapper>
 );
 
-const LoginModal = ({ isOpen, onClose }) => {
+const AuthModal = ({ isOpen, onClose, title = "Welcome To Mimir" }) => {
   const [showTerms, setShowTerms] = useState(false);
+
   return (
     <AnimatePresence>
       {isOpen && (
-        showTerms ? (
-          <TermsModal onClose={() => setShowTerms(false)} />
-        ) : (
-          <ModalWrapper onClose={onClose}>
+        <ModalWrapper onClose={onClose}>
+          {showTerms ? (
+            <TermsModal onClose={() => setShowTerms(false)} />
+          ) : (
             <CardContent className="flex flex-col items-start space-y-4 text-left">
-              <h2 className="text-2xl font-bold">Welcome Back</h2>
+              <h2 className="text-2xl font-bold">{title}</h2>
               <p className="text-gray-400 text-sm">
-                By continuing, you agree to our {" "}
+                By continuing, you agree to our{" "}
                 <button
                   onClick={() => setShowTerms(true)}
                   className="text-blue-500 hover:underline"
@@ -84,11 +85,11 @@ const LoginModal = ({ isOpen, onClose }) => {
               </p>
               <LoginButton />
             </CardContent>
-          </ModalWrapper>
-        )
+          )}
+        </ModalWrapper>
       )}
     </AnimatePresence>
   );
 };
 
-export default LoginModal;
+export default AuthModal;
