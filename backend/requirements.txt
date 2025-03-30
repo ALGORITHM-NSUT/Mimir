@@ -111,7 +111,7 @@ requests-toolbelt==1.0.0
 rich==13.9.4
 rich-toolkit==0.13.2
 rsa==4.9
-sentencepiece==0.2.0
+
 shapely==2.0.7
 shellingham==1.5.4
 six==1.17.0
