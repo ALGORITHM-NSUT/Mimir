@@ -9,7 +9,6 @@ import { UserContext } from "../Context/UserContext";
 import Alert from "@mui/material/Alert";
 import { motion, AnimatePresence } from "framer-motion";
 import ScrollCue from "../components/ChatPage/ScrollCue";
-import { useTheme } from "../Context/ThemeContext";
 import { FaQuestionCircle } from "react-icons/fa";
 import HelpModal from "../components/ChatPage/HelpModal";
 
@@ -28,7 +27,6 @@ const ChatPage = () => {
   const [alert, setAlert] = useState(null);
   const [isNewChat, setIsNewChat] = useState(location.pathname === "/new");
   const [showScrollButton, setShowScrollButton] = useState(false);
-  const { currentTheme } = useTheme();
   const [showHelpModal, setShowHelpModal] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(isNewChat);
 
@@ -205,7 +203,7 @@ const ChatPage = () => {
             );
 
             // Ensure sessionStorage is updated
-            sessionStorage.setItem(
+            sessionStorage.removeItem(
               "chatHistory",
               JSON.stringify({ chatId, messageId, history: newHistory })
             );
@@ -246,7 +244,7 @@ const ChatPage = () => {
   };
 
   return (
-    <div className={`relative h-screen w-full bg-[${currentTheme.background}] ${currentTheme.text} text-[16px] flex flex-col overflow-hidden`}>
+    <div className={`relative h-screen w-full text-[16px] bg-[#1b1c1d] flex flex-col overflow-hidden`}>
       <Sidebar
         isOpen={isSidebarOpen}
         toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
@@ -261,7 +259,7 @@ const ChatPage = () => {
         {/* Chat History Section */}
         <div
           ref={chatContainerRef}
-          className="flex-grow flex sm:max-h-[80vh] max-h-[80vh] flex-col px-4 sm:px-10 overflow-y-auto pb-24 sm:pb-28 w-full mt-6"
+          className="flex-grow flex sm:max-h-[80vh] max-h-[80vh] flex-col px-4 sm:px-10 overflow-y-auto pb-24 sm:pb-28 w-full"
         >
           {isNewChat === true ? (
             <div className="flex flex-col justify-center items-center mt-10 flex-grow">
@@ -278,9 +276,6 @@ const ChatPage = () => {
                       whileTap={{ scale: 0.95 }}
                     >
                       <p className="text-sm ">Try asking about these topics</p>
-                      {/* <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 animate-bounce" viewBox="0 0 20 20" fill="currentColor">
-                        <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
-                      </svg> */}
                     </motion.div>
 
               {/* Redesigned Suggestion Section */}
@@ -302,7 +297,7 @@ const ChatPage = () => {
                       
                     </motion.p>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full">
+                    <div className="grid grid-cols-2 gap-4 sm:w-[80%]">
                       {suggestions.map((suggestion, index) => (
                         <motion.div
                           key={index}
@@ -366,7 +361,6 @@ const ChatPage = () => {
                       ))}
                     </div>
 
-                    {/* Visual cue for scrolling/more content */}
                     <motion.div
                       className="mt-6 text-cyan-400 transition-colors cursor-pointer flex flex-col items-center"
                       initial={{ opacity: 0 }}
@@ -376,10 +370,6 @@ const ChatPage = () => {
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
                     >
-                      {/* <p className="text-sm mb-2">Try asking about these topics</p> */}
-                      {/* <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 animate-bounce" viewBox="0 0 20 20" fill="currentColor">
-                        <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
-                      </svg> */}
                     </motion.div>
                   </motion.div>
                 )}

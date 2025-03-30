@@ -4,7 +4,7 @@ import LoadingMessage from "./LoadingMessage";
 
 const ChatHistory = ({ chatHistory }) => {
   return (
-    <div className=" mt-6 sm:mt-12 sm:w-[66%] w-full">
+    <div className=" mx-4 mt-6 sm:mt-12 sm:w-[66%] w-full">
       {chatHistory.map((chat, index) => (
         <div key={index} className="mb-12">
           {index === chatHistory.length - 1 && chat.status === "Processing" ? (

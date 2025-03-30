@@ -15,7 +15,7 @@ const LoadingMessage = ({ query }) => {
       <div className="bg-[#2A2A2A] p-6 rounded-3xl rounded-tl-none shadow-[0px_5px_5px_rgba(0,0,0,0.3)] flex justify-center items-center">
         <div className="mt-2 max-w-full w-full">
 
-          <FaMagic className="mb-4 text-white-400 text-md" />
+          <FaMagic className="mb-4 text-gray-200 text-md" />
 
           <ChatLoader />
         </div>

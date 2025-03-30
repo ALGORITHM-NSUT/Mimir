@@ -1,7 +1,6 @@
-import React, { useContext } from "react";
-import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import React, { useContext, useEffect, useState } from "react";
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { UserContext, UserProvider } from "./Context/UserContext";
-import { ThemeProvider } from "./Context/ThemeContext";
 import LandingPage from "./pages/LandingPage";
 import ChatPage from "./pages/ChatPage";
 import SharedChatPage from "./pages/SharedChatPage";
@@ -12,20 +11,55 @@ const ProtectedRoute = ({ children }) => {
   return user?.userId ? children : <Navigate to="/" />;
 };
 
+// Component to update document title dynamically
+const TitleUpdater = () => {
+  const location = useLocation();
+  const [title, setTitle] = useState("Mimir");
+
+  useEffect(() => {
+    const updateTitle = () => {
+      let newTitle = "Mimir"; // Default title
+      const match = location.pathname.match(/\/chat\/(.+)/);
+      const chatId = match ? match[1] : null;
+
+      if (chatId) {
+        const userId = JSON.parse(sessionStorage.getItem("user"))?.userId;
+        if (userId) {
+          const chats = JSON.parse(sessionStorage.getItem(`chats_${userId}`) || "[]");
+          const chat = chats.find((c) => c.chatId === chatId);
+          if (chat) {
+            newTitle = chat.title; // Set chat title from session storage
+          }
+        }
+      }
+
+      setTitle(newTitle);
+      document.title = newTitle;
+    };
+
+    updateTitle(); // Run initially
+
+    // Polling for sessionStorage changes every 500ms
+    const intervalId = setInterval(updateTitle, 500);
+
+    return () => clearInterval(intervalId);
+  }, [location]);
+
+  return null;
+};
+
 const App = () => {
   return (
-    <ThemeProvider>
-      <UserProvider>
-        <Router>
-          <AppRoutes />
-        </Router>
-      </UserProvider>
-    </ThemeProvider>
+    <UserProvider>
+      <Router>
+        <TitleUpdater />
+        <AppRoutes />
+      </Router>
+    </UserProvider>
   );
 };
 
 const AppRoutes = () => {
-
   return (
     <Routes>
       <Route path="/" element={<LandingPage />} />
