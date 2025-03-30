@@ -67,7 +67,7 @@ const Response = ({ text, timestamp, messageId, upvote }) => {
                 td: TableCell,
               }}
             >
-              {text}
+              {text.replace(/```markdown|```/g, "")}
             </ReactMarkdown>
           </div>
         </div>
