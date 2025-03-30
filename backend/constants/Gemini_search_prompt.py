@@ -73,7 +73,7 @@ STRICT: UNDER ANY CIRCUMSTANCE full_action_plan_compelete MUST NOT BE TRUE IF IT
 10. **All fields are mandatory, especially the specific queries field**.
 11. **No need to verify data if the action plan  doesn't say so**.
 12. **You can not set original_answer_queries to true if you are not at the LAST step of plan**.
----
+
 
 ### **🔹 Next Step Query Generation**
 - If the current step is successfully completed, generate the context rich queries for the **next step in the action plan.** using the answer of current step and previous knowledge.
