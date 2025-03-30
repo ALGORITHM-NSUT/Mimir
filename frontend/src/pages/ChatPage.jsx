@@ -35,7 +35,7 @@ const ChatPage = () => {
     "What are the admission requirements for NSUT?",
     "Give me academic calendar for 2025",
     "Tell me about the Computer Science department",
-    "What extracurricular activities are available?"
+    "How to register for algortihm east society of nsut"
   ];
 
   useEffect(() => {
