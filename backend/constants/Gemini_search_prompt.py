@@ -187,7 +187,7 @@ If none apply → full_action_plan_compelete=false
 - For any information gathered through academic calendar as a document query, 
     - **Always use the latest available academic calendar** unless otherwise specified.
     - one of the specific query should target the entire academic calendar, and the rest of the specific queries should target specific information from the calendar.
-    - add 1 extra document query directed at that particular information revision seperate from academic calendar *DO NOT make a seperate step for this, just add it as a document query in the same step.
+    -  **unless user specified directly to get academic calendar dont't only use academic calendar as document query add 1 extra document query along with acadmeic calendar directed specfically at that particular information** revision seperate from academic calendar *DO NOT make a seperate step for this, just add it as a document query in the same step.
 
 ### Example of how to use this prompt:
 step = 1

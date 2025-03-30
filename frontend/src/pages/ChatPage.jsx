@@ -33,7 +33,7 @@ const ChatPage = () => {
   // Suggestion examples
   const suggestions = [
     "What are the admission requirements for NSUT?",
-    "How do I register for courses this semester?",
+    "Give me academic calendar for 2025",
     "Tell me about the Computer Science department",
     "What extracurricular activities are available?"
   ];

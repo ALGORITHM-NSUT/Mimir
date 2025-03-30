@@ -40,7 +40,6 @@ async def response_strategy(message: str, chat, is_deep_search=False):
             
             json_data = json.loads(bot_reply)
 
-            print(json_data)
             answer = {}  # Initialize answer dictionary here
             
             if json_data.get("retrieve"):
@@ -62,15 +61,14 @@ async def response_strategy(message: str, chat, is_deep_search=False):
         return await interactive_chat(message)
     except google.api_core.exceptions.ResourceExhausted:
         return {
-            "response": "Quota limit exceeded. Please wait before trying again.",
+            "response": "The server is currently experiencing High demand. Please wait before trying again.",
             "references": [],
             "code": 429
         }
     except Exception as e:
         detailed_error = traceback.format_exc()
-        print("Detailed error:", detailed_error)
         return {
-            "response": "An error occurred while processing your request, Please try again later.",
+            "response": "The server is currently experiencing High demand. Please wait before trying again.",
             "references": [],
             "code": 400
         }
