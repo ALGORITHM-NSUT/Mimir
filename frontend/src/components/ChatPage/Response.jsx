@@ -3,7 +3,6 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeSanitize from "rehype-sanitize";
 import { FaMagic, FaThumbsUp, FaThumbsDown } from "react-icons/fa";
-import axios from "axios";
 
 const Table = ({ children }) => (
   <div className="overflow-auto max-h-96">
@@ -25,31 +24,7 @@ const TableCell = ({ children, isHeader }) => {
   );
 };
 
-const Response = ({ text, timestamp, messageId, upvote }) => {
-  const [feedback, setFeedback] = useState(null);
-
-  useEffect(() => {
-    if (upvote === 1) setFeedback("up");
-    else if (upvote === -1) setFeedback("down");
-    else setFeedback(null);
-  }, [upvote]);
-
-  const handleFeedback = async (type) => {
-    const newFeedback = feedback === type ? null : type; // Toggle logic
-
-    setFeedback(newFeedback);
-
-    const upvoteValue = newFeedback === "up" ? 1 : newFeedback === "down" ? -1 : 0;
-
-    try {
-      await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/feedback/chat-feedback`, {
-        messageId,
-        upvote: upvoteValue,
-      });
-    } catch (error) {
-      console.error("Error submitting feedback:", error.response?.data || error.message);
-    }
-  };
+const Response = ({ text, timestamp, onFeedback }) => {
 
   return (
     <div className="mt-2 max-w-full w-full">
@@ -67,24 +42,10 @@ const Response = ({ text, timestamp, messageId, upvote }) => {
                 td: TableCell,
               }}
             >
-              {text.replace(/```markdown|```/g, "")}
+              {text}
             </ReactMarkdown>
           </div>
         </div>
-      </div>
-      <div className="flex justify-end mt-4">
-        <button
-          className={`mr-2 ${feedback === "up" ? "text-gray-100" : "text-gray-500"}`}
-          onClick={() => handleFeedback("up")}
-        >
-          <FaThumbsUp />
-        </button>
-        <button
-          className={`ml-2 ${feedback === "down" ? "text-red-500" : "text-gray-500"}`}
-          onClick={() => handleFeedback("down")}
-        >
-          <FaThumbsDown />
-        </button>
       </div>
     </div>
   );
