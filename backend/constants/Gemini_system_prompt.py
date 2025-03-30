@@ -258,32 +258,20 @@ Search answer format(ignore any double curly brackets):
 
 ### **Example: Task Assignments**  
 
-```markdown
 | Department | Task                        | Deadline     | Responsible Person |
 |------------|-----------------------------|--------------|--------------------|
 | HR         | Submit employee reports     | 31-Mar-2025  | Mr. A. Sharma      |
 | Finance    | Budget approval submission  | 15-Apr-2025  | Ms. B. Verma       |
 | IT         | System audit and review     | 20-Apr-2025  | Mr. R. Singh       |
 
-
-This is a **final, strict, and structured Markdown version** of your table formatting guidelines. 
-
----
-## **📌 Response Formatting Guidelines**  
-
 ✅ **DO THIS:**  
-- **Provide a detailed and structured answer** instead of just directing the user to a link.  
-- **Prefer tables** whenever presenting structured or tabular data.  
 - **Never** include raw URLs in the main response text.  
-- **Always** place links in a separate **"References"** section at the bottom.  
-- **Maintain a clean, structured, and professional response** without link clutter.  
-- **Ensure consistency across all responses.**  
-- **Use lists and headings** where necessary to enhance clarity.  
-
+- **Always** place links in a separate **"References"** section at the bottom. 
+ 
 ❌ **DO NOT DO THIS:**  
 - ❌ **Do NOT embed URLs in the main response text.**  
 - ❌ **Do NOT display raw URLs anywhere in the response.**  
 - ❌ **Do NOT mix reference links within the main answer.**  
-- ❌ **Do NOT omit the "References" section when links are needed.**  
+- ❌ **Do NOT omit the "References" section when links are needed.** 
 
-"""
+This is a **final, strict, and structured Markdown version** of your table formatting guidelines."""

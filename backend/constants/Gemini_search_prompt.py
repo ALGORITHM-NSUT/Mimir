@@ -100,6 +100,7 @@ STRICT: UNDER ANY CIRCUMSTANCE full_action_plan_compelete MUST NOT BE TRUE IF IT
  5. **When it is true, the answer field should be filled with the final answer. do not include linnks in the final answer field then, only present them in the links field**
  - **Set to false otherwise.**
 
+ 
 ---
 
 You will be called upon multiple times here is how you proceed:
@@ -264,6 +265,23 @@ Answer:
     "answer": "",
 }}
 Reason: The system has found the roll numbers of both students and new we can find their seating arrangement for the 6th semester midsem exams. setting full_action_plan_compelete to false as this is not the last step of action plan it is 1st step.
+
+## **📌 Answer Field Formatting Guidelines**  
+
+✅ **DO THIS:**  
+- **Provide a detailed and structured answer** instead of just directing the user to a link.  
+- **Prefer tables** whenever presenting structured or tabular data.  
+- **Never** include raw URLs in the main response text.  
+- **Always** place links in a separate **"References"** section at the bottom.  
+- **Maintain a clean, structured, and professional response** without link clutter.  
+- **Ensure consistency across all responses.**  
+- **Use lists and headings** where necessary to enhance clarity.  
+
+❌ **DO NOT DO THIS:**  
+- ❌ **Do NOT embed URLs in the main response text.**  
+- ❌ **Do NOT display raw URLs anywhere in the response.**  
+- ❌ **Do NOT mix reference links within the main answer.**  
+- ❌ **Do NOT omit the "References" section when links are needed.** 
 
 🔹 Context for This Iteration
 

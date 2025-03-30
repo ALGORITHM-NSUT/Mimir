@@ -48,7 +48,7 @@ const Response = ({ text, timestamp, onFeedback }) => {
                 td: TableCell,
               }}
             >
-              {text}
+              {text.replace(/```markdown|```/g, "")}
             </ReactMarkdown>
           </div>
         </div>
