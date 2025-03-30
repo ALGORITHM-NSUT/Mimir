@@ -127,7 +127,7 @@ const Sidebar = ({ isOpen, toggleSidebar, sidebarRef, setAlert }) => {
           <h2 className="text-lg font-semibold mb-2">Previous Chats</h2>
           <ul className="space-y-2 overflow-y-scroll h-[60vh]">
             {chats?.slice().reverse().map((chat) => (
-              <li key={chat.chatId} className="w-full flex">
+              <li key={chat.chatId} className="w-full flex items-center">
                 <button
                   onClick={() => navigateToChat(chat.chatId)}
                   className={`flex items-center gap-2 p-2 w-[80%] transition-all duration-300 ease-in-out ${chat.chatId == chatId ? "bg-[#555] text-white rounded-3xl" : "hover:bg-[#333] hover:rounded-3xl"}`}

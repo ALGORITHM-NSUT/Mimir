@@ -2,14 +2,13 @@ import { Menu } from "@headlessui/react";
 import { FaEllipsisH, FaTrash, FaShare, FaEdit } from "react-icons/fa";
 import RenameChatModal from "../../modals/RenameChatModal";
 import { useState } from "react";
+import ThreeDotsMenu from "./ThreeDotsMenu";
 
 const ChatOptions = ({ userId, chatId, handleDeleteChat, setChats }) => {
   const [renameModalOpen, setRenameModalOpen] = useState(false);
   return (
     <Menu as="div" className="relative inline-block text-left">
-      <Menu.Button className="p-2 rounded-full hover:bg-[#252627] transition">
-        <FaEllipsisH className="text-gray-400 hover:text-white" />
-      </Menu.Button>
+      <ThreeDotsMenu />
 
       <Menu.Items className="absolute right-0 mt-2 w-40 bg-[#1b1c1d] border border-[#252627] rounded-lg shadow-lg focus:outline-none z-50">
         <Menu.Item>

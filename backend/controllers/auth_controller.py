@@ -50,7 +50,7 @@ async def login_user(request: Request, response: Response):
     email = google_user["email"]
     name = google_user.get("name", "User")
     google_id = google_user["sub"]
-    picture = google_user.get("profileImage", "")  
+    picture = google_user.get("picture", "")  
     user = await users_collection.find_one({"email": email})
 
     if not user:
@@ -60,7 +60,7 @@ async def login_user(request: Request, response: Response):
             "google_id": google_id,
             "email": email,
             "name": name,
-            "picture": picture,  # Store profile picture
+            "picture": picture,
             "created_at": datetime.utcnow()
         }
         await users_collection.insert_one(new_user)
@@ -83,7 +83,7 @@ async def login_user(request: Request, response: Response):
             "userId": str(user["_id"]),
             "name": user["name"],
             "email": user["email"],
-            "picture": user.get("picture", "")  
+            "picture": picture
         }
     }
 
@@ -142,7 +142,7 @@ async def get_current_user_cache(request: Request):
             "userId": str(user["_id"]),
             "name": user["name"],
             "email": user["email"],
-            "profileImage": user.get("profile_image", "")
+            "picture": user.get("picture", "")
         }
 
         # Store in Redis with expiration

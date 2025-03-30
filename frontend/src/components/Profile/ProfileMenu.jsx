@@ -52,12 +52,13 @@ const ProfileMenu = () => {
   return (
     <div className="relative">
       <div className="flex justify-end">
-        {user?.profileImage ? (
+        {user?.picture ? (
           <img
-            src={user.profileImage}
+            src={user.picture}
             alt="User Profile"
             className="w-8 h-8 sm:w-10 sm:h-10 rounded-full cursor-pointer"
             onClick={toggleMenu}
+            referrerPolicy="no-referrer"
           />
         ) : (
           <FaUserCircle className="text-xl sm:text-2xl cursor-pointer" onClick={toggleMenu} />
