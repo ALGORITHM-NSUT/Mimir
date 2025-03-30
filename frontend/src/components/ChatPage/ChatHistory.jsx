@@ -10,7 +10,7 @@ const ChatHistory = ({ chatHistory }) => {
           {index === chatHistory.length - 1 && chat.status === "Processing" ? (
             <LoadingMessage query={chat.query} />
           ) : (
-            <ChatMessage query={chat.query} response={chat.response} references={chat.references} timestamp={chat.timestamp}/>
+            <ChatMessage query={chat.query} response={chat.response} references={chat.references} timestamp={chat.timestamp} messageId={chat.messageId} upvote= {chat?.upvote}/>
           )}
         </div>
       ))}

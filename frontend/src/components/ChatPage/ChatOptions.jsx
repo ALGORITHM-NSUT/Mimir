@@ -22,9 +22,11 @@ const ChatOptions = ({ userId, chatId, handleDeleteChat, setChats }) => {
 
   return (
     <Menu as="div" className="relative inline-block text-left">
-      <Menu.Button aria-label="Chat options">
+      <div>
+
         <ThreeDotsMenu />
-      </Menu.Button>
+      </div>
+      
 
       <Menu.Items className="absolute right-0 mt-2 w-40 origin-top-right bg-[#1b1c1d] border border-[#252627] rounded-lg shadow-lg focus:outline-none z-50">
         {menuItems.map(({ label, icon, action }, index) => (

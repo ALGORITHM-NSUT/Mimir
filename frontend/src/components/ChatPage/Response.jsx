@@ -3,6 +3,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeSanitize from "rehype-sanitize";
 import { FaMagic, FaThumbsUp, FaThumbsDown } from "react-icons/fa";
+import axios from "axios";
 
 const Table = ({ children }) => (
   <div className="overflow-auto max-h-96">
@@ -24,12 +25,30 @@ const TableCell = ({ children, isHeader }) => {
   );
 };
 
-const Response = ({ text, timestamp, onFeedback }) => {
+const Response = ({ text, timestamp, messageId, upvote }) => {
   const [feedback, setFeedback] = useState(null);
 
-  const handleFeedback = (type) => {
-    setFeedback(type);
-    if (onFeedback) onFeedback(type);
+  useEffect(() => {
+    if (upvote === 1) setFeedback("up");
+    else if (upvote === -1) setFeedback("down");
+    else setFeedback(null);
+  }, [upvote]);
+
+  const handleFeedback = async (type) => {
+    const newFeedback = feedback === type ? null : type; // Toggle logic
+
+    setFeedback(newFeedback);
+
+    const upvoteValue = newFeedback === "up" ? 1 : newFeedback === "down" ? -1 : 0;
+
+    try {
+      await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/feedback/chat-feedback`, {
+        messageId,
+        upvote: upvoteValue,
+      });
+    } catch (error) {
+      console.error("Error submitting feedback:", error.response?.data || error.message);
+    }
   };
 
   return (
