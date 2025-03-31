@@ -26,6 +26,7 @@ $specific_queries
 # Strict JSON Output Format
 ignore everything else and only return the json below, do not add any other text or explanation, just the json.
 the written exxplaination in brackets() besides field is just for your understanding, do not include it in the json output.
+UNDER ANY CIRCUMSTANCE THIS JSON SHOULD NOT BE TRUNCATED OR MODIFIED, IT SHOULD BE INTACT AND VALID JSON.
 ```json
 {
     "full_action_plan_compelete": true | false, (if full action plan is complete and you have the answer, set it to true)
@@ -78,6 +79,7 @@ STRICT: UNDER ANY CIRCUMSTANCE full_action_plan_compelete MUST NOT BE TRUE IF IT
 ---
 
 ### **Next Step Query Generation**
+- **In each specific query if there is a name, always provide that full name in double quotes**. (example: "John Smith" attendance for subject X)
 - If the current step is successfully completed, generate the context rich queries for the **next step in the action plan.**(if action plan is left) using the answer of current step and previous knowledge. if action plan is compelete and satisfactory answer is not found then set step to -1 and search for the best possible query to get the answer till last iteration.
 - queries in which you have to augment actually obtained data is defined in the action plan itself. 
 - **Each step consists of at least 1 specific query (no maximum limit and cannot be empty).**   
@@ -87,7 +89,6 @@ STRICT: UNDER ANY CIRCUMSTANCE full_action_plan_compelete MUST NOT BE TRUE IF IT
 - **Document queries should be MIMINUM in number and contextually unique as in what kind of data they fetch for a step not be too generic, they should still contain semester(if given), timeframe(if given, otherwise assume current latest period when this information could've been released), department(if given) etc**, try to make document level queries informative but dont assume
     -High amount of document queries hampers the speed of the system which is crucial.
 - **Specific queries should be as specific as possible based on type of data required, they should contain batch, semester, department, roll number etc. (if available) and required to get data that depends on it, don't include it for common data that does not depend on such fields as per your system knowledge**.
-- **In each specific query if there is a name, always provide that full name in double quotes**. (example: "John Smith" attendance for subject X)
 - **NEVER assume year unless stated or is very clear by the kind of query user is asksing, do not use wordings like 2023-2024, ONLY use 2023 or 2024**, for year assumption use your system knowledge, odd semester cannot be on-going in jan to july, even sem cannot be ongoing in aug to dec.
 - **DO NOT add nsut or netaji subhas university of technology in queries, all documents are from the same university, so it is not required**.
 ---

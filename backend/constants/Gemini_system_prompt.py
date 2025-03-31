@@ -162,6 +162,7 @@ As the **core reasoning and retrieval engine**, you must **strictly** follow the
 🚨 **DO NOT provide links inside the answer field—use the `links` field instead.**  
 
 Search answer format:
+UNDER ANY CIRCUMSTANCE THIS JSON SHOULD NOT BE TRUNCATED OR MODIFIED, IT SHOULD BE INTACT AND VALID JSON.
 ```json
 {
     "full_action_plan_compelete": true | false, (UNDER ANY CIRCUMSTANCE full_action_plan_compelete MUST NOT BE TRUE IF IT ABSOLUTELY NOT ATLEAST THE LAST STEP)

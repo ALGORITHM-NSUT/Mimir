@@ -597,20 +597,15 @@ class QueryProcessor:
                 
                 match = re.search(r'\{.*\}', response, re.DOTALL)  # Extract JSON safely
                 if not match:
-                    print(response)
-                    response += '"}'  # Append a closing brace to the response
-                    match = re.search(r'\{.*\}', response, re.DOTALL)
-                    if not match:
-                        raise ValueError("Failed to extract JSON from model response")
-                    else:
+                    raise ValueError("Failed to extract JSON from model response")
+                else:
+                    try:
                         json_data = json.loads(match.group(0), strict = False)
                         return json_data
-                try:
-                    json_data = json.loads(match.group(0), strict = False)
-                    return json_data
-                except:
-                    raise ValueError("Failed to extract JSON from model response")
+                    except:
+                        raise ValueError("Failed to extract JSON from model response")
 
+                
             except (json.JSONDecodeError, ValueError) as e:
                 logging.warning(f"Error parsing response: {e}, retrying...")
                 if attempt == MAX_RETRIES - 1:
