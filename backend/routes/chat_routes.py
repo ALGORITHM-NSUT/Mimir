@@ -1,6 +1,6 @@
 from fastapi import APIRouter, BackgroundTasks
 from controllers.chat_controller import handle_chat_request, user_chat_delete, get_all_chats, get_chat, generate_chatShare_link, generate_chatShare_link, get_shared_chat
-from controllers.chat_controller import get_response, prepare_chat_data, change_title
+from controllers.chat_controller import get_response, prepare_chat_data, change_title, upsert_chat
 
 
 router = APIRouter()
@@ -8,8 +8,9 @@ router = APIRouter()
 @router.post("/")
 async def chat_endpoint(data: dict, background_tasks: BackgroundTasks):
     
-    new_data = await prepare_chat_data(data)
+    new_data = prepare_chat_data(data)
 
+    background_tasks.add_task(upsert_chat, new_data["userId"], new_data["chatId"], data.get("message"))
     background_tasks.add_task(handle_chat_request, data)
 
     return {
