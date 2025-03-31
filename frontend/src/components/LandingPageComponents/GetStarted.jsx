@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import ScrollPrompt from "./ScrollPrompt";
-import LoginPage from "../../pages/LoginPage";
-import LoginModal from "../../modals/LoginModal"; // Import the Modal component
+import LoginModal from "../../modals/LoginModal"; 
 
 const GetStarted = () => {
   const [showScrollPrompt, setShowScrollPrompt] = useState(true);
@@ -52,10 +50,7 @@ const GetStarted = () => {
 
       {/* Modal Implementation */}
       <LoginModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
-        
       
-
-      {showScrollPrompt && <ScrollPrompt title={"Know More"} />}
     </div>
   );
 };

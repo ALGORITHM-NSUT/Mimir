@@ -13,7 +13,7 @@ const ScrollCue = ({ showScrollButton, chatContainerRef }) => {
           onClick={() => chatContainerRef.current.scrollTo({ top: chatContainerRef.current.scrollHeight, behavior: 'smooth' })}
         >
           <motion.div
-            className="cursor-pointer absolute z-10 rounded-full bg-clip-padding text-token-text-secondary right-1/2 translate-x-1/2 bg-[#212121] w-8 h-8 flex items-center justify-center bottom-5"
+            className="cursor-pointer absolute z-10 rounded-full bg-clip-padding text-token-text-secondary right-1/2 translate-x-1/2 bg-[#454444] text-gray-100 w-8 h-8 flex items-center justify-center bottom-5"
           >
              <svg
                 xmlns="http://www.w3.org/2000/svg"

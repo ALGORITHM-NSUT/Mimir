@@ -18,4 +18,5 @@ EXPOSE 8000
 ENV PYTHONUNBUFFERED=1
 
 # Command to run FastAPI
-CMD ["fastapi", "run","--workers","2"]
+CMD uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000} --workers 2
+

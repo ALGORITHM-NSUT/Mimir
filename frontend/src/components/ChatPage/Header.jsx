@@ -46,10 +46,15 @@ const Header = ({ toggleSidebar, setAlert }) => {
         </Link>
       </div>
 
-      {/* Center - Title */}
-      <span className="text-xl sm:text-2xl font-semibold bg-white text-transparent bg-clip-text text-center">
-        Mimir
-      </span>
+      {/* Center - Title with Beta Badge */}
+      <div className="flex items-center justify-center">
+        <span className="text-xl sm:text-2xl font-semibold bg-gradient-to-r from-blue-400 to-pink-400 text-transparent bg-clip-text text-center">
+          Mimir
+        </span>
+        <span className="ml-2 text-xs border border-gray-500 text-gray-300 px-1.5 py-0.5 rounded-md">
+          Beta
+        </span>
+      </div>
       
       {/* Right Section - Profile and Share */}
       <div className="flex items-center justify-end gap-2">

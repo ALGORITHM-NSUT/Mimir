@@ -1,11 +1,11 @@
 import React, { useRef, useState, useEffect, useContext } from "react";
-import { useNavigate } from "react-router-dom"; // Import useNavigate
-import { UserContext } from "../Context/UserContext"; // Import UserContext
+import { useNavigate } from "react-router-dom"; 
 import Navbar from "../components/LandingPageComponents/Navbar";
 import GetStarted from "../components/LandingPageComponents/GetStarted";
 import Features from "../components/LandingPageComponents/Features";
 import FAQ from "../components/LandingPageComponents/FAQ";
 import Footer from "../components/LandingPageComponents/Footer";
+import { UserContext } from "../context/UserContext";
 
 const LandingPage = () => {
   const { user } = useContext(UserContext);

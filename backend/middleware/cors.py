@@ -1,6 +1,6 @@
 from fastapi.middleware.cors import CORSMiddleware
 
-allowedorigins = ["https://mimir-frontend-eight.vercel.app", "http://localhost:5173"]
+allowedorigins = ["https://mimir-gamma.vercel.app", "http://localhost:5173"]
 
 
 def setup_cors(app):

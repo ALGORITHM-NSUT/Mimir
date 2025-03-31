@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Response, Request
-from controllers.auth_controller import login_user, logout_user, get_current_user
+from controllers.auth_controller import login_user, logout_user, get_current_user, get_current_user_cache
 
 router = APIRouter()
 
@@ -13,4 +13,4 @@ async def logout(response: Response):
 
 @router.get("/getUser")
 async def get_user(request: Request):
-    return await get_current_user(request)
+    return await get_current_user_cache(request)

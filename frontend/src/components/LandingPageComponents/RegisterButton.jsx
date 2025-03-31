@@ -1,8 +1,8 @@
 import { useContext, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { UserContext } from "../../context/UserContext";
+import { UserContext } from "../../Context/UserContext";
 
-const LoginButton = ({ navigateUrl = "new"}) => {
+const RegisterButton = () => {
   const { setUser } = useContext(UserContext);
   const navigate = useNavigate()
 
@@ -11,7 +11,7 @@ const LoginButton = ({ navigateUrl = "new"}) => {
     const credential = response.credential;
 
     try {
-      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/auth/login`, {
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/auth/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include", 
@@ -24,7 +24,7 @@ const LoginButton = ({ navigateUrl = "new"}) => {
       if (res.ok) {
         setUser(data.user)
         sessionStorage.setItem("user", JSON.stringify(data.user));
-        setTimeout(() => navigate(`/${navigateUrl}`, { state: { isContinueModalOpen: true } }), 300);
+        setTimeout(() => navigate("/new"), 300);
       } else {
         console.error("Login failed:", data.detail);
       }
@@ -60,4 +60,4 @@ const LoginButton = ({ navigateUrl = "new"}) => {
   return <div className="align-center" id="google-signin-btn"></div>;
 };
 
-export default LoginButton;
+export default RegisterButton;
