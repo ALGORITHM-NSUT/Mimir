@@ -18,7 +18,7 @@ from constants.Semantic_cache_prompt import Semantic_cache_prompt
 
 from utils.redis_client import redis_client
 
-jina_workers = 3
+CACHE_TTL = int(os.getenv("REDIS_TTL")) 
 
 def get_next_index():
     # Get current index
@@ -27,7 +27,7 @@ def get_next_index():
         return 0
     index = int(redis_client.get("index"))
     # Increment index (loop back to 0 after 19)
-    next_index = (index + 1) % jina_workers
+    next_index = (index + 1)
     redis_client.set("index", next_index)
     return index
 
@@ -69,11 +69,12 @@ async def handle_chat_request(data: dict):
     isDeepSearch = data.get("isDeepSearch", False)  # Get the deep search flag
     
     client = genai.Client(api_key=GEMINI_API_KEY)
-    chats = client.chats.create(model="gemini-2.0-flash-lite", 
+    chats = client.chats.create(
+        model="gemini-2.0-flash-thinking-exp-01-21",
         config=types.GenerateContentConfig(
         system_instruction=Semantic_cache_prompt,
-        response_mime_type='application/json',
-        response_schema=response_format,
+        # response_mime_type='application/json',
+        # response_schema=response_format,
         temperature=0.3)
     )
     if not userId:

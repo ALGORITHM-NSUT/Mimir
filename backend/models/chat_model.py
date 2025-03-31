@@ -43,5 +43,4 @@ class answer(BaseModel):
     document_queries: list[str]
     step: int
     links: list[link]
-    partial_answer: str
     answer: str
