@@ -48,6 +48,7 @@ logging.basicConfig(
     filemode='a'  # Append to the file instead of overwriting
 )
 
+max_keys = 17
 def get_next_index() -> int:
     # Get current index
     try:
@@ -56,7 +57,7 @@ def get_next_index() -> int:
             return 0
         index = int(redis_client.get("index"))
         # Increment index (loop back to 0 after 19)
-        next_index = (index + 1) % 3
+        next_index = (index + 1) % max_keys
         redis_client.set("index", next_index)
         logging.info(f"Next index set to: {next_index}")
         return index
@@ -66,9 +67,7 @@ def get_next_index() -> int:
     
 
 load_dotenv()
-max_keys = 20
 index = get_next_index()
-GEMINI_API_KEY = os.getenv("GOOGLE_API_KEY").split(" | ")[index % 2].strip()
 MONGO_URI_MIMIIR = os.getenv("MONGO_URI_MIMIR")
 
 mongoDb_client = AsyncIOMotorClient(MONGO_URI_MIMIIR)
@@ -80,7 +79,6 @@ llm2 = "gemini-2.0-flash-thinking-exp-01-21"
 # Action Model for quick search
 llm = "gemini-2.0-flash"
 
-client = genai.Client(api_key=GEMINI_API_KEY)
 
 MAX_RETRIES = 3
 
@@ -94,7 +92,7 @@ class QueryProcessor:
         self.search_prompt = Gemini_search_prompt
         logging.info("QueryProcessor initialized")
 
-    async def process_query(self, question: str, user_knowledge: str, is_deep_search: bool = False):
+    async def process_query(self, question: str, plan: list, is_deep_search: bool = False):
         """Iterative retrieval process with dynamic query adjustment"""
         try:
             # Select model based on deep search flag
@@ -103,20 +101,17 @@ class QueryProcessor:
             
             logging.info(f"Model to use: {model_to_use}")
             
-            retrycnt = 1
             
             context_entries = []
             seen_ids = set()
             seen_ids.add(ObjectId("aaaaaaaaaaaaaaaaaaaaaaaa"))
-            plan = await self._expand_query(question, user_knowledge, model_to_use)
+            # plan = await self._expand_query(question, user_knowledge, model_to_use)
             knowledge = ""
             max_iter = 4
             ans = {}
             step = 1
             queries = plan[step - 1]["specific_queries"]
             doc_queries = plan[step - 1]["document_queries"]
-            
-            
 
             for iteration in range(max_iter):
                 doc_ids = await self._search_docs(doc_queries) if doc_queries else []
@@ -129,11 +124,9 @@ class QueryProcessor:
                     self.current_date, 
                     plan, 
                     knowledge, 
-                    max_iter - retrycnt, 
+                    max_iter, 
                     iteration + 1, 
-                    user_knowledge, 
                     step, 
-                    retrycnt,
                     model_to_use  # Pass the selected model
                 )  
                 
@@ -141,15 +134,10 @@ class QueryProcessor:
                     return ans
                 if iteration == max_iter - 1:
                     return ans
-                if "partial_answer" in ans and ans["partial_answer"] is not None:
-                    knowledge += str(ans["partial_answer"]) + "\n" 
                 if "answer" in ans and ans["answer"] is not None:
                     knowledge += str(ans["answer"]) + "\n"
                 if "links" in ans and len(ans["links"]) != 0:
-                    knowledge = knowledge + " " + json.dumps(ans["links"], indent=2)
-                
-                if (ans["step"] == step):
-                    retrycnt -= 1
+                    knowledge = knowledge + " " + json.dumps(ans["links"], indent=2) + "\n\n"
                 
                 step = ans["step"]
                 doc_queries = ans["document_queries"]
@@ -188,6 +176,7 @@ class QueryProcessor:
                         metadata["summary"] = metadata.get("summary", "")
                         # Extract the list of page summaries (0-indexed list)
                         page_summaries = metadata.get("page_summaries", [])
+                        metadata.pop("page_summaries")
                         
                     page = chunk["page"]
                     # Add page summary only once per page.
@@ -514,9 +503,8 @@ class QueryProcessor:
             }
             searchspace = ["\n".join(doc[field] for field in fields if field in doc and doc[field] is not None) for doc in docs]
             data = {
-                "model": "jina-reranker-v2-base-multilingual",
+                "model": "jina-colbert-v2",
                 "query": question,
-                "top_n": min(20, len(docs)),
                 "documents": searchspace
             }
             try:
@@ -539,6 +527,8 @@ class QueryProcessor:
 
         for attempt in range(MAX_RETRIES):
             try:
+                GEMINI_API_KEY = os.getenv("GOOGLE_API_KEY").split(" | ")[(index + attempt) % 2].strip()
+                client = genai.Client(api_key=GEMINI_API_KEY)
                 response = client.models.generate_content(
                     model=model_to_use, 
                     contents=[prompt],
@@ -570,7 +560,7 @@ class QueryProcessor:
 
         
 
-    async def _generate_answer(self, question: str, context: str, current_date: str, plan: dict, knowledge: str, max_iter: int, iteration: int, user_knowledge: str, step: int, retrycnt: int, model_to_use: str = llm) -> dict:
+    async def _generate_answer(self, question: str, context: str, current_date: str, plan: list, knowledge: str, max_iter: int, iteration: int, step: int, model_to_use: str = llm) -> dict:
         """Generate and format final response"""
         specific_queries = []
         if step != -1:
@@ -578,21 +568,15 @@ class QueryProcessor:
             specific_queries = plan[step - 1]["specific_queries"]
         else:
             specific_queries = ["abandoned action plan in previous step directly searching user queries"]
-        stepknowledge = ""
-        if retrycnt == 0:
-            stepknowledge += f"This is retry for step {step} of plan"
-        else:
-            stepknowledge += f"{step}"
         warning = ""
-        if (model_to_use == llm2):
+        if model_to_use == llm2:
             warning = "if final response is too long to fit in the output window, give as much as possible then truncate some of it and give relevant documents, but the json format shouldn't be broken."
         full_plan = {"original user question": question, "plan": plan}
         for attempt in range(MAX_RETRIES):
             try:
-                response = client.models.generate_content(
-                    model=model_to_use,
-                    contents=[self.search_prompt.format(
+                llmcontext = self.search_prompt.substitute(
                         warning=warning,
+                        step=step,
                         question=question,
                         context=context,
                         current_date=current_date,
@@ -601,25 +585,27 @@ class QueryProcessor:
                         knowledge=knowledge,
                         max_iter=max_iter,
                         iteration=iteration,
-                        user_knowledge=user_knowledge,
-                        step=stepknowledge,
-                        max_steps=len(plan),
-                        retries_left=retrycnt)],
+                        max_steps=len(plan))
+                logging.info(f"LLM context: {llmcontext}")
+                GEMINI_API_KEY = os.getenv("GOOGLE_API_KEY").split(" | ")[(index + attempt) % 2].strip()
+                client = genai.Client(api_key=GEMINI_API_KEY)
+                response = client.models.generate_content(
+                    model=model_to_use,
+                    contents=[llmcontext],
                     config=self._get_config(model_to_use, 'answer')
                 ).text
                 
                 match = re.search(r'\{.*\}', response, re.DOTALL)  # Extract JSON safely
                 if not match:
-                    response += '"}'  # Append a closing brace to the response
-                    match = re.search(r'\{.*\}', response, re.DOTALL)
-                    if not match:
-                        raise ValueError("Failed to extract JSON from model response")
-                try:
-                    json_data = json.loads(match.group(0), strict = False)
-                    return json_data
-                except:
                     raise ValueError("Failed to extract JSON from model response")
+                else:
+                    try:
+                        json_data = json.loads(match.group(0), strict = False)
+                        return json_data
+                    except:
+                        raise ValueError("Failed to extract JSON from model response")
 
+                
             except (json.JSONDecodeError, ValueError) as e:
                 logging.warning(f"Error parsing response: {e}, retrying...")
                 if attempt == MAX_RETRIES - 1:
@@ -651,6 +637,8 @@ class QueryProcessor:
             raise Exception("Internal Server Error: requests must not be empty")
         for attempt in range(MAX_RETRIES):
             try:
+                GEMINI_API_KEY = os.getenv("GOOGLE_API_KEY").split(" | ")[(index + attempt) % 2].strip()
+                client = genai.Client(api_key=GEMINI_API_KEY)
                 response = client.models.embed_content(
                         model="text-embedding-004",
                         contents=texts,
