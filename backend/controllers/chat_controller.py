@@ -1,5 +1,5 @@
 from datetime import datetime
-from fastapi import HTTPException
+from fastapi import HTTPException, BackgroundTasks
 from bson import ObjectId
 from pymongo import ASCENDING
 from utils.db import db
@@ -274,3 +274,59 @@ async def change_title(chatId: str, data: dict):
         raise HTTPException(status_code=404, detail="Chat not found or unauthorized")
 
     return {"message": "Title updated successfully"}
+
+
+async def continue_chat(data: dict):
+    token = data.get("token")
+    new_user_id = data.get("newUserId")
+
+    chat_data = verify_chat_share_token(token)
+    if not chat_data:
+        raise HTTPException(status_code=403, detail="Invalid or expired share link.")
+
+    old_user_id, old_chat_id = chat_data
+
+    new_chat_id = f"chat-{secrets.token_hex(8)}"
+
+    old_chat = await user_chats_collection.find_one({"chatId": old_chat_id}, {"title": 1})
+    chat_title = old_chat["title"] if old_chat and "title" in old_chat else "Untitled Chat"
+
+    print("chat insertion started")
+    await user_chats_collection.insert_one({
+        "chatId": new_chat_id,
+        "userId": new_user_id,
+        "delete_for_user": False,
+        "title": chat_title,
+        "createdAt": datetime.utcnow().isoformat()
+    })
+
+    print("chat insertion completed")
+
+    chat_cursor = messages_collection.find(
+        {"chatId": old_chat_id}, {"_id": 0}
+    ).sort("timestamp", 1)
+
+    old_messages = await chat_cursor.to_list(None)
+
+    if not old_messages:
+        raise HTTPException(status_code=404, detail="No messages found for this chat.")
+
+    new_messages = [
+        {
+            "chatId": new_chat_id,
+            "userId": new_user_id,
+            "messageId": f"msg-{secrets.token_hex(8)}",
+            "query": msg["query"],
+            "response": msg["response"],
+            "references": msg["references"],
+            "timestamp": datetime.utcnow().isoformat(),  
+        }
+        for msg in old_messages
+    ]
+
+    if new_messages:
+        await messages_collection.insert_many(new_messages)
+
+   
+
+    return {"newChatId": new_chat_id}

@@ -1,10 +1,10 @@
 import React, { useContext, useEffect, useState } from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from "react-router-dom";
-import { UserContext, UserProvider } from "./Context/UserContext";
 import LandingPage from "./pages/LandingPage";
 import ChatPage from "./pages/ChatPage";
 import SharedChatPage from "./pages/SharedChatPage";
 import "./index.css";
+import { UserContext, UserProvider } from "./context/UserContext";
 
 const ProtectedRoute = ({ children }) => {
   const { user } = useContext(UserContext);

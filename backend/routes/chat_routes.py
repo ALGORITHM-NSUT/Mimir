@@ -1,13 +1,12 @@
 from fastapi import APIRouter, BackgroundTasks
 from controllers.chat_controller import handle_chat_request, user_chat_delete, get_all_chats, get_chat, generate_chatShare_link, generate_chatShare_link, get_shared_chat
-from controllers.chat_controller import get_response, prepare_chat_data, change_title, upsert_chat
+from controllers.chat_controller import get_response, prepare_chat_data, change_title, upsert_chat, continue_chat
 
 
 router = APIRouter()
 
 @router.post("/")
 async def chat_endpoint(data: dict, background_tasks: BackgroundTasks):
-    
     new_data = prepare_chat_data(data)
 
     background_tasks.add_task(upsert_chat, new_data["userId"], new_data["chatId"], data.get("message"))
@@ -43,6 +42,10 @@ async def validate_link_endpoint(token: str):
 @router.post("/response/{userId}")
 async def get_chat_response(userId: str, data: dict):
     return await get_response(userId, data)
+
+@router.post("/continue")
+async def continue_chat_endpoint(data: dict):
+    return await continue_chat(data)
 
 # always put this route in the last, because this is a dynamic route
 @router.post("/{chatId}")
