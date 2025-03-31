@@ -37,10 +37,8 @@ user_chats_collection = db["user_chats"]
 GEMINI_API_KEY = os.getenv("GOOGLE_API_KEY").split(" | ")[index % 2].strip()
 client = genai.Client(api_key=GEMINI_API_KEY)
 
-async def prepare_chat_data(data: dict) -> dict:
+def prepare_chat_data(data: dict) -> dict:
     chatId = data.get("chatId")
-    message = data.get("message")
-    userId = data.get("userId")
 
     if not chatId:
         chatId = f"chat-{secrets.token_hex(8)}"
@@ -49,16 +47,18 @@ async def prepare_chat_data(data: dict) -> dict:
     messageId = f"msg-{secrets.token_hex(8)}"
     data["messageId"] = messageId
 
+    return data  
+
+async def upsert_chat(userId: str, chatId: str, message: str):
     await user_chats_collection.update_one(
         {"userId": userId, "chatId": chatId},
         {
-            "$set": {"chatId": chatId, "userId": userId,"delete_for_user": False}, 
-            "$setOnInsert": {"title": message, "createdAt": datetime.utcnow()}
+            "$set": {"chatId": chatId, "userId": userId, "delete_for_user": False},
+            "$setOnInsert": {"title": message, "createdAt": datetime.utcnow()},
         },
-        upsert=True
+        upsert=True,
     )
 
-    return data
 
 async def handle_chat_request(data: dict):
     chatId = data.get("chatId")
