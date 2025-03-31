@@ -4,7 +4,7 @@ import axios from "axios";
 import { IoChatboxOutline } from "react-icons/io5";
 import { FaPlus } from "react-icons/fa";
 import { TbLayoutSidebarRightExpandFilled } from "react-icons/tb";
-import { UserContext } from "../../Context/UserContext.jsx";
+import { UserContext } from "../../context/UserContext.jsx";
 import ChatOptions from "./ChatOptions.jsx";
 
 const Sidebar = ({ isOpen, toggleSidebar, sidebarRef, setAlert }) => {

@@ -7,7 +7,7 @@ import { TbLayoutSidebarLeftExpandFilled } from "react-icons/tb";
 import { FaPencilAlt, FaUserCircle } from "react-icons/fa";
 import ProfileMenu from "../Profile/ProfileMenu";
 import ShareChatModal from "../../modals/ShareChatModal";
-import { UserContext } from "../../Context/UserContext";
+import { UserContext } from "../../context/UserContext";
 
 const Header = ({ toggleSidebar, setAlert }) => {
 
