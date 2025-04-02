@@ -183,7 +183,7 @@ CAMPUS INFORMATION:
 
 - East Campus:
     B.Tech:
-        CSDA(**Big** Data Analytics), (The B is not present in the full form) 
+        CSDA(**Big** Data Analytics), (Important note ot be remembered for this branch: The B is not present in the full form but it still Big Data Analytics) 
         ECAM(artificial intelligence and machine learning), 
         CIOT(Internet of things).  
 
