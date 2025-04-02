@@ -270,7 +270,7 @@ class QueryProcessor:
                 "$vectorSearch": {
                     "queryVector": query_vector,
                     "path": "embedding",
-                    "numCandidates": 1000,
+                    "numCandidates": 5000,
                     "limit": limit,
                     "index": "vector_index"
                 }
@@ -319,34 +319,9 @@ class QueryProcessor:
                         {
                             "$search": {
                                 "index": "text",
-                                "compound": {
-                                    "must": [
-                                        
-                                    ],
-                                    # "mustNot": [
-                                    #     {
-                                    #         "in": {
-                                    #         "path": "_id",
-                                    #         "value": list(seen_ids)
-                                    #         }
-                                    #     }
-                                    # ]
-                                }
+                                "text": {"query": query, "path": ["text", "table_summary"]},
                             }
-                        },
-                        {"$limit": limit},
-                        {
-                            "$group": {
-                                "_id": None,
-                                "docs": {"$push": "$$ROOT"}
-                            }
-                        },
-                        {
-                            "$unwind": {
-                                "path": "$docs",
-                                "includeArrayIndex": "rank"
-                            }
-                        },
+                        },                        
                         {
                             "$addFields": {
                                 "fts_score": {
@@ -371,6 +346,18 @@ class QueryProcessor:
                         },
                         {"$sort": {"fts_score": -1}},
                         {"$limit": limit},
+                        {
+                            "$group": {
+                                "_id": None,
+                                "docs": {"$push": "$$ROOT"}
+                            }
+                        },
+                        {
+                            "$unwind": {
+                                "path": "$docs",
+                                "includeArrayIndex": "rank"
+                            }
+                        },
                     ]
                 }
             },
@@ -430,11 +417,10 @@ class QueryProcessor:
             {"$sort": {"score": -1}},
             {"$limit": limit}
         ]
-        pipeline[8]["$unionWith"]["pipeline"][0]["$search"]["compound"]["must"].append({"text": {"query": query, "path": "text"}})
-        
         if doc_ids:
-            pipeline[8]["$unionWith"]["pipeline"][0]["$search"]["compound"]["must"].append({"in": {"path": "doc_id", "value": doc_ids}})
-        #     pipeline[0]["$vectorSearch"]["filter"] = {"_id": {"$nin": list(seen_ids)}, "doc_id": {"$in": doc_ids}}
+            pipeline[8]["$unionWith"]["pipeline"].insert(1, {"$match": {"doc_id": {"$in": doc_ids}}})
+            pipeline[0]["$vectorSearch"]["filter"] = {"doc_id": {"$in": doc_ids}}
+
         # else:
         #     pipeline[0]["$vectorSearch"]["filter"] = {"_id": {"$nin": list(seen_ids)}}
         for attempt in range(MAX_RETRIES):  # Retry up to 5 times
