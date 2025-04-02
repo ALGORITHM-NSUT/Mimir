@@ -62,7 +62,7 @@ const TermsModal = ({ onClose }) => (
   </ModalWrapper>
 );
 
-const AuthModal = ({ isOpen, onClose, title = "Welcome To Mimir" }) => {
+const AuthModal = ({ isOpen, onClose, title = "Welcome To Mimir", navigateUrl}) => {
   const [showTerms, setShowTerms] = useState(false);
 
   return (
@@ -83,7 +83,7 @@ const AuthModal = ({ isOpen, onClose, title = "Welcome To Mimir" }) => {
                   Terms and Services
                 </button>.
               </p>
-              <LoginButton />
+              <LoginButton navigateUrl={navigateUrl} />
             </CardContent>
           )}
         </ModalWrapper>

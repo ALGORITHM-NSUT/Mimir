@@ -1,8 +1,8 @@
 import { useContext, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { UserContext } from "../../Context/UserContext";
+import { UserContext } from "../../context/UserContext";
 
-const LoginButton = () => {
+const LoginButton = ({ navigateUrl = "new"}) => {
   const { setUser } = useContext(UserContext);
   const navigate = useNavigate()
 
@@ -24,7 +24,7 @@ const LoginButton = () => {
       if (res.ok) {
         setUser(data.user)
         sessionStorage.setItem("user", JSON.stringify(data.user));
-        setTimeout(() => navigate("/new"), 300);
+        setTimeout(() => navigate(`/${navigateUrl}`, { state: { isContinueModalOpen: true } }), 300);
       } else {
         console.error("Login failed:", data.detail);
       }

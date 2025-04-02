@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect, useContext } from "react";
 import { FaUserCircle, FaSignOutAlt, FaUser } from "react-icons/fa";
 import { RiFeedbackFill } from "react-icons/ri";
 import { useParams } from "react-router-dom";
-import { UserContext } from "../../Context/UserContext.jsx";
+import { UserContext } from "../../context/UserContext.jsx";
 import Alert from "@mui/material/Alert";
 import LogoutConfirmationModal from "../../modals/LogoutConfirmationModal.jsx";
 import ProfileModal from "../../modals/ProfileModal.jsx";

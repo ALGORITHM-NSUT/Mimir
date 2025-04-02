@@ -5,7 +5,7 @@ import Sidebar from "../components/ChatPage/Sidebar";
 import InputBox from "../components/ChatPage/InputBox";
 import ChatHistory from "../components/ChatPage/ChatHistory";
 import Header from "../components/ChatPage/Header";
-import { UserContext } from "../Context/UserContext";
+import { UserContext } from "../context/UserContext";
 import Alert from "@mui/material/Alert";
 import { motion, AnimatePresence } from "framer-motion";
 import ScrollCue from "../components/ChatPage/ScrollCue";

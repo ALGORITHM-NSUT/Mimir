@@ -2,7 +2,7 @@ import React, { useContext, useState } from "react";
 import { motion } from "framer-motion";
 import { createPortal } from "react-dom";
 import axios from "axios";
-import { UserContext } from "../Context/UserContext";
+import { UserContext } from "../context/UserContext";
 
 const StarRating = ({ value, setValue }) => {
   return (

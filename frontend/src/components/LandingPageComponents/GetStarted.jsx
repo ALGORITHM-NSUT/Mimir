@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import LoginModal from "../../modals/LoginModal"; // Import the Modal component
+import LoginModal from "../../modals/LoginModal"; 
 
 const GetStarted = () => {
   const [showScrollPrompt, setShowScrollPrompt] = useState(true);
