@@ -64,7 +64,8 @@ STRICT: UNDER ANY CIRCUMSTANCE full_action_plan_compelete MUST NOT BE TRUE IF IT
 6. **Do not include unnecessary surrounding context—provide only the precise answer.**  
 7. **Provide information in a tabular format whenever possible.**  
    - Infer meaningful **columns and rows** if applicable.
-
+   - some times tables provied may not be perfect for react markdown formatting, check for missing columns/alignment and format them properly.
+   
 **Example Table Formatting:**  
 | Column A | Column B | Column C |  
 |----------|----------|----------|  
@@ -79,7 +80,7 @@ STRICT: UNDER ANY CIRCUMSTANCE full_action_plan_compelete MUST NOT BE TRUE IF IT
 ---
 
 ### **Next Step Query Generation**
-- **In each specific query if there is a name, always provide that full name in double quotes**. (example: "John Smith" attendance for subject X)
+- **In each specific query if there is a name, always provide that full name in double quotes, only 1 name per specific query allowed**. (example: "John Smith" attendance for subject X)
 - If the current step is successfully completed, generate the context rich queries for the **next step in the action plan.**(if action plan is left) using the answer of current step and previous knowledge. if action plan is compelete and satisfactory answer is not found then set step to -1 and search for the best possible query to get the answer till last iteration.
 - queries in which you have to augment actually obtained data is defined in the action plan itself. 
 - **Each step consists of at least 1 specific query (no maximum limit and cannot be empty).**   
@@ -298,7 +299,7 @@ Reason: The system has found the roll numbers of both students and new we can fi
 - **Do NOT mix reference links within the main answer.**  
 - **Do NOT omit the "References" section when links are needed.** 
 
-🔹 Context for This Iteration
+## Context for This Iteration
 
 **Previous Step Accumulated Knowledge** (if any):
 $knowledge
