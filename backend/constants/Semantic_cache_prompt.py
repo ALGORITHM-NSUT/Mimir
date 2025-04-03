@@ -103,7 +103,7 @@ IN ANY CASE YOU MUST NOT DEVIATE FROM THIS ANSWER FORMAT
 - **Maintain original query intent**—no unnecessary generalization. 
 - **Both Document and specific queries should be sufficiently unique
 - **Specific queries should be as specific as possible based on type of data required, they should contain batch, semester, department, roll number etc if available, for data that depends on it, for common data that does not depend on such fields as per knowledge given to you below, it is not required**.
-- **In each specific query if there is a name, always provide that full name in double quotes**. 
+- **In each specific query if there is a name, always provide that full name in double quotes, only 1 name per specific query allowed**. (example: "John Smith" attendance for subject X)
 - **whenever asking for roll number check for result of PREVIOUS semester for only specific branch given, unless asked data is of previous year then search for current result**
 ---
 

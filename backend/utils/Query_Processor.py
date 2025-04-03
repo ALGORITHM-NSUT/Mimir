@@ -265,6 +265,8 @@ class QueryProcessor:
 
     async def _search_query(self, query_vector, seen_ids: set, minscore: float, vector_weight: float, full_text_weight: float, limit: int, doc_ids: list, query: str) -> list:
         """Search query with MongoDB quota handling"""
+        print(query)
+        keyword = query[query.find('"') + 1:query.rfind('"')]
         pipeline = [
             {
                 "$vectorSearch": {
@@ -319,7 +321,6 @@ class QueryProcessor:
                         {
                             "$search": {
                                 "index": "text",
-                                "text": {"query": query, "path": ["text", "table_summary"]},
                             }
                         },                        
                         {
@@ -333,19 +334,14 @@ class QueryProcessor:
                             }
                         },
                         {
-                            "$project": {
-                                "_id": "$docs._id",
-                                "doc_id": "$docs.doc_id",
-                                "fts_score": 1,
-                                "chunk_id": "$docs.chunk_id",
-                                "text": "$docs.text",
-                                "page": "$docs.page",
-                                "chunk_num": "$docs.chunk_num",
-                                "table_summary": "$docs.table_summary"
-                            }
+                            "$sort": 
+                                {
+                                    "fts_score": -1
+                                }
                         },
-                        {"$sort": {"fts_score": -1}},
-                        {"$limit": limit},
+                        {
+                            "$limit": 50
+                        },
                         {
                             "$group": {
                                 "_id": None,
@@ -358,6 +354,18 @@ class QueryProcessor:
                                 "includeArrayIndex": "rank"
                             }
                         },
+                        {
+                            "$project": {
+                                "_id": "$docs._id",
+                                "doc_id": "$docs.doc_id",
+                                "fts_score": 1,
+                                "chunk_id": "$docs.chunk_id",
+                                "text": "$docs.text",
+                                "page": "$docs.page",
+                                "chunk_num": "$docs.chunk_num",
+                                "table_summary": "$docs.table_summary"
+                            }
+                        },                       
                     ]
                 }
             },
@@ -415,12 +423,33 @@ class QueryProcessor:
                 }
             },
             {"$sort": {"score": -1}},
-            {"$limit": limit}
+            {"$limit": 25}
         ]
         if doc_ids:
             pipeline[8]["$unionWith"]["pipeline"].insert(1, {"$match": {"doc_id": {"$in": doc_ids}}})
             pipeline[0]["$vectorSearch"]["filter"] = {"doc_id": {"$in": doc_ids}}
-
+        
+        if keyword:
+            pipeline[8]["$unionWith"]["pipeline"][0]["$search"]["compound"] = {
+                "must": [
+                    {
+                        "phrase": {
+                            "query": keyword,
+                            "path": ["text"]
+                        }
+                    }
+                ],
+                "should": [
+                    {
+                        "text": {
+                            "query": query,
+                            "path": ["text", "table_summary"]
+                        }
+                    }
+                ]
+            }
+        else:
+            pipeline[8]["$unionWith"]["pipeline"][0]["$search"]["text"] = {"query": query, "path": ["text", "table_summary"]}
         # else:
         #     pipeline[0]["$vectorSearch"]["filter"] = {"_id": {"$nin": list(seen_ids)}}
         for attempt in range(MAX_RETRIES):  # Retry up to 5 times
@@ -466,6 +495,9 @@ class QueryProcessor:
         results_list = await asyncio.gather(*tasks.values())
         results = {query: result for query, result in zip(tasks.keys(), results_list)}
 
+        for i in range(len(queries)):
+            queries[i].pop("embedding")
+            
         all_results = []
         for query, result in results.items():
             for chunk in result:
