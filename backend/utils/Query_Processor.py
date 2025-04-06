@@ -92,7 +92,7 @@ class QueryProcessor:
         self.search_prompt = Gemini_search_prompt
         logging.info("QueryProcessor initialized")
 
-    async def process_query(self, question: str, plan: list, is_deep_search: bool = False):
+    async def process_query(self, question: str, plan: list, document_level: bool, is_deep_search: bool = False):
         """Iterative retrieval process with dynamic query adjustment"""
         try:
             # Select model based on deep search flag
@@ -112,39 +112,56 @@ class QueryProcessor:
             step = 1
             queries = plan[step - 1]["specific_queries"]
             doc_queries = plan[step - 1]["document_queries"]
-
-            for iteration in range(max_iter):
-                doc_ids = []
-                # doc_ids = await self._search_docs(doc_queries) if doc_queries else []
-                chunk_results, current_docids, seen_ids = await self._search_in_chunks(queries, seen_ids, doc_ids, iteration + 1)
-                iteration_context = self._format_context(chunk_results)
-                context_entries.append(iteration_context)
+            if not document_level:
+                for iteration in range(max_iter):
+                    doc_ids = []
+                    chunk_results, current_docids, seen_ids = await self._search_in_chunks(queries, seen_ids, doc_ids, iteration + 1)
+                    iteration_context = self._format_context(chunk_results)
+                    context_entries.append(iteration_context)
+                    ans = await self._generate_answer(
+                        question, 
+                        iteration_context, 
+                        self.current_date, 
+                        plan, 
+                        knowledge, 
+                        max_iter, 
+                        iteration + 1, 
+                        step, 
+                        model_to_use,
+                        document_level 
+                    )  
+                    
+                    if "full_action_plan_compelete" in ans and ans["full_action_plan_compelete"]:
+                        return ans
+                    if iteration == max_iter - 1:
+                        return ans
+                    if "answer" in ans and ans["answer"] is not None:
+                        knowledge += str(ans["answer"]) + "\n"
+                    if "links" in ans and len(ans["links"]) != 0:
+                        knowledge = knowledge + " " + json.dumps(ans["links"], indent=2) + "\n\n"
+                    
+                    step = ans["step"]
+                    doc_queries = ans["document_queries"]
+                    queries = ans["specific_queries"]
+            else:
+                docs = await self._search_docs(question) if doc_queries else []
+                context = self._format_context(docs)
+                max_iter = 1
+                step = 1
                 ans = await self._generate_answer(
                     question, 
-                    iteration_context, 
+                    context, 
                     self.current_date, 
                     plan, 
                     knowledge, 
                     max_iter, 
-                    iteration + 1, 
+                    1, 
                     step, 
-                    model_to_use  # Pass the selected model
-                )  
-                
-                if "full_action_plan_compelete" in ans and ans["full_action_plan_compelete"]:
-                    return ans
-                if iteration == max_iter - 1:
-                    return ans
-                if "answer" in ans and ans["answer"] is not None:
-                    knowledge += str(ans["answer"]) + "\n"
-                if "links" in ans and len(ans["links"]) != 0:
-                    knowledge = knowledge + " " + json.dumps(ans["links"], indent=2) + "\n\n"
-                
-                step = ans["step"]
-                doc_queries = ans["document_queries"]
-                queries = ans["specific_queries"]
-
-            return ans  
+                    model_to_use,
+                    document_level
+                )
+            return ans 
+         
         except ModelAPIError as e:
             logging.error(f"Model API error in process_query: {str(e)}", exc_info=True)
             raise
@@ -223,16 +240,20 @@ class QueryProcessor:
             },
             {
                 "$project": {
-                    "_id": 1,
                     "summary": 1,
-                    "Publish Date": 1
+                    "Publish Date": 1,
+                    "Title": 1,
+                    "Published By": 1,
+                    "Publishing Post": 1,
+                    "Publishing Department": 1,
+                    "Link": 1
                 }
             }
         ]
         for attempt in range(MAX_RETRIES):  # Retry up to 5 times
             try:
                 result = self.documents.aggregate(pipeline)
-                docs = [{"_id" : doc["_id"], "summary" : doc["summary"], "Publish Date": doc["Publish Date"].date().isoformat()} async for doc in result]
+                docs = [{"Title": doc["Title"], "summary" : doc["summary"], "Publish Date": doc["Publish Date"].date().isoformat(), "Published By": doc["Published By"], "Publishing Department": doc["Publishing Department"], "Link": doc["Link"]} async for doc in result]
                 reranked = await self._rerank(docs, query, ["summary"])
                 return reranked
                     
@@ -259,7 +280,7 @@ class QueryProcessor:
             tasks = [asyncio.create_task(doc_query(queryembeds[i], queries[i])) for i in range(len(queryembeds))]
             results_list = await asyncio.gather(*tasks)
             results = [item for sublist in results_list for item in sublist]
-            return list({item["_id"] for item in results})
+            return results
         except Exception as e:
             logging.error(f"Error in _search_docs: {str(e)}")
             raise DatabaseError(f"Error in _search_docs, document searching failed: {str(e)}")
@@ -579,18 +600,24 @@ class QueryProcessor:
 
         
 
-    async def _generate_answer(self, question: str, context: str, current_date: str, plan: list, knowledge: str, max_iter: int, iteration: int, step: int, model_to_use: str = llm) -> dict:
+    async def _generate_answer(self, question: str, context: str, current_date: str, plan: list, knowledge: str, max_iter: int, iteration: int, step: int, model_to_use: str = llm, document_level: bool = False) -> dict:
         """Generate and format final response"""
         specific_queries = []
-        if step != -1:
-            step = min(step, len(plan) - 1)
-            specific_queries = plan[step - 1]["specific_queries"]
+        full_plan = {}
+        if document_level:
+            full_plan = {"original user question for correct document identification": question, "plan": plan}
+            specific_queries = ["This is a documeent level query, using given summaries, give brief about sources that may be used as a source to answer the question"]
         else:
-            specific_queries = ["abandoned action plan in previous step directly searching user queries"]
+            full_plan = {"original user question": question, "plan": plan}
+            if step != -1:
+                step = min(step, len(plan) - 1)
+                specific_queries = plan[step - 1]["specific_queries"]
+            else:
+                specific_queries = ["abandoned action plan in previous step directly searching user queries"]
         warning = ""
         if model_to_use == llm2:
             warning = "if final response is too long to fit in the output window, give as much as possible then truncate some of it and give relevant documents, but the json format shouldn't be broken."
-        full_plan = {"original user question": question, "plan": plan}
+        
         for attempt in range(MAX_RETRIES):
             try:
                 llmcontext = self.search_prompt.substitute(
