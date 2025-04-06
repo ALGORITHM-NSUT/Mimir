@@ -114,7 +114,8 @@ class QueryProcessor:
             doc_queries = plan[step - 1]["document_queries"]
 
             for iteration in range(max_iter):
-                doc_ids = await self._search_docs(doc_queries) if doc_queries else []
+                doc_ids = []
+                # doc_ids = await self._search_docs(doc_queries) if doc_queries else []
                 chunk_results, current_docids, seen_ids = await self._search_in_chunks(queries, seen_ids, doc_ids, iteration + 1)
                 iteration_context = self._format_context(chunk_results)
                 context_entries.append(iteration_context)
@@ -334,7 +335,7 @@ class QueryProcessor:
                             }
                         },
                         {
-                            "$limit": 50
+                            "$limit": limit
                         },   
                         {
                             "$group": {
@@ -423,7 +424,7 @@ class QueryProcessor:
                 }
             },
             {"$sort": {"score": -1}},
-            {"$limit": 25}
+            {"$limit": limit}
         ]
         if doc_ids:
             pipeline[8]["$unionWith"]["pipeline"].insert(1, {"$match": {"doc_id": {"$in": doc_ids}}})
