@@ -277,9 +277,9 @@ class QueryProcessor:
                     "index": "vector_index"
                 }
             },
-            {"$addFields": {"vs_score": {"$meta": "vectorSearchScore"}}},
-            {"$sort": { "vs_score": -1 }},
-            {"$match": {"vs_score": {"$gte": minscore}}},
+            {"$addFields": {"vector_score": {"$meta": "vectorSearchScore"}}},
+            {"$sort": {"vector_score": -1}},
+            {"$match": {"vector_score": {"$gte": minscore}}},
             {
                 "$group": {
                     "_id": None,
@@ -322,26 +322,20 @@ class QueryProcessor:
                             "$search": {
                                 "index": "text",
                             }
-                        },                        
+                        },
                         {
                             "$addFields": {
-                                "fts_score": {
-                                    "$multiply": [
-                                        full_text_weight,
-                                        {"$divide": [1.0, {"$add": ["$rank", 60]}]}
-                                    ]
-                                }
+                                "fts_score_meta": { "$meta": "searchScore" }
                             }
                         },
                         {
-                            "$sort": 
-                                {
-                                    "fts_score": -1
-                                }
+                            "$sort": {
+                                "fts_score_meta": -1
+                            }
                         },
                         {
                             "$limit": 50
-                        },
+                        },   
                         {
                             "$group": {
                                 "_id": None,
@@ -352,6 +346,16 @@ class QueryProcessor:
                             "$unwind": {
                                 "path": "$docs",
                                 "includeArrayIndex": "rank"
+                            }
+                        },                     
+                        {
+                            "$addFields": {
+                                "fts_score": {
+                                    "$multiply": [
+                                        full_text_weight,
+                                        {"$divide": [1.0, {"$add": ["$rank", 60]}]}
+                                    ]
+                                }
                             }
                         },
                         {
@@ -388,8 +392,8 @@ class QueryProcessor:
                     "fts_score": {"$ifNull": ["$fts_score", 0]},
                     "score": {
                         "$add": [
-                        {"$ifNull": ["$vs_score", 0]},
-                        {"$ifNull": ["$fts_score", 0]}
+                            {"$ifNull": ["$vs_score", 0]},
+                            {"$ifNull": ["$fts_score", 0]}
                         ]
                     },
                     "_id": 1,

@@ -84,7 +84,7 @@ IN ANY CASE YOU MUST NOT DEVIATE FROM THIS ANSWER FORMAT
 10. **Make as minimum and contextually unique document queries as possible, no 2 document queries should retreive similar type of data, they should NOT just be rewords of each other**.
     -High amount of document queries hampers the speed of the system which is crucial.
     - NEVER make document_queries like: 'Official Notices & Circulars 2025' because all documents will for this criteria and no filtering will be possible
-11. **NEVER assume year unless stated or is very clear by the kind of query user asks, do not use wordings like 2023-2024, ONLY use 2023 or 2024**, for year assumption use your system knowledge, odd semester cannot be on-going in jan to july, even sem in aug to dec.
+11. **NEVER assume year unless stated or is very clear by the kind of query user asks, do not use wordings like 2023-2024** odd semester cannot be on-going in jan to july, even sem cannot be on-going in aug to dec.
 12. **DO NOT add nsut or netaji subhas university of technology in queries, all documents are from the same university, so it is not required**.
 13. **Only generate multiple steps if answer of 1 step will be used to get enough data for next step, If multiple peices of information do not depend upon each other, they can be inquired in one step. different document queries can be inquired in the same step.**
 14. **Document_queries and specific list can contain more than 1 type of unrelated queries, try your best to reduce steps while increasing subqueries**
@@ -98,13 +98,13 @@ IN ANY CASE YOU MUST NOT DEVIATE FROM THIS ANSWER FORMAT
 - **Ensure meaningful variation**:
   - Queries should be **precise and retrieval-ready** (e.g., add batch, semester, department, roll number if available).  
   - **Modify numeric values logically** (e.g., even ↔ odd semester if applicable).  
-  - If timeframe is missing, **infer a reasonable session** (but never predict future years).  
+  - If timeframe is missing but it is crucial for answering query, **infer a reasonable session** (but never predict future years).  
 - **ALWAYS Use both full form and abbreviation in both document queries and specific queries in every single query, no need to make multiple queries just to have both abbrevation and full form** if given.  
 - **Maintain original query intent**—no unnecessary generalization. 
 - **Both Document and specific queries should be sufficiently unique
 - **Specific queries should be as specific as possible based on type of data required, they should contain batch, semester, department, roll number etc if available, for data that depends on it, for common data that does not depend on such fields as per knowledge given to you below, it is not required**.
 - **In each specific query if there is a name, always provide that full name in double quotes, only 1 name per specific query allowed**. (example: "John Smith" attendance for subject X)
-- **whenever asking for roll number check for result of PREVIOUS semester for only specific branch given, unless asked data is of previous year then search for current result**
+- **whenever asking for roll number check for result of PREVIOUS semester for only specific branch given, unless asked data is of previous year then search for CURRENT semester result**
 ---
 
 ## SCORING SYSTEM
