@@ -387,6 +387,14 @@ class QueryProcessor:
                 }
             },
             {
+                "$lookup": {
+                    "from": "documents",
+                    "localField": "doc_id",
+                    "foreignField": "_id",
+                    "as": "doc_info"
+                }
+            },
+            {
                 "$project": {
                     "vs_score": {"$ifNull": ["$vs_score", 0]},
                     "fts_score": {"$ifNull": ["$fts_score", 0]},
@@ -402,28 +410,16 @@ class QueryProcessor:
                     "text": 1,
                     "page": 1,
                     "chunk_num": 1,
-                    "table_summary": 1
-                }
-            },
-            
-            {
-                "$lookup": {
-                    "from": "documents",
-                    "localField": "doc_id",
-                    "foreignField": "_id",
-                    "as": "doc_info"
-                }
-            },
-            {
-                "$project": {
-                    "embedding": 0,
-                    "doc_info.content": 0,
-                    "doc_info.summary_embedding": 0,
-                    "doc_info.sections": 0,
-                    "doc_info.entities": 0,
-                    "doc_info.doc_id": 0,
-                    "doc_info._id": 0,
-                    "chunk_id": 0,
+                    "table_summary": 1,
+                    "doc_info.Publish Date": 1,
+                    "doc_info.Published By": 1,
+                    "doc_info.Title": 1,
+                    "doc_info.summary": 1,
+                    "doc_info.Publishing Post": 1,
+                    "doc_info.Publishing Department": 1,
+                    "doc_info.Link": 1,
+                    "doc_info.page_summaries": 1,
+                    "doc_info.Pages": 1
                 }
             },
             {"$sort": {"score": -1}},
