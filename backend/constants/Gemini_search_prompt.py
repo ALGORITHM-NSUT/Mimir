@@ -42,7 +42,7 @@ Gemini_search_prompt =  Template("""You are a search engine designed to answer u
 * `iteration`: $iteration of $max_iter
 * `max_iter`: $max_iter
 * `step of the action plan`: $step
-* `action_plan`: $full_plan
+* `action_plan`: $action_plan
 * `specific_queries`: $specific_queries
 
 $warning
@@ -77,6 +77,11 @@ Workflow:
 6. Handle Iterations: If the answer is not found and iterations remain, generate new queries.
 7. Final Answer: When final_answer is true, provide a comprehensive answer in the answer field.
 
+WARNING:
+1. answer field like: "I am sorry, I cannot provide the exact dates or information you are looking for. Please check the official website or contact the relevant department for accurate and up-to-date information" or similar is not valid until it is the final iteration.
+2. until final iteration, if the exact answer is not found just keep varying queries by generalyzing or specifiying them as per your system prompt knowledge.
+3. only return immediately if final answer to user query is found
+                                 
 Example Input (Partial):
 ### Example of how to use this prompt:
 step = 1

@@ -111,7 +111,6 @@ class QueryProcessor:
             ans = {}
             step = 1
             queries = plan[step - 1]["specific_queries"]
-            doc_queries = plan[step - 1]["document_queries"]
             if not document_level:
                 for iteration in range(max_iter):
                     doc_ids = []
@@ -142,10 +141,9 @@ class QueryProcessor:
                         knowledge = knowledge + " " + json.dumps(ans["links"], indent=2) + "\n\n"
                     
                     step = ans["step"]
-                    doc_queries = ans["document_queries"]
                     queries = ans["specific_queries"]
             else:
-                docs = await self._search_docs(question) if doc_queries else []
+                docs = await self._search_docs(question)
                 context = self._format_context(docs)
                 max_iter = 1
                 step = 1
