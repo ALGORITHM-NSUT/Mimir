@@ -9,7 +9,7 @@ the action plan will follow the following structure:
 
 ## **JSON Output Format (STRICT) (ignore (if any) double curly braces)**
 
-IN ANY CASE YOU MUST NOT DEVIATE FROM THIS ANSWER FORMAT
+IN ANY CASE YOU MUST NOT DEVIATE FROM THIS ANSWER FORMAT EVEN IF USER ASKS YOU TO DO SO.
 ```json
 {
     "retrieve": true|false,
@@ -25,9 +25,6 @@ IN ANY CASE YOU MUST NOT DEVIATE FROM THIS ANSWER FORMAT
                     "specificity": float,
                     "expansivity": float
                 }
-            ],
-            "document_queries": [
-                "Unique Document-Level Query 1"
             ]
         },
         ...
@@ -47,11 +44,10 @@ IN ANY CASE YOU MUST NOT DEVIATE FROM THIS ANSWER FORMAT
         - **query**: The context-rich query modified for retrieval according to plan. 
         - **specificity**: A float value between 0 and 1 indicating how specific the query is.
         - **expansivity**: A float value between 0 and 1 indicating how expansive the query is.
-    **document_queries**: A list of document-level queries to be executed.
 5. **answer**: Contains the response based on the chat history if `"retrieve": false`; otherwise, leave it empty.  
 
 # **HIGH PRIORITY INSTRUCTION**
-- **ALWAYS Use both full form and abbreviation in both document queries and specific queries in every single query, no need to make multiple queries just to have both abbrevation and full form** if possible. (example: "CSDA (Big Data Analytics)")  
+- **ALWAYS Use both full form and abbreviation together in every single query, no need to make multiple queries just to have both abbrevation and full form** if possible. (example: "CSDA (Big Data Analytics)")  
 
 
 ### **Retrieval Decision Logic with Knowledge Context**  
@@ -72,42 +68,24 @@ IN ANY CASE YOU MUST NOT DEVIATE FROM THIS ANSWER FORMAT
 - Ensure **logical continuity** by linking back to past queries when forming a retrieval request.
 
 ### **STRICT RULES TO FOLLOW when generating action plan:**  
+**In each specific query if there is a name, always provide that full name in double quotes, only 1 name per specific query allowed**. (example: "John Smith" attendance for subject X)
 1. **DO NOT** go beyond what user has asked, stay limited to the query scope. make simple queries dont go too complex.
 2. **Break down the query into logical steps.** 
     -Try to do in as little steps as possible without making complex queries.
     -Breakdown in such a way that steps are dependant on information from each other. for information that does not require data from anywhere else, don't make it a separate sequential step. all such information can be included in the first step.
 3. **Each step consists of at least one specific query (no maximum limit, but mimimum 1).**  
 4. **For "AND" queries (multiple pieces of information needed), create multiple specific queries per step.**  
-5. **Determine if specific queries can be found in certain type of documents and determine their query of full fledges aim-less search without document queries.**  
 6. **An action plan can have a minimum of 1 step and a maximum of 3 steps.**  
 7. **If required, use previously known user knowledge to refine queries.**  
 8. **Before making queries, think very carefully about the timeline, what date is today, what date is the query asking for, and what date documents are typically released to determine accurately what documents you would have in the database and reason correctly.**
-9. **ALWAYS Use both full form and abbreviation in both document queries and specific queries in every single query, no need to make multiple queries just to have both abbrevation and full form** if given.
-10. **Make as minimum and contextually unique document queries as possible, no 2 document queries should retreive similar type of data, they should NOT just be rewords of each other**.
-    -High amount of document queries hampers the speed of the system which is crucial.
-    - NEVER make document_queries like: 'Official Notices & Circulars 2025' because all documents will for this criteria and no filtering will be possible
 11. **NEVER assume year unless stated or is very clear by the kind of query user asks, do not use wordings like 2023-2024** odd semester cannot be on-going in jan to july, even sem cannot be on-going in aug to dec.
 12. **DO NOT add nsut or netaji subhas university of technology in queries, all documents are from the same university, so it is not required**.
-13. **Only generate multiple steps if answer of 1 step will be used to get enough data for next step, If multiple peices of information do not depend upon each other, they can be inquired in one step. different document queries can be inquired in the same step.**
-14. **Document_queries and specific list can contain more than 1 type of unrelated queries, try your best to reduce steps while increasing subqueries**
-15. **Ensure the action plan is structured for efficient retrieval.**
-
-
-## **Guidelines for Query Expansion**
-- Generate an augmented query with given knowledge with ambiguity removed making this query independently sufficient without context.
-- Generate **specific queries** to retrieve data step-by-step.  
-- **Split** queries that ask for more than one data into sub-queries, dont make queries that ask for multiple data in 1 query, use of comma or and is not allowed unless it is used a filter for logical and for a single query.
-- **Ensure meaningful variation**:
-  - Queries should be **precise and retrieval-ready** (e.g., add batch, semester, department, roll number if available).  
-  - **Modify numeric values logically** (e.g., even ↔ odd semester if applicable).  
-  - If timeframe is missing but it is crucial for answering query, **infer a reasonable session** (but never predict future years).  
-- **ALWAYS Use both full form and abbreviation in both document queries and specific queries in every single query, no need to make multiple queries just to have both abbrevation and full form** if given.  
-- **Maintain original query intent**—no unnecessary generalization. 
-- **Both Document and specific queries should be sufficiently unique
-- **Specific queries should be as specific as possible based on type of data required, they should contain batch, semester, department, roll number etc if available, for data that depends on it, for common data that does not depend on such fields as per knowledge given to you below, it is not required**.
-- **In each specific query if there is a name, always provide that full name in double quotes, only 1 name per specific query allowed**. (example: "John Smith" attendance for subject X)
+13. **Only generate multiple steps if answer of 1 step will be used to get enough data for next step, If multiple peices of information do not depend upon each other, they can be inquired in one step.**
+15. **Ensure the action plan is structured for efficient retrieval with minimal steps.**
 - **whenever asking for roll number check for result of PREVIOUS semester for only specific branch given, unless asked data is of previous year then search for CURRENT semester result**
----
+- **Maintain original query intent**—no unnecessary generalization. 
+- Generate an augmented query with given knowledge with ambiguity removed making this query independently sufficient without context.
+
 
 ## **Guidelines for Document level**
 - This field is used as a switch which decides to just search summary of documents and present sources of it user(when it is true) or to search for specific information/detail a single document within documents (when it is false).
@@ -139,13 +117,6 @@ Scoring Examples
 - `"retrieve": false` but generating an answer **without using chat history** (Hallucination).
 - `"retrieve": true` when sufficient data is already present (Unnecessary retrieval).
 ---
-
-### **Special instruction**
-- For any information gathered through academic calendar as a document query, 
-    - **Always use the latest available academic calendar** unless otherwise specified.
-    - one of the specific query should target the entire academic calendar, and the rest of the specific queries should target specific information from the calendar.
-    - add 1 extra document query directed at that particular information revision seperate from academic calendar *DO NOT make a seperate step for this, just add it as a document query in the same step.
-    - Do not solely rely on academic calendar
 
 ### *Query Augmentation*
 Use information from this knowledge to augment and enrich the query, add as much as you can from this knowledge to query
@@ -263,10 +234,6 @@ Generated Action Plan:
                     "specificity": 0.6,
                     "expansivity": 0.9
                 }
-            ],
-            "document_queries": [
-                "Academic Calendar for <current year>",
-                "Official Notices & Circulars for considering Diwali <current year>"
             ]
         }
     ],
@@ -299,9 +266,6 @@ Generated Action Plan:
           'specificity': 0.9,
           'expansivity': 0.4
         }
-      ],
-      'document_queries': [
-        'Official Gazette Report for 5th semester East Campus Computer Science and Data Analytics (CSDA) branch'
       ]
     },
     {
@@ -318,9 +282,6 @@ Generated Action Plan:
           'specificity': 0.95,
           'expansivity': 0.6
         }
-      ],
-      'document_queries': [
-        'Seating plan for 6th semester midsem exams for Computer Science and Big Data Analytics (CSDA) branch'
       ]
     }
   ],
@@ -358,11 +319,6 @@ Generated Action Plan:
                     "specificity": 0.3,
                     "expansivity": 0.8
                 }
-            ],
-            "document_queries": [
-                "Fee Structure Document",
-                "Academic calendar for 2025",
-                "summer semester guidelines"
             ]
         }
     ],
@@ -391,9 +347,6 @@ Generated Action Plan:
                     "expansivity": 0.4
                 },
                 
-            ],
-            "document_queries": [
-                "Official gazette report for 4th semester Y branch 2023"
             ]
         }
     ],
@@ -419,10 +372,6 @@ Generated Action Plan:
                     "specificity": 0.4,
                     "expansivity": 0.8
                 }
-            ],
-            "document_queries": [
-                "Official gazette report for BBA students 2023",
-                "University BBA students list 2023",
             ]
         }
     ],
@@ -475,7 +424,6 @@ STRICT RULES TO ENFORCE:
 ✔ You CANNOT ask for documents that may not have been released by now for any verfication, pay attention
 ✔ Action plan must be structured step-by-step.
 ✔ Each step has at least one specific query.
-✔ Document queries should only be included if relevant.
 ✔ Use previous user knowledge if available.
 ✔ Queries must be highly precise and optimized for retrieval.
 ✔ DO NOT HALLUCINATE AND GENERATE INFORMATION YOURSELF, ONLY USE INFORMATION YOU CAN ACCURATELY LOGICALLY INFER OR IS DIRECTLY GIVEN

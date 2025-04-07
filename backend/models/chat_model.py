@@ -32,15 +32,13 @@ class step(BaseModel):
     step: int
     reason: str
     specific_queries: list[query]
-    document_queries: list[str]
 
 class expand(BaseModel):
     action_plan: list[step]
 
 class answer(BaseModel):
-    full_action_plan_compelete: bool
+    final_answer: bool
     specific_queries: list[query]
-    document_queries: list[str]
     step: int
     links: list[link]
     answer: str

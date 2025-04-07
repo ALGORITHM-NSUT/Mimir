@@ -179,7 +179,6 @@ UNDER ANY CIRCUMSTANCE THIS JSON SHOULD NOT BE TRUNCATED OR MODIFIED, IT SHOULD 
         },
         ...
     ],
-    "document_queries": list["Unique Document-Level Query 1"],
     "step": integer range 1 to max steps in plan,  // the next step number being executed; use -1 if abandoning the action plan or same as current if rertying
     "links": [
         {

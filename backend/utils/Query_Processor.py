@@ -128,10 +128,11 @@ class QueryProcessor:
                         iteration + 1, 
                         step, 
                         model_to_use,
-                        document_level 
+                        document_level,
+                        queries
                     )  
                     
-                    if "full_action_plan_compelete" in ans and ans["full_action_plan_compelete"]:
+                    if "final_answer" in ans and ans["final_answer"]:
                         return ans
                     if iteration == max_iter - 1:
                         return ans
@@ -158,7 +159,8 @@ class QueryProcessor:
                     1, 
                     step, 
                     model_to_use,
-                    document_level
+                    document_level,
+                    queries
                 )
             return ans 
          
@@ -600,21 +602,15 @@ class QueryProcessor:
 
         
 
-    async def _generate_answer(self, question: str, context: str, current_date: str, plan: list, knowledge: str, max_iter: int, iteration: int, step: int, model_to_use: str = llm, document_level: bool = False) -> dict:
+    async def _generate_answer(self, question: str, context: str, current_date: str, plan: list, knowledge: str, max_iter: int, iteration: int, step: int, model_to_use: str = llm, document_level: bool = False, specific_queries: list = None) -> dict:
         """Generate and format final response"""
-        specific_queries = []
         full_plan = {}
         if document_level:
             full_plan = {"original user question for correct document identification": question, "plan": plan}
-            specific_queries = ["This is a documeent level query, using given summaries, give brief about sources that may be used as a source to answer the question"]
+            specific_queries = ["This is a document level query, using given summaries, give brief about sources that may be used as a source to answer the question"]
         else:
             full_plan = {"original user question": question, "plan": plan}
-            if step != -1:
-                step = min(step, len(plan) - 1)
-                specific_queries = plan[step - 1]["specific_queries"]
-            else:
-                specific_queries = ["abandoned action plan in previous step directly searching user queries"]
-        warning = ""
+            warning = ""
         if model_to_use == llm2:
             warning = "if final response is too long to fit in the output window, give as much as possible then truncate some of it and give relevant documents, but the json format shouldn't be broken."
         
