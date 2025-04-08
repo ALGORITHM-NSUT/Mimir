@@ -2,7 +2,6 @@ import logging
 from bson import ObjectId
 from datetime import datetime
 from constants.Gemini_search_prompt import Gemini_search_prompt
-from constants.Query_expansion import Query_expansion_prompt
 import os
 from dotenv import load_dotenv
 import json
@@ -104,10 +103,8 @@ class QueryProcessor:
             
             context_entries = []
             seen_ids = set()
-            seen_ids.add(ObjectId("aaaaaaaaaaaaaaaaaaaaaaaa"))
-            # plan = await self._expand_query(question, user_knowledge, model_to_use)
             knowledge = ""
-            max_iter = 4
+            max_iter = 3
             ans = {}
             step = 1
             queries = plan[step - 1]["specific_queries"]
@@ -287,7 +284,6 @@ class QueryProcessor:
 
     async def _search_query(self, query_vector, seen_ids: set, minscore: float, vector_weight: float, full_text_weight: float, limit: int, doc_ids: list, query: str) -> list:
         """Search query with MongoDB quota handling"""
-        print(query)
         keyword = query[query.find('"') + 1:query.rfind('"')]
         pipeline = [
             {
@@ -295,7 +291,7 @@ class QueryProcessor:
                     "queryVector": query_vector,
                     "path": "embedding",
                     "numCandidates": 5000,
-                    "limit": limit,
+                    "limit": 50,
                     "index": "vector_index"
                 }
             },
@@ -356,7 +352,7 @@ class QueryProcessor:
                             }
                         },
                         {
-                            "$limit": limit
+                            "$limit": 50
                         },   
                         {
                             "$group": {
@@ -561,45 +557,6 @@ class QueryProcessor:
                     raise rerankerError(f"Reranking failed after {MAX_RETRIES} attempts: {str(e)}")
             await asyncio.sleep(2 ** attempt + random.uniform(0, 1))
     
-    async def _expand_query(self, query: str, user_knowledge: str, model_to_use: str) -> list:
-        """Generate initial query variations with API quota handling"""
-        prompt = Query_expansion_prompt.format(query=query, current_date=self.current_date, user_knowledge=user_knowledge)
-
-        for attempt in range(MAX_RETRIES):
-            try:
-                GEMINI_API_KEY = os.getenv("GOOGLE_API_KEY").split(" | ")[(index + attempt) % 2].strip()
-                client = genai.Client(api_key=GEMINI_API_KEY)
-                response = client.models.generate_content(
-                    model=model_to_use, 
-                    contents=[prompt],
-                    config=self._get_config(model_to_use, 'expand')
-                )
-                response_text = response.text
-                match = re.search(r'\{.*\}', response_text, re.DOTALL)
-                if not match:
-                    raise ValueError("Failed to extract JSON from model response")
-                try:
-                    json_data = json.loads(match.group(0), strict=False)
-                    logging.info(f"Query expansion response: {json_data}")
-                    return json_data["action_plan"]
-                except:
-                    raise ValueError("Failed to extract JSON from model response")
-            except (json.JSONDecodeError, ValueError) as e:
-                logging.warning(f"Error parsing response: {e}, retrying...")
-                if attempt == MAX_RETRIES - 1:
-                    raise ValueError(f"Failed to parse response after {MAX_RETRIES} attempts: {str(e)}")
-            except (ResourceExhausted, ServerError) as e:
-                logging.warning(f"Quota exceeded, retrying after delay...")
-                if attempt == MAX_RETRIES - 1:
-                    raise ValueError(f"Failed to parse response after {MAX_RETRIES} attempts: {str(e)}")
-                await asyncio.sleep(2 ** attempt + random.uniform(0, 1))  # Exponential backoff
-            except GoogleAPIError as e:
-                logging.error(f"Google API error: {e}")
-                raise ModelAPIError(f"Failed to get response from google api: {str(e)}")
-        raise ModelAPIError(f"Failed after {MAX_RETRIES} retries due to API quota limits")
-
-        
-
     async def _generate_answer(self, question: str, context: str, current_date: str, plan: list, knowledge: str, max_iter: int, iteration: int, step: int, model_to_use: str = llm, document_level: bool = False, specific_queries: list = None) -> dict:
         """Generate and format final response"""
         full_plan = {}
