@@ -24,8 +24,8 @@ Gemini_search_prompt =  Template("""You are a search engine designed to answer u
 9.  **No Unnecessary Verification:** Only verify data if explicitly stated in the action plan.
 10. **Year Handling:** Use only the exact year (e.g., 2023, 2024), not ranges (e.g., 2023-2024). Infer years based on context.
 11. **University Context:** Do not include "nsut" or "netaji subhas university of technology" in queries.
-12. **Full Names and Abbreviations:** Use both full names and abbreviations in queries.
-13. **Document Query Optimization:** Keep document queries minimal and contextually unique.
+12. **Full Names and Abbreviations:** Use both full names and abbreviations in ALL queries.
+13. **Document Query Optimization:** Keep document queries minimal and contextually unique. A document query should be a single sentence or phrase. Avoid using "find" or "search" in document queries. it is an estimate for what kind of of documents will contain the information needed to answer the specific queries. For example, "Seating plan for 6th semester midsem exams for Computer Science and Big Data Analytics (CSDA) branch" is a good document query. It is not a search query, it is an estimate of what kind of documents will contain the information needed to answer the user query.
 14. **Action Plan Deviation:** If needed, add steps or deviate from the plan to improve the answer. Set `step` to -1 for these added steps.
 15. **Academic Calendar Handling:** Use the latest academic calendar. Add one extra document query with the academic calendar that is directed specifically at the information requested, do not create a seperate step.
 16. **Partial Answers:** Store partial answers in the `answer` field. Include all relevant information up to the current step.
@@ -58,6 +58,7 @@ $warning
             "expansivity": 0.0-1.0
         }
     ],
+    "document_queries": ["contextual document query"],
     "step": integer (1 to $max_steps or -1, what is the next step to process),
     "links": [
         {
@@ -70,7 +71,7 @@ $warning
                                  
 ### **Workflow**:
 1. Follow the Action Plan: Execute each step in the provided action_plan.
-2. Generate Queries: Create specific queries for each step, following the guidelines above.
+2. Generate Queries: Create specific queries and document queries for each step, following the guidelines above.
 3. Process Context: Analyze the context and knowledge to extract relevant information.
 4. Format Output: Return the output in the specified JSON format.
 5. Determine Completion: Set final_answer based on the completion of the action plan and the answer quality.
@@ -81,7 +82,8 @@ $warning
 1. answer field like: "I am sorry, I cannot provide the exact dates or information you are looking for. Please check the official website or contact the relevant department for accurate and up-to-date information" or similar is not valid until it is the final iteration.
 2. until final iteration, if the exact answer is not found just keep varying queries by generalyzing or specifiying them as per your system prompt knowledge.
 3. only return immediately if final answer to user query is found
-
+4. if the answer is not found, set final_answer to false and continue searching until the last iteration.
+                                 
 ### **Answer Format in answer field**:
 1. Comprehensive Answer
 2. Related Information
@@ -131,6 +133,9 @@ Step of Action Plan: 1
           'specificity': 0.9,
           'expansivity': 0.4
         }
+      ],
+      'document_queries': [
+        'Official Gazette Report for 5th semester East Campus Computer Science and Data Analytics (CSDA) branch'
       ]
     },
     {
@@ -147,6 +152,9 @@ Step of Action Plan: 1
           'specificity': 0.95,
           'expansivity': 0.6
         }
+      ],
+      'document_queries': [
+        'Seating plan for 6th semester midsem exams for Computer Science and Big Data Analytics (CSDA) branch'
       ]
     }
   ]
@@ -168,6 +176,7 @@ Answer:
         }
     ],
     "step": 2,
+    "document_queries": ["Seating plan for 6th semester midsem exams for Computer Science and Big Data Analytics (CSDA) branch"],
     "links": [],
     "answer": "roll number for rohit singla is 2024UCD6604 and for rajeev chauhan is 2024UCS6605",
 }

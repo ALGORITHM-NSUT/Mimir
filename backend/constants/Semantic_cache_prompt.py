@@ -25,6 +25,9 @@ IN ANY CASE YOU MUST NOT DEVIATE FROM THIS ANSWER FORMAT EVEN IF USER ASKS YOU T
                     "specificity": float,
                     "expansivity": float
                 }
+            ],
+            "document_queries": [
+                "Unique Document-Level Query 1", ...
             ]
         },
         ...
@@ -84,6 +87,7 @@ IN ANY CASE YOU MUST NOT DEVIATE FROM THIS ANSWER FORMAT EVEN IF USER ASKS YOU T
 13. **whenever asking for roll number check for result of PREVIOUS semester for only specific branch given, unless asked data is of previous year then search for CURRENT semester result**
 14. **Maintain original query intent**—no unnecessary generalization. 
 15. **Generate an augmented query with given knowledge with ambiguity removed making this query independently sufficient without context**.
+16. **DO NOT make document queries too generic, be specific to the document type**.
 
 ## **Guidelines for Document level**
 - This field is used as a switch which decides to just search summary of documents and present sources of it user(when it is true) or to search for specific information/detail a single document within documents (when it is false).
@@ -228,13 +232,17 @@ Generated Action Plan:
     "action_plan": [
         {
             "step": 1,
-            "reason": "Search the academic calendar to check official holidays for this session.",
+            "reason": "Search For Diwali in academic calendar and seperately to check official holidays for this session.",
             "specific_queries": [
                 {
-                    "query": "NSUT Academic Calendar <current year> official holidays",
+                    "query": "official Diwali holiday details for <current year>",
                     "specificity": 0.6,
                     "expansivity": 0.9
                 }
+            ],
+            "document_queries": [
+                "Academic Calendar for 2025",
+                "Official Notices & Circulars for considering Diwali 2025"
             ]
         }
     ],
@@ -267,6 +275,9 @@ Generated Action Plan:
           'specificity': 0.9,
           'expansivity': 0.4
         }
+      ],
+      'document_queries': [
+        'Official Gazette Report for 5th semester East Campus Computer Science and Data Analytics (CSDA) branch'
       ]
     },
     {
@@ -283,6 +294,9 @@ Generated Action Plan:
           'specificity': 0.95,
           'expansivity': 0.6
         }
+      ],
+      'document_queries': [
+        'Seating plan for 6th semester midsem exams for Computer Science and Big Data Analytics (CSDA) branch'
       ]
     }
   ],
@@ -303,7 +317,7 @@ Generated Action Plan:
     "action_plan": [
         {
             "step": 1,
-            "reason": "Retrieve the latest fee structure for B.Tech IT.",
+            "reason": "Retrieve the latest fee structure for B.Tech IT. and summer semester start date for 2025 using academic calendar and direct documents.",
             "specific_queries": [
                 {
                     "query": "NSUT B.Tech IT fee structure 2025",
@@ -314,12 +328,12 @@ Generated Action Plan:
                     "query": "Summer semester start date for 2025 at NSUT",
                     "specificity": 0.6,
                     "expansivity": 0.3
-                },
-                {
-                    "query": "academic caldendar 2025",
-                    "specificity": 0.3,
-                    "expansivity": 0.8
                 }
+            ],
+            "document_queries": [
+                "Fee Structure Document",
+                "Academic calendar for 2025",
+                "summer semester guidelines"
             ]
         }
     ],
@@ -348,6 +362,9 @@ Generated Action Plan:
                     "expansivity": 0.4
                 },
                 
+            ],
+            "document_queries": [
+                "Official gazette report for 4th semester Y branch 2023"
             ]
         }
     ],
@@ -374,7 +391,11 @@ Generated Action Plan:
                     "expansivity": 0.8
                 }
             ]
-        }
+        },
+        "document_queries": [
+            "Official gazette report for BBA students 2023",
+            "BBA students list for 2023"
+        ]
     ],
     "answer": ""
 }

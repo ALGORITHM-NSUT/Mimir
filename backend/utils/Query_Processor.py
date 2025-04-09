@@ -108,9 +108,14 @@ class QueryProcessor:
             ans = {}
             step = 1
             queries = plan[step - 1]["specific_queries"]
+            doc_queries = plan[step - 1]["document_queries"]
             if not document_level:
                 for iteration in range(max_iter):
-                    doc_ids = []
+                    docs = await self._search_docs(doc_queries, document_level) if doc_queries else []
+                    if docs:
+                        doc_ids = [doc["_id"] for doc in docs]
+                    else:
+                        doc_ids = []
                     chunk_results, current_docids, seen_ids = await self._search_in_chunks(queries, seen_ids, doc_ids, iteration + 1)
                     iteration_context = self._format_context(chunk_results)
                     context_entries.append(iteration_context)
@@ -140,7 +145,7 @@ class QueryProcessor:
                     step = ans["step"]
                     queries = ans["specific_queries"]
             else:
-                docs = await self._search_docs(question)
+                docs = await self._search_docs(question, document_level)
                 context = self._format_context(docs)
                 max_iter = 1
                 step = 1
@@ -224,7 +229,8 @@ class QueryProcessor:
             context += f"{meta}\n\n"
         return context
     
-    async def _doc_query(self, doc_query_vector, limit: int, query: str) -> list:
+    async def _doc_query(self, doc_query_vector, limit: int, query: str, document_level: bool = False) -> list:
+        minscore = 0.75
         pipeline = [
             {
                 "$vectorSearch": {
@@ -235,8 +241,10 @@ class QueryProcessor:
                     "index": "vector_index"
                 }
             },
+            {"$match": {"vector_score": {"$gte": minscore}}},
             {
                 "$project": {
+                    "_id": 1,
                     "summary": 1,
                     "Publish Date": 1,
                     "Title": 1,
@@ -250,9 +258,11 @@ class QueryProcessor:
         for attempt in range(MAX_RETRIES):  # Retry up to 5 times
             try:
                 result = self.documents.aggregate(pipeline)
-                docs = [{"Title": doc["Title"], "summary" : doc["summary"], "Publish Date": doc["Publish Date"].date().isoformat(), "Published By": doc["Published By"], "Publishing Department": doc["Publishing Department"], "Link": doc["Link"]} async for doc in result]
-                reranked = await self._rerank(docs, query, ["summary"])
-                return reranked
+                docs = [{"_id": doc["_id"], "Title": doc["Title"], "summary" : doc["summary"], "Publish Date": doc["Publish Date"].date().isoformat(), "Published By": doc["Published By"], "Publishing Department": doc["Publishing Department"], "Link": doc["Link"]} async for doc in result]
+                if document_level:
+                    reranked = await self._rerank(docs, query, ["summary"])
+                    return reranked
+                return docs
                     
             except OperationFailure as e:
                 logging.warning(f"MongoDB OperationFailure: {e}, retrying...")
@@ -267,12 +277,12 @@ class QueryProcessor:
                 await asyncio.sleep(2 ** attempt + random.uniform(0, 1))
 
         
-    async def _search_docs(self, queries: list) -> list:
+    async def _search_docs(self, queries: list, document_level: bool = False) -> list:
         """Search documents based on query string"""
         try:
             limit = 50
             async def doc_query(queryembed, query):
-                return await self._doc_query(queryembed, limit, query)
+                return await self._doc_query(queryembed, limit, query, document_level)
             queryembeds = await self._get_vector(queries)
             tasks = [asyncio.create_task(doc_query(queryembeds[i], queries[i])) for i in range(len(queryembeds))]
             results_list = await asyncio.gather(*tasks)
@@ -416,12 +426,12 @@ class QueryProcessor:
                 "$project": {
                     "vs_score": {"$ifNull": ["$vs_score", 0]},
                     "fts_score": {"$ifNull": ["$fts_score", 0]},
-                    "score": {
-                        "$add": [
-                            {"$ifNull": ["$vs_score", 0]},
-                            {"$ifNull": ["$fts_score", 0]}
-                        ]
-                    },
+                    # "score": {
+                    #     "$add": [
+                    #         {"$ifNull": ["$vs_score", 0]},
+                    #         {"$ifNull": ["$fts_score", 0]}
+                    #     ]
+                    # },
                     "_id": 1,
                     "doc_id": 1,
                     "chunk_id": 1,
@@ -443,10 +453,33 @@ class QueryProcessor:
             {"$sort": {"score": -1}},
             {"$limit": limit}
         ]
+        preferred_doc_boost = 1.25  # Boost factor for preferred documents
         if doc_ids:
-            pipeline[8]["$unionWith"]["pipeline"].insert(1, {"$match": {"doc_id": {"$in": doc_ids}}})
-            pipeline[0]["$vectorSearch"]["filter"] = {"doc_id": {"$in": doc_ids}}
-        
+            pipeline[11]["$project"]["score"] = {
+                "$multiply": [
+                    {
+                        "$add": [
+                            {"$ifNull": ["$vs_score", 0]},
+                            {"$ifNull": ["$fts_score", 0]}
+                        ]
+                    },
+                    {
+                        "$cond": {
+                            "if": {"$in": ["$doc_id", doc_ids]},
+                            "then": preferred_doc_boost,
+                            "else": 1.0
+                        }
+                    }
+                ]
+            }
+        else:
+            # Original score calculation if no doc_ids provided
+            pipeline[11]["$project"]["score"] = {
+                "$add": [
+                    {"$ifNull": ["$vs_score", 0]},
+                    {"$ifNull": ["$fts_score", 0]}
+                ]
+            }
         if keyword:
             pipeline[8]["$unionWith"]["pipeline"][0]["$search"]["compound"] = {
                 "must": [
@@ -468,8 +501,8 @@ class QueryProcessor:
             }
         else:
             pipeline[8]["$unionWith"]["pipeline"][0]["$search"]["text"] = {"query": query, "path": ["text", "table_summary"]}
-        # else:
-        #     pipeline[0]["$vectorSearch"]["filter"] = {"_id": {"$nin": list(seen_ids)}}
+        
+        #pipeline[0]["$vectorSearch"]["filter"] = {"_id": {"$nin": list(seen_ids)}}
         for attempt in range(MAX_RETRIES):  # Retry up to 5 times
             try:
                 cursor = self.chunks.aggregate(pipeline)
