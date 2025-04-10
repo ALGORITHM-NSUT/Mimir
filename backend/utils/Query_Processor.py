@@ -2,7 +2,6 @@ import logging
 from bson import ObjectId
 from datetime import datetime
 from constants.Gemini_search_prompt import Gemini_search_prompt
-from constants.Query_expansion import Query_expansion_prompt
 import os
 from dotenv import load_dotenv
 import json
@@ -92,7 +91,7 @@ class QueryProcessor:
         self.search_prompt = Gemini_search_prompt
         logging.info("QueryProcessor initialized")
 
-    async def process_query(self, question: str, plan: list, is_deep_search: bool = False):
+    async def process_query(self, question: str, plan: list, document_level: bool, is_deep_search: bool = False):
         """Iterative retrieval process with dynamic query adjustment"""
         try:
             # Select model based on deep search flag
@@ -104,46 +103,62 @@ class QueryProcessor:
             
             context_entries = []
             seen_ids = set()
-            seen_ids.add(ObjectId("aaaaaaaaaaaaaaaaaaaaaaaa"))
-            # plan = await self._expand_query(question, user_knowledge, model_to_use)
             knowledge = ""
-            max_iter = 4
+            max_iter = 3
             ans = {}
             step = 1
             queries = plan[step - 1]["specific_queries"]
-            doc_queries = plan[step - 1]["document_queries"]
-
-            for iteration in range(max_iter):
-                doc_ids = await self._search_docs(doc_queries) if doc_queries else []
-                chunk_results, current_docids, seen_ids = await self._search_in_chunks(queries, seen_ids, doc_ids, iteration + 1)
-                iteration_context = self._format_context(chunk_results)
-                context_entries.append(iteration_context)
+            if not document_level:
+                for iteration in range(max_iter):
+                    doc_ids = []
+                    chunk_results, current_docids, seen_ids = await self._search_in_chunks(queries, seen_ids, doc_ids, iteration + 1)
+                    iteration_context = self._format_context(chunk_results)
+                    context_entries.append(iteration_context)
+                    ans = await self._generate_answer(
+                        question, 
+                        iteration_context, 
+                        self.current_date, 
+                        plan, 
+                        knowledge, 
+                        max_iter, 
+                        iteration + 1, 
+                        step, 
+                        model_to_use,
+                        document_level,
+                        queries
+                    )  
+                    
+                    if "final_answer" in ans and ans["final_answer"]:
+                        return ans
+                    if iteration == max_iter - 1:
+                        return ans
+                    if "answer" in ans and ans["answer"] is not None:
+                        knowledge += str(ans["answer"]) + "\n"
+                    if "links" in ans and len(ans["links"]) != 0:
+                        knowledge = knowledge + " " + json.dumps(ans["links"], indent=2) + "\n\n"
+                    
+                    step = ans["step"]
+                    queries = ans["specific_queries"]
+            else:
+                docs = await self._search_docs(question)
+                context = self._format_context(docs)
+                max_iter = 1
+                step = 1
                 ans = await self._generate_answer(
                     question, 
-                    iteration_context, 
+                    context, 
                     self.current_date, 
                     plan, 
                     knowledge, 
                     max_iter, 
-                    iteration + 1, 
+                    1, 
                     step, 
-                    model_to_use  # Pass the selected model
-                )  
-                
-                if "full_action_plan_compelete" in ans and ans["full_action_plan_compelete"]:
-                    return ans
-                if iteration == max_iter - 1:
-                    return ans
-                if "answer" in ans and ans["answer"] is not None:
-                    knowledge += str(ans["answer"]) + "\n"
-                if "links" in ans and len(ans["links"]) != 0:
-                    knowledge = knowledge + " " + json.dumps(ans["links"], indent=2) + "\n\n"
-                
-                step = ans["step"]
-                doc_queries = ans["document_queries"]
-                queries = ans["specific_queries"]
-
-            return ans  
+                    model_to_use,
+                    document_level,
+                    queries
+                )
+            return ans 
+         
         except ModelAPIError as e:
             logging.error(f"Model API error in process_query: {str(e)}", exc_info=True)
             raise
@@ -222,16 +237,20 @@ class QueryProcessor:
             },
             {
                 "$project": {
-                    "_id": 1,
                     "summary": 1,
-                    "Publish Date": 1
+                    "Publish Date": 1,
+                    "Title": 1,
+                    "Published By": 1,
+                    "Publishing Post": 1,
+                    "Publishing Department": 1,
+                    "Link": 1
                 }
             }
         ]
         for attempt in range(MAX_RETRIES):  # Retry up to 5 times
             try:
                 result = self.documents.aggregate(pipeline)
-                docs = [{"_id" : doc["_id"], "summary" : doc["summary"], "Publish Date": doc["Publish Date"].date().isoformat()} async for doc in result]
+                docs = [{"Title": doc["Title"], "summary" : doc["summary"], "Publish Date": doc["Publish Date"].date().isoformat(), "Published By": doc["Published By"], "Publishing Department": doc["Publishing Department"], "Link": doc["Link"]} async for doc in result]
                 reranked = await self._rerank(docs, query, ["summary"])
                 return reranked
                     
@@ -258,14 +277,13 @@ class QueryProcessor:
             tasks = [asyncio.create_task(doc_query(queryembeds[i], queries[i])) for i in range(len(queryembeds))]
             results_list = await asyncio.gather(*tasks)
             results = [item for sublist in results_list for item in sublist]
-            return list({item["_id"] for item in results})
+            return results
         except Exception as e:
             logging.error(f"Error in _search_docs: {str(e)}")
             raise DatabaseError(f"Error in _search_docs, document searching failed: {str(e)}")
 
     async def _search_query(self, query_vector, seen_ids: set, minscore: float, vector_weight: float, full_text_weight: float, limit: int, doc_ids: list, query: str) -> list:
         """Search query with MongoDB quota handling"""
-        print(query)
         keyword = query[query.find('"') + 1:query.rfind('"')]
         pipeline = [
             {
@@ -273,13 +291,13 @@ class QueryProcessor:
                     "queryVector": query_vector,
                     "path": "embedding",
                     "numCandidates": 5000,
-                    "limit": limit,
+                    "limit": 50,
                     "index": "vector_index"
                 }
             },
-            {"$addFields": {"vs_score": {"$meta": "vectorSearchScore"}}},
-            {"$sort": { "vs_score": -1 }},
-            {"$match": {"vs_score": {"$gte": minscore}}},
+            {"$addFields": {"vector_score": {"$meta": "vectorSearchScore"}}},
+            {"$sort": {"vector_score": -1}},
+            {"$match": {"vector_score": {"$gte": minscore}}},
             {
                 "$group": {
                     "_id": None,
@@ -322,26 +340,20 @@ class QueryProcessor:
                             "$search": {
                                 "index": "text",
                             }
-                        },                        
+                        },
                         {
                             "$addFields": {
-                                "fts_score": {
-                                    "$multiply": [
-                                        full_text_weight,
-                                        {"$divide": [1.0, {"$add": ["$rank", 60]}]}
-                                    ]
-                                }
+                                "fts_score_meta": { "$meta": "searchScore" }
                             }
                         },
                         {
-                            "$sort": 
-                                {
-                                    "fts_score": -1
-                                }
+                            "$sort": {
+                                "fts_score_meta": -1
+                            }
                         },
                         {
                             "$limit": 50
-                        },
+                        },   
                         {
                             "$group": {
                                 "_id": None,
@@ -352,6 +364,16 @@ class QueryProcessor:
                             "$unwind": {
                                 "path": "$docs",
                                 "includeArrayIndex": "rank"
+                            }
+                        },                     
+                        {
+                            "$addFields": {
+                                "fts_score": {
+                                    "$multiply": [
+                                        full_text_weight,
+                                        {"$divide": [1.0, {"$add": ["$rank", 60]}]}
+                                    ]
+                                }
                             }
                         },
                         {
@@ -383,26 +405,6 @@ class QueryProcessor:
                 }
             },
             {
-                "$project": {
-                    "vs_score": {"$ifNull": ["$vs_score", 0]},
-                    "fts_score": {"$ifNull": ["$fts_score", 0]},
-                    "score": {
-                        "$add": [
-                        {"$ifNull": ["$vs_score", 0]},
-                        {"$ifNull": ["$fts_score", 0]}
-                        ]
-                    },
-                    "_id": 1,
-                    "doc_id": 1,
-                    "chunk_id": 1,
-                    "text": 1,
-                    "page": 1,
-                    "chunk_num": 1,
-                    "table_summary": 1
-                }
-            },
-            
-            {
                 "$lookup": {
                     "from": "documents",
                     "localField": "doc_id",
@@ -412,18 +414,34 @@ class QueryProcessor:
             },
             {
                 "$project": {
-                    "embedding": 0,
-                    "doc_info.content": 0,
-                    "doc_info.summary_embedding": 0,
-                    "doc_info.sections": 0,
-                    "doc_info.entities": 0,
-                    "doc_info.doc_id": 0,
-                    "doc_info._id": 0,
-                    "chunk_id": 0,
+                    "vs_score": {"$ifNull": ["$vs_score", 0]},
+                    "fts_score": {"$ifNull": ["$fts_score", 0]},
+                    "score": {
+                        "$add": [
+                            {"$ifNull": ["$vs_score", 0]},
+                            {"$ifNull": ["$fts_score", 0]}
+                        ]
+                    },
+                    "_id": 1,
+                    "doc_id": 1,
+                    "chunk_id": 1,
+                    "text": 1,
+                    "page": 1,
+                    "chunk_num": 1,
+                    "table_summary": 1,
+                    "doc_info.Publish Date": 1,
+                    "doc_info.Published By": 1,
+                    "doc_info.Title": 1,
+                    "doc_info.summary": 1,
+                    "doc_info.Publishing Post": 1,
+                    "doc_info.Publishing Department": 1,
+                    "doc_info.Link": 1,
+                    "doc_info.page_summaries": 1,
+                    "doc_info.Pages": 1
                 }
             },
             {"$sort": {"score": -1}},
-            {"$limit": 25}
+            {"$limit": limit}
         ]
         if doc_ids:
             pipeline[8]["$unionWith"]["pipeline"].insert(1, {"$match": {"doc_id": {"$in": doc_ids}}})
@@ -539,57 +557,18 @@ class QueryProcessor:
                     raise rerankerError(f"Reranking failed after {MAX_RETRIES} attempts: {str(e)}")
             await asyncio.sleep(2 ** attempt + random.uniform(0, 1))
     
-    async def _expand_query(self, query: str, user_knowledge: str, model_to_use: str) -> list:
-        """Generate initial query variations with API quota handling"""
-        prompt = Query_expansion_prompt.format(query=query, current_date=self.current_date, user_knowledge=user_knowledge)
-
-        for attempt in range(MAX_RETRIES):
-            try:
-                GEMINI_API_KEY = os.getenv("GOOGLE_API_KEY").split(" | ")[(index + attempt) % 2].strip()
-                client = genai.Client(api_key=GEMINI_API_KEY)
-                response = client.models.generate_content(
-                    model=model_to_use, 
-                    contents=[prompt],
-                    config=self._get_config(model_to_use, 'expand')
-                )
-                response_text = response.text
-                match = re.search(r'\{.*\}', response_text, re.DOTALL)
-                if not match:
-                    raise ValueError("Failed to extract JSON from model response")
-                try:
-                    json_data = json.loads(match.group(0), strict=False)
-                    logging.info(f"Query expansion response: {json_data}")
-                    return json_data["action_plan"]
-                except:
-                    raise ValueError("Failed to extract JSON from model response")
-            except (json.JSONDecodeError, ValueError) as e:
-                logging.warning(f"Error parsing response: {e}, retrying...")
-                if attempt == MAX_RETRIES - 1:
-                    raise ValueError(f"Failed to parse response after {MAX_RETRIES} attempts: {str(e)}")
-            except (ResourceExhausted, ServerError) as e:
-                logging.warning(f"Quota exceeded, retrying after delay...")
-                if attempt == MAX_RETRIES - 1:
-                    raise ValueError(f"Failed to parse response after {MAX_RETRIES} attempts: {str(e)}")
-                await asyncio.sleep(2 ** attempt + random.uniform(0, 1))  # Exponential backoff
-            except GoogleAPIError as e:
-                logging.error(f"Google API error: {e}")
-                raise ModelAPIError(f"Failed to get response from google api: {str(e)}")
-        raise ModelAPIError(f"Failed after {MAX_RETRIES} retries due to API quota limits")
-
-        
-
-    async def _generate_answer(self, question: str, context: str, current_date: str, plan: list, knowledge: str, max_iter: int, iteration: int, step: int, model_to_use: str = llm) -> dict:
+    async def _generate_answer(self, question: str, context: str, current_date: str, plan: list, knowledge: str, max_iter: int, iteration: int, step: int, model_to_use: str = llm, document_level: bool = False, specific_queries: list = None) -> dict:
         """Generate and format final response"""
-        specific_queries = []
-        if step != -1:
-            step = min(step, len(plan) - 1)
-            specific_queries = plan[step - 1]["specific_queries"]
+        full_plan = {}
+        if document_level:
+            full_plan = {"original user question for correct document identification": question, "plan": plan}
+            specific_queries = ["This is a document level query, using given summaries, give brief about sources that may be used as a source to answer the question"]
         else:
-            specific_queries = ["abandoned action plan in previous step directly searching user queries"]
-        warning = ""
+            full_plan = {"original user question": question, "plan": plan}
+            warning = ""
         if model_to_use == llm2:
             warning = "if final response is too long to fit in the output window, give as much as possible then truncate some of it and give relevant documents, but the json format shouldn't be broken."
-        full_plan = {"original user question": question, "plan": plan}
+        
         for attempt in range(MAX_RETRIES):
             try:
                 llmcontext = self.search_prompt.substitute(

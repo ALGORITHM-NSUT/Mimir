@@ -179,7 +179,6 @@ UNDER ANY CIRCUMSTANCE THIS JSON SHOULD NOT BE TRUNCATED OR MODIFIED, IT SHOULD 
         },
         ...
     ],
-    "document_queries": list["Unique Document-Level Query 1"],
     "step": integer range 1 to max steps in plan,  // the next step number being executed; use -1 if abandoning the action plan or same as current if rertying
     "links": [
         {
@@ -189,6 +188,14 @@ UNDER ANY CIRCUMSTANCE THIS JSON SHOULD NOT BE TRUNCATED OR MODIFIED, IT SHOULD 
     ]
     "answer": "Final answer (if available) or partial answer in between steps"
 }
+
+## SCORING SYSTEM
+Specificity vs. Expansivity
+
+Score Type | 0.0	               |0.5 	               |1.0
+Specificity|	General inquiry    |	Targeted search    |	Exact data point
+Expansivity|	Single value needed|	Section of document|	Full document parse
+
 ---
 
 **Strict adherence to these guidelines ensures an optimized, reliable, and structured retrieval-based answering system!**  
@@ -230,15 +237,5 @@ UNDER ANY CIRCUMSTANCE THIS JSON SHOULD NOT BE TRUNCATED OR MODIFIED, IT SHOULD 
 | HR         | Submit employee reports     | 31-Mar-2025  | Mr. A. Sharma      |
 | Finance    | Budget approval submission  | 15-Apr-2025  | Ms. B. Verma       |
 | IT         | System audit and review     | 20-Apr-2025  | Mr. R. Singh       |
-
-**DO THIS:**  
-- **Never** include raw URLs in the main response text.  
-- **Always** place links in a separate **"References"** section at the bottom. 
- 
-**DO NOT DO THIS:**  
-- **Do NOT embed URLs in the main response text.**  
-- **Do NOT display raw URLs anywhere in the response.**  
-- **Do NOT mix reference links within the main answer.**  
-- **Do NOT omit the "References" section when links are needed.** 
 
 This is a **final, strict, and structured Markdown version** of your table formatting guidelines."""
