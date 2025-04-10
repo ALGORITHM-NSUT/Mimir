@@ -1,6 +1,6 @@
 from fastapi import APIRouter, BackgroundTasks
 from controllers.chat_controller import handle_chat_request, user_chat_delete, get_all_chats, get_chat, generate_chatShare_link, generate_chatShare_link, get_shared_chat
-from controllers.chat_controller import get_response, prepare_chat_data, change_title, upsert_chat, continue_chat
+from controllers.chat_controller import get_response, prepare_chat_data, change_title, upsert_chat, continue_chat,qa_endpoint
 
 
 router = APIRouter()
@@ -18,6 +18,9 @@ async def chat_endpoint(data: dict, background_tasks: BackgroundTasks):
         "status": "processing."
     }
 
+@router.post("/qa")
+async def post_qa(query : str):
+    return await qa_endpoint(query)
 
 
 @router.get("/all")

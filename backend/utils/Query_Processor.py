@@ -48,7 +48,7 @@ logging.basicConfig(
     filemode='a'  # Append to the file instead of overwriting
 )
 
-max_keys = 17
+max_keys = 3
 def get_next_index() -> int:
     # Get current index
     try:

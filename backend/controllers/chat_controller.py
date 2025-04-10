@@ -69,6 +69,7 @@ async def handle_chat_request(data: dict):
     isDeepSearch = data.get("isDeepSearch", False)  # Get the deep search flag
 
     client = genai.Client(api_key=GEMINI_API_KEY)
+    # new route (query string , chats)
     chats = client.chats.create(
         model="gemini-2.0-flash-thinking-exp-01-21",
         config=types.GenerateContentConfig(
@@ -77,6 +78,7 @@ async def handle_chat_request(data: dict):
         # response_schema=response_format,
         temperature=0.3)
     )
+    
 
     if not userId:
         raise HTTPException(status_code=400, detail="User ID is required")
@@ -330,3 +332,31 @@ async def continue_chat(data: dict):
    
 
     return {"newChatId": new_chat_id}
+
+async def qa_endpoint(query : str):
+    try:
+            # new route (query string , chats)
+        chats = client.chats.create(
+            model="gemini-2.0-flash-thinking-exp-01-21",
+            config=types.GenerateContentConfig(
+            system_instruction=Semantic_cache_prompt,
+            # response_mime_type='application/json',
+            # response_schema=response_format,
+            temperature=0.3)
+        )
+        full_response = await response_strategy(query, chats)
+        response_text = full_response["response"]
+        references = full_response["references"]
+        code = full_response["code"]
+
+        message_data = {
+            "query": query,
+            "response": response_text,
+            "references": references,
+        }
+        return {"query" : query,
+                "response_text" : response_text,
+                "references" : references,
+        },200
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
