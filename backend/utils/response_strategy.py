@@ -54,7 +54,7 @@ async def response_strategy(message: str, chat, is_deep_search=False):
             answer = {}  # Initialize answer dictionary here
             
             if json_data.get("retrieve"):
-                answer = await qp.process_query(json_data["original_augmented_query"], json_data["action_plan"], json_data["document_level"], is_deep_search)
+                answer = await qp.process_query(user_input, json_data["action_plan"], json_data["document_level"], is_deep_search)
                 answer["retrieve"] = True
                 chat.record_history(
                     user_input = "",

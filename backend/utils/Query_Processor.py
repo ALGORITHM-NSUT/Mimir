@@ -302,7 +302,7 @@ class QueryProcessor:
                     "queryVector": query_vector,
                     "path": "embedding",
                     "numCandidates": 5000,
-                    "limit": 50,
+                    "limit": 25,
                     "index": "vector_index"
                 }
             },
@@ -363,7 +363,7 @@ class QueryProcessor:
                             }
                         },
                         {
-                            "$limit": 50
+                            "$limit": 25
                         },   
                         {
                             "$group": {
@@ -524,7 +524,7 @@ class QueryProcessor:
         maxdocs = 20
         async def search_query(query):
             limit = int(max(10, query["expansivity"] * maxdocs))
-            vector_weight = min(0.7, max(0.3, 1 - query["specificity"]))
+            vector_weight = min(0.6, max(0.4, 1 - query["specificity"]))
             full_text_weight = 1 - vector_weight
             return await self._search_query(query["embedding"], seen_ids, minscore, vector_weight, full_text_weight, limit, doc_ids, query["query"])
         
