@@ -71,7 +71,7 @@ async def handle_chat_request(data: dict):
     client = genai.Client(api_key=GEMINI_API_KEY)
     # new route (query string , chats)
     chats = client.chats.create(
-        model="gemini-2.0-flash-thinking-exp-01-21",
+        model="gemini-2.5-flash-preview-04-17",
         config=types.GenerateContentConfig(
         system_instruction=Semantic_cache_prompt,
         # response_mime_type='application/json',
