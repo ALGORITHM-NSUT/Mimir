@@ -1,0 +1,35 @@
+name: Ping Mimir
+
+on:
+  schedule:
+    - cron: "*/10 * * * *" 
+
+jobs:
+  run-script:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call GET Route with Retry
+        run: |
+          MAX_RETRIES=3
+          RETRY_DELAY=30  # seconds
+          ATTEMPT=1
+
+          while [ $ATTEMPT -le $MAX_RETRIES ]; do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://mimir-c69y.onrender.com/)
+            echo "Attempt $ATTEMPT: Response Code: $STATUS"
+
+            if [ "$STATUS" -eq 200 ]; then
+              echo "Success: API is healthy."
+              exit 0
+            fi
+
+            if [ $ATTEMPT -lt $MAX_RETRIES ]; then
+              echo "Retrying in $RETRY_DELAY seconds..."
+              sleep $RETRY_DELAY
+            fi
+
+            ATTEMPT=$((ATTEMPT + 1))
+          done
+
+          echo "Failed to get a 200 OK after $MAX_RETRIES attempts."
+          exit 1
