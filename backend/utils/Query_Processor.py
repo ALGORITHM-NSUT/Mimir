@@ -108,40 +108,63 @@ class QueryProcessor:
             ans = {}
             step = 1
             queries = plan[step - 1]["specific_queries"]
-            doc_queries = plan[step - 1]["document_queries"]
-
-            for iteration in range(max_iter):
-                doc_ids = []
-                # doc_ids = await self._search_docs(doc_queries) if doc_queries else []
-                chunk_results, current_docids, seen_ids = await self._search_in_chunks(queries, seen_ids, doc_ids, iteration + 1)
-                iteration_context = self._format_context(chunk_results)
-                context_entries.append(iteration_context)
+            if not document_level:
+                for iteration in range(max_iter):
+                    docs = []
+                    doc_ids = []
+                    # if docs:
+                    #     doc_ids = [doc["_id"] for doc in docs]
+                    # else:
+                    #     doc_ids = []
+                    chunk_results, current_docids, seen_ids = await self._search_in_chunks(queries, seen_ids, doc_ids, iteration + 1)
+                    iteration_context = self._format_context(chunk_results)
+                    context_entries.append(iteration_context)
+                    ans = await self._generate_answer(
+                        question, 
+                        iteration_context, 
+                        self.current_date, 
+                        plan, 
+                        knowledge, 
+                        max_iter, 
+                        iteration + 1, 
+                        step, 
+                        model_to_use,
+                        document_level,
+                        queries
+                    )  
+                    
+                    if "final_answer" in ans and ans["final_answer"]:
+                        ans["answer"] = self.fix_markdown_tables(ans["answer"])
+                        return ans
+                    if iteration == max_iter - 1:
+                        return ans
+                    if "answer" in ans and ans["answer"] is not None:
+                        knowledge += str(ans["answer"]) + "\n"
+                    if "links" in ans and len(ans["links"]) != 0:
+                        knowledge = knowledge + " " + json.dumps(ans["links"], indent=2) + "\n\n"
+                    
+                    step = ans["step"]
+                    queries = ans["specific_queries"]
+            else:
+                docs = await self._search_docs(question, document_level)
+                context = self._format_context(docs)
+                max_iter = 1
+                step = 1
                 ans = await self._generate_answer(
                     question, 
-                    iteration_context, 
+                    context, 
                     self.current_date, 
                     plan, 
                     knowledge, 
                     max_iter, 
-                    iteration + 1, 
+                    1, 
                     step, 
-                    model_to_use  # Pass the selected model
-                )  
-                
-                if "full_action_plan_compelete" in ans and ans["full_action_plan_compelete"]:
-                    return ans
-                if iteration == max_iter - 1:
-                    return ans
-                if "answer" in ans and ans["answer"] is not None:
-                    knowledge += str(ans["answer"]) + "\n"
-                if "links" in ans and len(ans["links"]) != 0:
-                    knowledge = knowledge + " " + json.dumps(ans["links"], indent=2) + "\n\n"
-                
-                step = ans["step"]
-                doc_queries = ans["document_queries"]
-                queries = ans["specific_queries"]
-
-            return ans  
+                    model_to_use,
+                    document_level,
+                    queries
+                )
+            return ans 
+         
         except ModelAPIError as e:
             logging.error(f"Model API error in process_query: {str(e)}", exc_info=True)
             raise
@@ -155,6 +178,27 @@ class QueryProcessor:
             logging.error(f"Unexpected error in process_query: {str(e)}", exc_info=True)
             raise QueryProcessorError(f"Query processing failed: {str(e)}", e)
         
+    def fix_markdown_tables(self, text: str) -> str:
+        """Fix markdown tables in the text"""
+        lines = text.splitlines()
+        out = []
+        i = 0
+        header_re = re.compile(r"^\s*\|.*\|\s*$")
+        sep_re = re.compile(r"^\s*\|(?:[ \-]*\|)+\s*$")
+        while i < len(lines):
+            if header_re.match(lines[i]) and i+1 < len(lines) and sep_re.match(lines[i+1]):
+                cols = [c for c in lines[i].strip().strip('|').split('|')]
+                n = len(cols)
+                out.append(lines[i])
+                out.append('|' + '|'.join(['---']*n) + '|')
+                i += 2
+                while i < len(lines) and lines[i].strip().startswith("|"):
+                    out.append(lines[i])
+                    i += 1
+            else:
+                out.append(lines[i])
+                i += 1
+        return "\n".join(out)
 
     def _process_chunks(self, docs: set, all_results: list) -> list:
         doc_metadata_map = {}
