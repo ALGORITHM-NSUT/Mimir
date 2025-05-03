@@ -111,10 +111,11 @@ class QueryProcessor:
             if not document_level:
                 for iteration in range(max_iter):
                     docs = []
-                    if docs:
-                        doc_ids = [doc["_id"] for doc in docs]
-                    else:
-                        doc_ids = []
+                    doc_ids = []
+                    # if docs:
+                    #     doc_ids = [doc["_id"] for doc in docs]
+                    # else:
+                    #     doc_ids = []
                     chunk_results, current_docids, seen_ids = await self._search_in_chunks(queries, seen_ids, doc_ids, iteration + 1)
                     iteration_context = self._format_context(chunk_results)
                     context_entries.append(iteration_context)
@@ -133,6 +134,7 @@ class QueryProcessor:
                     )  
                     
                     if "final_answer" in ans and ans["final_answer"]:
+                        ans["answer"] = self.fix_markdown_tables(ans["answer"])
                         return ans
                     if iteration == max_iter - 1:
                         return ans
@@ -176,6 +178,27 @@ class QueryProcessor:
             logging.error(f"Unexpected error in process_query: {str(e)}", exc_info=True)
             raise QueryProcessorError(f"Query processing failed: {str(e)}", e)
         
+    def fix_markdown_tables(self, text: str) -> str:
+        """Fix markdown tables in the text"""
+        lines = text.splitlines()
+        out = []
+        i = 0
+        header_re = re.compile(r"^\s*\|.*\|\s*$")
+        sep_re = re.compile(r"^\s*\|(?:[ \-]*\|)+\s*$")
+        while i < len(lines):
+            if header_re.match(lines[i]) and i+1 < len(lines) and sep_re.match(lines[i+1]):
+                cols = [c for c in lines[i].strip().strip('|').split('|')]
+                n = len(cols)
+                out.append(lines[i])
+                out.append('|' + '|'.join(['---']*n) + '|')
+                i += 2
+                while i < len(lines) and lines[i].strip().startswith("|"):
+                    out.append(lines[i])
+                    i += 1
+            else:
+                out.append(lines[i])
+                i += 1
+        return "\n".join(out)
 
     def _process_chunks(self, docs: set, all_results: list) -> list:
         doc_metadata_map = {}
