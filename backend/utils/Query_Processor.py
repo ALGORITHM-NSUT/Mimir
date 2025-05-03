@@ -111,10 +111,11 @@ class QueryProcessor:
             if not document_level:
                 for iteration in range(max_iter):
                     docs = []
-                    if docs:
-                        doc_ids = [doc["_id"] for doc in docs]
-                    else:
-                        doc_ids = []
+                    doc_ids = []
+                    # if docs:
+                    #     doc_ids = [doc["_id"] for doc in docs]
+                    # else:
+                    #     doc_ids = []
                     chunk_results, current_docids, seen_ids = await self._search_in_chunks(queries, seen_ids, doc_ids, iteration + 1)
                     iteration_context = self._format_context(chunk_results)
                     context_entries.append(iteration_context)
@@ -133,6 +134,7 @@ class QueryProcessor:
                     )  
                     
                     if "final_answer" in ans and ans["final_answer"]:
+                        ans["answer"] = self.fix_markdown_tables(ans["answer"])
                         return ans
                     if iteration == max_iter - 1:
                         return ans
