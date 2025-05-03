@@ -32,10 +32,10 @@ const ChatPage = () => {
 
   // Suggestion examples
   const suggestions = [
-    "Tell me details about annual sprorts day 2025",
+    "Tell me details about annual sports day 2025",
     "Give me academic calendar for 2025",
     "Tell me about the Computer Science department",
-    "How to register for algortihm east society of nsut"
+    "How to register for algorithm east society of nsut"
   ];
 
   useEffect(() => {

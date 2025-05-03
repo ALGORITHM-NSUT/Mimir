@@ -47,7 +47,7 @@ logging.basicConfig(
     filemode='a'  # Append to the file instead of overwriting
 )
 
-max_keys = 17
+max_keys = 3
 def get_next_index() -> int:
     # Get current index
     try:
@@ -74,9 +74,9 @@ mongoDb_client = AsyncIOMotorClient(MONGO_URI_MIMIIR)
 
 # Thinking Model
 
-llm2 = "gemini-2.0-flash-thinking-exp-01-21"
+llm2 = "gemini-2.5-flash-preview-04-17"
 # Action Model for quick search
-llm = "gemini-2.0-flash"
+llm = "gemini-2.5-flash-preview-04-17"
 
 
 MAX_RETRIES = 3
@@ -91,7 +91,7 @@ class QueryProcessor:
         self.search_prompt = Gemini_search_prompt
         logging.info("QueryProcessor initialized")
 
-    async def process_query(self, question: str, plan: list, is_deep_search: bool = False):
+    async def process_query(self, question: str, plan: list, document_level: bool, is_deep_search: bool = False):
         """Iterative retrieval process with dynamic query adjustment"""
         try:
             # Select model based on deep search flag
@@ -111,11 +111,10 @@ class QueryProcessor:
             if not document_level:
                 for iteration in range(max_iter):
                     docs = []
-                    doc_ids = []
-                    # if docs:
-                    #     doc_ids = [doc["_id"] for doc in docs]
-                    # else:
-                    #     doc_ids = []
+                    if docs:
+                        doc_ids = [doc["_id"] for doc in docs]
+                    else:
+                        doc_ids = []
                     chunk_results, current_docids, seen_ids = await self._search_in_chunks(queries, seen_ids, doc_ids, iteration + 1)
                     iteration_context = self._format_context(chunk_results)
                     context_entries.append(iteration_context)
@@ -134,7 +133,6 @@ class QueryProcessor:
                     )  
                     
                     if "final_answer" in ans and ans["final_answer"]:
-                        ans["answer"] = self.fix_markdown_tables(ans["answer"])
                         return ans
                     if iteration == max_iter - 1:
                         return ans
@@ -202,45 +200,51 @@ class QueryProcessor:
 
     def _process_chunks(self, docs: set, all_results: list) -> list:
         doc_metadata_map = {}
-        for doc in docs:
+        
+        for doc_id in docs:
+            content = []
             metadata = {}
-            content = ""
             pages_added = set()
-            page_summaries = []  # will hold the list from metadata later
+            page_summaries = []
+            
+            matching_chunks = [chunk for chunk in all_results if str(chunk["doc_id"]) == doc_id]
+            if not matching_chunks:
+                continue
+                
+            # Initialize metadata from first chunk
+            first_chunk = matching_chunks[0]
+            metadata = first_chunk["doc_info"][0]
+            metadata["Publish Date"] = metadata["Publish Date"].date().isoformat()
+            metadata["summary"] = metadata.get("summary", "")
+            page_summaries = metadata.pop("page_summaries", [])
+            
+            # Process each chunk
+            for chunk in matching_chunks:
+                page = chunk["page"]
+                
+                # Add page summary if not already added
+                if page not in pages_added and (page - 1) < len(page_summaries):
+                    content.append(f"page : {page}")
+                    content.append(f"summary for page : {page_summaries[page - 1]}\n")
+                    pages_added.add(page)
+                
+                # Add chunk content
+                content.append(f"chunk number: {chunk['chunk_num']}")
+                content.append(chunk['text'])
+                
+                if chunk.get("table_summary"):
+                    content.append(f"table summary: {chunk['table_summary']}")
+                content.append("")  # Empty line between chunks
+            
+            if content:
+                metadata["content"] = "\n".join(content)
+                doc_metadata_map[doc_id] = metadata
 
-            for chunk in all_results:
-                if str(chunk["doc_id"]) == doc:
-                    # On first encounter, initialize metadata and extract page summaries
-                    if not metadata:
-                        metadata = chunk["doc_info"][0]
-                        metadata["Publish Date"] = metadata["Publish Date"].date().isoformat()
-                        # Ensure document-level summary is added as a field.
-                        metadata["summary"] = metadata.get("summary", "")
-                        # Extract the list of page summaries (0-indexed list)
-                        page_summaries = metadata.get("page_summaries", [])
-                        metadata.pop("page_summaries")
-                        
-                    page = chunk["page"]
-                    # Add page summary only once per page.
-                    if page not in pages_added and (page - 1) < len(page_summaries):
-                        content += f"page : {page} \n summary for page : {page_summaries[page - 1]}\n\n"
-                        pages_added.add(page)
-                        
-                    # Append chunk details.
-                    content += f"chunk number: {chunk['chunk_num']}\n" + f"{chunk['text']}\n"
-                    if "table_summary" in chunk and chunk["table_summary"]:
-                        content += f"table summary: {chunk['table_summary']}\n"
-
-                    content += "\n"
-                    
-            if content and metadata:
-                metadata["content"] = content
-                doc_metadata_map[doc] = metadata
-
-        sorted_documents = sorted(
-            doc_metadata_map.values(), key=lambda x: x["Publish Date"], reverse=True
+        return sorted(
+            doc_metadata_map.values(),
+            key=lambda x: x["Publish Date"],
+            reverse=True
         )
-        return sorted_documents
 
 
     def _format_context(self, items: list) -> str:
@@ -252,6 +256,7 @@ class QueryProcessor:
         return context
     
     async def _doc_query(self, doc_query_vector, limit: int, query: str) -> list:
+        minscore = 0.75
         pipeline = [
             {
                 "$vectorSearch": {
@@ -262,20 +267,27 @@ class QueryProcessor:
                     "index": "vector_index"
                 }
             },
+            {"$addFields": {"vs_score": {"$meta": "vectorSearchScore"}}},
+            {"$sort": { "vs_score": -1 }},
+            {"$match": {"vs_score": {"$gte": minscore}}},
             {
                 "$project": {
-                    "_id": 1,
                     "summary": 1,
-                    "Publish Date": 1
+                    "Publish Date": 1,
+                    "Title": 1,
+                    "Published By": 1,
+                    "Publishing Post": 1,
+                    "Publishing Department": 1,
+                    "Link": 1
                 }
             }
         ]
         for attempt in range(MAX_RETRIES):  # Retry up to 5 times
             try:
+                
                 result = self.documents.aggregate(pipeline)
-                docs = [{"_id" : doc["_id"], "summary" : doc["summary"], "Publish Date": doc["Publish Date"].date().isoformat()} async for doc in result]
-                reranked = await self._rerank(docs, query, ["summary"])
-                return reranked
+                docs = [{"Title": doc["Title"], "summary" : doc["summary"], "Publish Date": doc["Publish Date"].date().isoformat(), "Published By": doc["Published By"], "Publishing Department": doc["Publishing Department"], "Link": doc["Link"]} async for doc in result]
+                return docs
                     
             except OperationFailure as e:
                 logging.warning(f"MongoDB OperationFailure: {e}, retrying...")
@@ -290,17 +302,13 @@ class QueryProcessor:
                 await asyncio.sleep(2 ** attempt + random.uniform(0, 1))
 
         
-    async def _search_docs(self, queries: list) -> list:
+    async def _search_docs(self, query: str, document_level: bool = False) -> list:
         """Search documents based on query string"""
         try:
             limit = 50
-            async def doc_query(queryembed, query):
-                return await self._doc_query(queryembed, limit, query)
-            queryembeds = await self._get_vector(queries)
-            tasks = [asyncio.create_task(doc_query(queryembeds[i], queries[i])) for i in range(len(queryembeds))]
-            results_list = await asyncio.gather(*tasks)
-            results = [item for sublist in results_list for item in sublist]
-            return list({item["_id"] for item in results})
+            queryembeds = await self._get_vector([query])
+            return await self._doc_query(queryembeds[0], limit, query)
+            
         except Exception as e:
             logging.error(f"Error in _search_docs: {str(e)}")
             raise DatabaseError(f"Error in _search_docs, document searching failed: {str(e)}")
@@ -308,6 +316,7 @@ class QueryProcessor:
     async def _search_query(self, query_vector, seen_ids: set, minscore: float, vector_weight: float, full_text_weight: float, limit: int, doc_ids: list, query: str) -> list:
         """Search query with MongoDB quota handling"""
         keyword = query[query.find('"') + 1:query.rfind('"')]
+        query = query.replace('"', '')
         pipeline = [
             {
                 "$vectorSearch": {
@@ -439,12 +448,6 @@ class QueryProcessor:
                 "$project": {
                     "vs_score": {"$ifNull": ["$vs_score", 0]},
                     "fts_score": {"$ifNull": ["$fts_score", 0]},
-                    "score": {
-                        "$add": [
-                            {"$ifNull": ["$vs_score", 0]},
-                            {"$ifNull": ["$fts_score", 0]}
-                        ]
-                    },
                     "_id": 1,
                     "doc_id": 1,
                     "chunk_id": 1,
@@ -466,10 +469,33 @@ class QueryProcessor:
             {"$sort": {"score": -1}},
             {"$limit": limit}
         ]
-        if doc_ids:
-            pipeline[8]["$unionWith"]["pipeline"].insert(1, {"$match": {"doc_id": {"$in": doc_ids}}})
-            pipeline[0]["$vectorSearch"]["filter"] = {"doc_id": {"$in": doc_ids}}
-        
+        preferred_doc_boost = 1.25 
+        # if doc_ids:
+        #     pipeline[11]["$project"]["score"] = {
+        #         "$multiply": [
+        #             {
+        #                 "$add": [
+        #                     {"$ifNull": ["$vs_score", 0]},
+        #                     {"$ifNull": ["$fts_score", 0]}
+        #                 ]
+        #             },
+        #             {
+        #                 "$cond": {
+        #                     "if": {"$in": ["$doc_id", doc_ids]},
+        #                     "then": preferred_doc_boost,
+        #                     "else": 1.0
+        #                 }
+        #             }
+        #         ]
+        #     }
+        # else:
+            # Original score calculation if no doc_ids provided
+        pipeline[11]["$project"]["score"] = {
+            "$add": [
+                {"$ifNull": ["$vs_score", 0]},
+                {"$ifNull": ["$fts_score", 0]}
+            ]
+        }
         if keyword:
             pipeline[8]["$unionWith"]["pipeline"][0]["$search"]["compound"] = {
                 "must": [
@@ -491,8 +517,8 @@ class QueryProcessor:
             }
         else:
             pipeline[8]["$unionWith"]["pipeline"][0]["$search"]["text"] = {"query": query, "path": ["text", "table_summary"]}
-        # else:
-        #     pipeline[0]["$vectorSearch"]["filter"] = {"_id": {"$nin": list(seen_ids)}}
+        
+        #pipeline[0]["$vectorSearch"]["filter"] = {"_id": {"$nin": list(seen_ids)}}
         for attempt in range(MAX_RETRIES):  # Retry up to 5 times
             try:
                 cursor = self.chunks.aggregate(pipeline)
@@ -516,7 +542,7 @@ class QueryProcessor:
 
     async def _search_in_chunks(self, queries: list, seen_ids: set, doc_ids: list, iteration: int) -> list:
         minscore = 0.75
-
+        maxdocs = 20
         async def search_query(query):
             limit = int(max(10, query["expansivity"] * maxdocs))
             vector_weight = min(0.6, max(0.4, 1 - query["specificity"]))
@@ -582,16 +608,17 @@ class QueryProcessor:
     
     async def _generate_answer(self, question: str, context: str, current_date: str, plan: list, knowledge: str, max_iter: int, iteration: int, step: int, model_to_use: str = llm, document_level: bool = False, specific_queries: list = None) -> dict:
         """Generate and format final response"""
-        specific_queries = []
-        if step != -1:
-            step = min(step, len(plan) - 1)
-            specific_queries = plan[step - 1]["specific_queries"]
+        full_plan = {}
+        if document_level:
+            full_plan = {"original user question for correct document identification": question, "plan": plan}
+            specific_queries = ["This is a document level query, using given summaries, give brief about sources that may be used as a source to answer the question, the user does nt require exact answer, but a brief about the relevant sources"]
         else:
-            specific_queries = ["abandoned action plan in previous step directly searching user queries"]
+            full_plan = {"original user question": question, "plan": plan}
+            
         warning = ""
         if model_to_use == llm2:
             warning = "if final response is too long to fit in the output window, give as much as possible then truncate some of it and give relevant documents, but the json format shouldn't be broken."
-        full_plan = {"original user question": question, "plan": plan}
+        
         for attempt in range(MAX_RETRIES):
             try:
                 llmcontext = self.search_prompt.substitute(

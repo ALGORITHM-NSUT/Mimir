@@ -45,8 +45,7 @@ Given a user query, determine if the answer is in the chat history.
 5. **answer**: Contains the response based on the chat history if `"retrieve": false`; otherwise, leave it empty.  
 
 # **HIGH PRIORITY INSTRUCTION**
-- **ALWAYS Use both full form and abbreviation in both document queries and specific queries in every single query, no need to make multiple queries just to have both abbrevation and full form** if possible. (example: "CSDA (Big Data Analytics)")  
-
+- **ALWAYS Use both full form and abbreviation together in every single query, no need to make multiple queries just to have both abbrevation and full form** if possible. (example: if provided "CSDA" change to "B.tech CSDA (Big Data Analytics)")  
 
 ## **Retrieval Decision Logic with Knowledge Context**  
 - **Use chat history only if the exact information is present**.
@@ -119,6 +118,7 @@ ADMINISTRATIVE DOCUMENTS:
 
 CAMPUS INFORMATION: 
 - Main Campus: 
+    Phd,
     BBA, 
     BFtech, 
     B.Tech:
@@ -136,6 +136,8 @@ CAMPUS INFORMATION:
         ME(Mechanical Engineering)
 
 - East Campus:
+    Phd,
+    M.Tech,
     B.Tech:
         CSDA(**Big** Data Analytics), (Important note ot be remembered for this branch: The B is not present in the full form but it still Big Data Analytics) 
         ECAM(artificial intelligence and machine learning), 
@@ -197,21 +199,18 @@ Generated Action Plan:
             "step": 1,
             "specific_queries": [
                 {
-                    "query": "NSUT Academic Calendar 2025 official holidays",
+                    "query": "official Diwali holiday details for <current year>",
                     "specificity": 0.6,
                     "expansivity": 0.9
                 }
-            ],
-            "document_queries": [
-                "Academic Calendar for 2025",
-                "Official Notices & Circulars for considering Diwali 2025"
             ]
         }
     ],
     knowledge: ""
 }
 Reasoning Explanation:
-Step 1: First, search the Academic Calendar for all listed holidays.
+Step 1: First, search for asked holiday.(fill current year with actual year using given date)
+
 
 Example 2: Query for Seating Arrangement of Students
 Query: "were rohit singla and rajeev chauhan seated together in same room for 6th sem midsem exams? they are in csda"
@@ -234,9 +233,6 @@ Generated Action Plan:
           'specificity': 0.9,
           'expansivity': 0.4
         }
-      ],
-      'document_queries': [
-        'Official Gazette Report for 5th semester East Campus Computer Science and Data Analytics (CSDA) branch'
       ]
     },
     {
@@ -252,9 +248,6 @@ Generated Action Plan:
           'specificity': 0.95,
           'expansivity': 0.6
         }
-      ],
-      'document_queries': [
-        'Seating plan for 6th semester midsem exams for Computer Science and Big Data Analytics (CSDA) branch'
       ]
     }
   ],
@@ -281,20 +274,10 @@ Generated Action Plan:
                     "expansivity": 0.7
                 },
                 {
-                    "query": "Summer semester start date for 2025 at NSUT",
+                    "query": "Summer semester start date for 2025",
                     "specificity": 0.6,
                     "expansivity": 0.3
-                },
-                {
-                    "query": "academic caldendar 2025",
-                    "specificity": 0.3,
-                    "expansivity": 0.8
                 }
-            ],
-            "document_queries": [
-                "Fee Structure Document",
-                "Academic calendar for 2025",
-                "summer semester guidelines"
             ]
         }
     ],
@@ -321,9 +304,6 @@ Generated Action Plan:
                     "expansivity": 0.4
                 },
                 
-            ],
-            "document_queries": [
-                "Official gazette report for 4th semester Y branch 2023"
             ]
         }
     ],
@@ -396,7 +376,6 @@ STRICT RULES TO ENFORCE:
 ✔ You CANNOT ask for documents that may not have been released by now for any verfication, pay attention
 ✔ Action plan must be structured step-by-step.
 ✔ Each step has at least one specific query.
-✔ Document queries should only be included if relevant.
 ✔ Use previous user knowledge if available.
 ✔ Queries must be highly precise and optimized for retrieval.
 ✔ DO NOT HALLUCINATE AND GENERATE INFORMATION YOURSELF, ONLY USE INFORMATION YOU CAN ACCURATELY LOGICALLY INFER OR IS DIRECTLY GIVEN
