@@ -2,12 +2,18 @@ name: Ping Mimir
 
 on:
   schedule:
-    - cron: "*/10 * * * *" 
+    - cron: "*/9 * * * *"  
 
 jobs:
   run-script:
     runs-on: ubuntu-latest
     steps:
+      - name: Random Delay (0–180 seconds)
+        run: |
+          DELAY=$((RANDOM % 181))
+          echo "Sleeping for $DELAY seconds to randomize call..."
+          sleep $DELAY
+
       - name: Call GET Route with Retry
         run: |
           MAX_RETRIES=3
