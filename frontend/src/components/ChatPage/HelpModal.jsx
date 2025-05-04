@@ -55,7 +55,6 @@ const HelpModal = ({ onClose }) => {
             <div className="bg-[#404040] rounded-lg p-4">
               <ul className="list-disc pl-5 space-y-2">
                 <li>If responses seem irrelevant, try rephrasing your question.</li>
-                <li>Deep Search mode may time out for complex queries - try breaking them down.</li>
                 <li>Network issues may cause interruptions - check your connection if responses fail.</li>
                 <li>Session timeouts may require you to log in again.</li>
               </ul>
@@ -67,9 +66,7 @@ const HelpModal = ({ onClose }) => {
             <h3 className="text-lg font-medium text-red-400 mb-2">Rate Limits</h3>
             <div className="bg-[#404040] rounded-lg p-4">
               <ul className="list-disc pl-5 space-y-2">
-                <li>Maximum 150 characters per query.</li>
-                <li>Deep Search is limited to 1 requests per minute.</li>
-                <li>Quick Search has a limit of 2 requests per minute.</li>
+                <li>Maximum 200 characters per query.</li>
                 <li>Excessive usage may result in temporary throttling.</li>
               </ul>
             </div>
@@ -82,7 +79,7 @@ const HelpModal = ({ onClose }) => {
               <ul className="list-disc pl-5 space-y-2">
                 <li>Mimir uses AI to retrieve information from university documents.</li>
                 <li>Share your conversations using the share button in the header.</li>
-                <li>All responses should be verified with official sources.</li>
+                <li>All responses are verified with official sources.</li>
                
                 <li>For technical support, contact <span className="text-cyan-400">algorithmnsut@gmail.com</span></li>
               </ul>

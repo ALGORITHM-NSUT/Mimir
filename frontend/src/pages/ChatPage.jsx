@@ -182,8 +182,6 @@ const ChatPage = () => {
           { messageId }
         );
 
-        console.log("Polling Response:", response.data);
-
         const { response: botResponse, references } = response.data;
 
         if (botResponse && botResponse !== "Processing") {
@@ -223,7 +221,7 @@ const ChatPage = () => {
     const handleScroll = () => {
       if (chatContainerRef.current) {
         const { scrollTop, scrollHeight, clientHeight } = chatContainerRef.current;
-        setShowScrollButton(scrollTop + clientHeight < scrollHeight - 100);
+        setShowScrollButton(scrollTop + clientHeight < scrollHeight);
       }
     };
 
@@ -262,12 +260,13 @@ const ChatPage = () => {
           className="flex-grow flex sm:max-h-[80vh] max-h-[80vh] flex-col px-4 sm:px-10 overflow-y-auto pb-24 sm:pb-28 w-full"
         >
           {isNewChat === true ? (
-            <div className="flex flex-col justify-center items-center mt-10 flex-grow">
-              <h1 className="text-center text-5xl sm:text-5xl lg:text-5xl font-semibold bg-gradient-to-r from-violet-400 via-blue-400 to-pink-400 text-transparent bg-clip-text py-2">
+            <div className="flex flex-col justify-center items-center md:mt-10 flex-grow">
+              <h1 className="text-center text-5xl font-semibold bg-gradient-to-r from-violet-400 via-blue-400 to-pink-400 text-transparent bg-clip-text py-2">
                 What can I help with?
               </h1>
+              
               <motion.div
-                      className="mt-6 text-cyan-400 transition-colors cursor-pointer flex flex-col items-center"
+                      className="mt-4 md:mt-6 text-cyan-400 transition-colors cursor-pointer flex flex-col items-center"
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
                       transition={{ delay: 0.6 }}
@@ -276,20 +275,21 @@ const ChatPage = () => {
                       whileTap={{ scale: 0.95 }}
                     >
                       <p className="text-sm ">Try asking about these topics</p>
+                      <p className="text-gray-500 text-xs"> (Knowlege cutoff: 1 Jan 2024) </p>
                     </motion.div>
 
               {/* Redesigned Suggestion Section */}
               <AnimatePresence>
                 {showSuggestions && (
                   <motion.div
-                    className="mt-8 flex flex-col items-center w-full max-w-3xl"
+                    className="mt-6 md:mt-8 flex flex-col items-center w-full max-w-3xl"
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
                     transition={{ duration: 0.5 }}
                   >
                     <motion.p
-                      className="text-gray-400 mb-4 text-center"
+                      className="text-gray-400 mb-2 md:mb-4 text-center"
                       initial={{ opacity: 0, y: -10 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: 0.1 }}
@@ -297,7 +297,7 @@ const ChatPage = () => {
                       
                     </motion.p>
 
-                    <div className="grid grid-cols-2 gap-4 sm:w-[80%]">
+                    <div className="grid md:grid-cols-2 gap-4 sm:w-[80%]">
                       {suggestions.map((suggestion, index) => (
                         <motion.div
                           key={index}
@@ -315,7 +315,7 @@ const ChatPage = () => {
                           }}
                           whileTap={{ scale: 0.98 }}
                           onClick={() => handleSuggestionClick(suggestion)}
-                          className="bg-gradient-to-br from-[#2a2a2a] to-[#303030] text-gray-200 p-5 rounded-xl cursor-pointer 
+                          className="bg-gradient-to-br from-[#2a2a2a] to-[#303030] text-gray-200 p-3 lg:p-5 rounded-xl cursor-pointer 
                             border border-gray-700 shadow-lg transition-all duration-300 text-sm sm:text-base
                             flex items-center relative overflow-hidden group"
                         >
@@ -409,8 +409,8 @@ const ChatPage = () => {
         <ScrollCue showScrollButton={showScrollButton} chatContainerRef={chatContainerRef} />
       </div>
 
-      <div className="fixed bottom-0 left-1/2 -translate-x-1/2 mb-2 text-gray-400 text-xs font-extralight text-center whitespace-nowrap max-w-[90%]">
-        <span>Mimir can make mistakes. Check important info.</span>
+      <div className="flex justify-center relative bottom-0 left-1/2 -translate-x-1/2 mb-2 text-gray-400 text-xs font-extralight text-center whitespace-nowrap max-w-[90%]">
+        <span>Mimir can make mistakes. Check important info. <span className="hidden sm:inline">(Knowlege cutoff: 1 Jan 2024)</span></span>
       </div>
 
       {/* Help Icon Button */}

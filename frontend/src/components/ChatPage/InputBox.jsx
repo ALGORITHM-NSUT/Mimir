@@ -109,29 +109,100 @@ const InputBox = ({ onSendMessage, setAlert }) => {
       exit="exit"
       variants={containerVariants}
       transition={{ duration: 0.3 }}
-      className={`relative flex items-center py-1 px-4 bg-[#303030]
+      className={`relative flex items-center py-2 px-4 bg-[#303030]
         backdrop-blur-lg shadow-xl rounded-3xl w-full sm:w-[65%] overflow-hidden 
         transition-all duration-300 ${glowEffect}`}
       onClick={() => textAreaRef.current?.focus()}
     >
      
 
-      <div className="relative flex-1">
-        <textarea
-          ref={textAreaRef}
-          className="flex-1 p-3 pt-8 text-md sm:text-base outline-none 
-            text-gray-100 bg-transparent placeholder-gray-400 rounded-lg 
-            resize-none overflow-auto max-h-[150px] min-h-[40px] w-full 
-            transition-all duration-200"
-          placeholder="Ask anything..."
-          value={message}
-          maxLength={MAX_CHAR_LIMIT}
-          onChange={handleChange}
-          onFocus={() => setIsFocused(true)}
-          onBlur={() => setIsFocused(false)}
-          onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && (e.preventDefault(), handleSend())}
-        />
-        
+      <div className="relative flex-1 items-center justfy-center">
+        <div className="inset-0 flex items-center justify-center p-4 mt-2">
+          <textarea
+            ref={textAreaRef}
+            className="flex-1 text-md sm:text-base outline-none 
+              text-gray-100 bg-transparent placeholder-gray-400 rounded-lg 
+              resize-none overflow-auto max-h-[150px] w-full min-h-[40px]
+              transition-all duration-200"
+            placeholder="Ask me anything from NSUT..."
+            value={message}
+            maxLength={MAX_CHAR_LIMIT}
+            onChange={handleChange}
+            onFocus={() => setIsFocused(true)}
+            onBlur={() => setIsFocused(false)}
+            onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && (e.preventDefault(), handleSend())}
+          />
+          
+        </div>
+      </div>
+
+      {/* Action Buttons */}
+      <div className="flex grid gap-2 items-center justify-center">
+        <div className="flex items-center gap-2">
+          {/* <motion.button
+            className={`p-3 text-gray-50 rounded-full 
+              bg-[#404040] hover:bg-[#505050] transition-all
+              ${isDeepSearch ? 
+                'text-yellow-400 ring-1 ring-yellow-400/30 shadow-[0_0_10px_rgba(250,204,21,0.2)]' : 
+                'text-gray-400'
+              }
+              hover:shadow-yellow-500/30 relative`}
+            onClick={handleDeepSearchToggle}
+            whileHover="hover"
+            whileTap="tap"
+            variants={buttonVariants}
+            title={isDeepSearch ? "Deep Search Mode" : "Quick Search Mode"}
+          >
+            <MdTravelExplore size={22} />
+            {isDeepSearch && (
+              <motion.div
+                className="absolute inset-0 rounded-full bg-yellow-400/10"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.3 }}
+              />
+            )}
+          </motion.button> */}
+
+          <motion.div
+            whileHover="hover"
+            whileTap="tap"
+            variants={buttonVariants}
+          >
+            <SpeechButton 
+              setMessage={setMessage} 
+              isListening={isListening} 
+              setIsListening={setIsListening} 
+            />
+          </motion.div>
+
+          <motion.button
+            className={`p-3 ml-2 mb-2 text-gray-50 rounded-full transition-all shadow-md
+              ${message.trim() ? 
+                `${isDeepSearch ? 
+                  'bg-[#404040] hover:bg-[#505050]' : 
+                  ''
+                  
+                }` : 
+                'opacity-50 cursor-not-allowed bg-[#404040]'}`}
+            onClick={handleSend}
+            disabled={!message.trim()}
+            whileHover="hover"
+            whileTap="tap"
+            variants={buttonVariants}
+          >
+            <motion.div
+              animate={message.trim() ? { 
+                rotate: [0, 360],
+                scale: [1, 1.2, 1] 
+              } : {}}
+              transition={{ duration: 0.6, ease: "easeInOut" }}
+            >
+              <IoSend size={22} />
+            </motion.div>
+          </motion.button>
+        </div>
         {/* Character Counter */}
         <AnimatePresence>
           {message.length > 0 && (
@@ -139,9 +210,9 @@ const InputBox = ({ onSendMessage, setAlert }) => {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="absolute bottom-2 right-2 flex items-center gap-1"
+              className="absolute bottom-0 right-0 mr-4 mb-2 flex items-center gap-1 scale-95"
             >
-              <div className="h-1 w-20 bg-gray-700 rounded-full overflow-hidden">
+              <div className="h-1 w-16 bg-gray-700 rounded-full overflow-hidden right-0">
                 <motion.div
                   className="h-full bg-[#582EA6]"
                   initial={{ width: 0 }}
@@ -154,73 +225,6 @@ const InputBox = ({ onSendMessage, setAlert }) => {
             </motion.div>
           )}
         </AnimatePresence>
-      </div>
-
-      {/* Action Buttons */}
-      <div className="flex items-center gap-2">
-        <motion.button
-          className={`p-3 text-gray-50 rounded-full 
-            bg-[#404040] hover:bg-[#505050] transition-all
-            ${isDeepSearch ? 
-              'text-yellow-400 ring-1 ring-yellow-400/30 shadow-[0_0_10px_rgba(250,204,21,0.2)]' : 
-              'text-gray-400'
-            }
-            hover:shadow-yellow-500/30 relative`}
-          onClick={handleDeepSearchToggle}
-          whileHover="hover"
-          whileTap="tap"
-          variants={buttonVariants}
-          title={isDeepSearch ? "Deep Search Mode" : "Quick Search Mode"}
-        >
-          <MdTravelExplore size={22} />
-          {isDeepSearch && (
-            <motion.div
-              className="absolute inset-0 rounded-full bg-yellow-400/10"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.3 }}
-            />
-          )}
-        </motion.button>
-
-        <motion.div
-          whileHover="hover"
-          whileTap="tap"
-          variants={buttonVariants}
-        >
-          <SpeechButton 
-            setMessage={setMessage} 
-            isListening={isListening} 
-            setIsListening={setIsListening} 
-          />
-        </motion.div>
-
-        <motion.button
-          className={`p-3 ml-2 text-gray-50 rounded-full transition-all shadow-md
-            ${message.trim() ? 
-              `${isDeepSearch ? 
-                'bg-[#404040] hover:bg-[#505050]' : 
-                ''
-                
-              }` : 
-              'opacity-50 cursor-not-allowed bg-[#404040]'}`}
-          onClick={handleSend}
-          disabled={!message.trim()}
-          whileHover="hover"
-          whileTap="tap"
-          variants={buttonVariants}
-        >
-          <motion.div
-            animate={message.trim() ? { 
-              rotate: [0, 360],
-              scale: [1, 1.2, 1] 
-            } : {}}
-            transition={{ duration: 0.6, ease: "easeInOut" }}
-          >
-            <IoSend size={22} />
-          </motion.div>
-        </motion.button>
       </div>
 
       {/* Character limit warning */}
