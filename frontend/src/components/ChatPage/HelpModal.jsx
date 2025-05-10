@@ -9,89 +9,77 @@ const HelpModal = ({ onClose }) => {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[9999] 
-        flex items-center justify-center p-4"
+      className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[9999] flex items-center justify-center p-4"
       onClick={onClose}
-      style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 }}
     >
       <motion.div
         initial={{ scale: 0.95, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         exit={{ scale: 0.95, opacity: 0 }}
         onClick={e => e.stopPropagation()}
-        className="bg-[#303030] rounded-xl p-6 max-w-2xl w-full shadow-xl border border-gray-700 max-h-[80vh] overflow-y-auto"
+        className="bg-[#1f1f1f] rounded-2xl p-6 max-w-2xl w-full shadow-2xl border border-gray-700"
+        style={{
+          maxHeight: '80vh',
+          overflowY: 'auto',
+          scrollbarWidth: 'none', // Firefox
+          msOverflowStyle: 'none' // IE 10+
+        }}
       >
-        <div className="flex items-center justify-between mb-4">
+        <style>
+          {`
+            /* Hide scrollbar for Chrome, Safari and Opera */
+            div::-webkit-scrollbar {
+              display: none;
+            }
+          `}
+        </style>
+
+        {/* Header */}
+        <div className="flex items-center justify-between mb-5">
           <div className="flex items-center gap-3">
             <FaQuestionCircle size={24} className="text-cyan-400" />
-            <h2 className="text-xl font-semibold text-gray-100">Help & Information</h2>
+            <h2 className="text-2xl font-semibold text-white">Help & Information</h2>
           </div>
-          <button 
+          <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-200 transition-colors"
+            className="text-gray-400 hover:text-white transition-colors"
+            aria-label="Close"
           >
             <FaTimes size={20} />
           </button>
         </div>
 
-        <div className="space-y-6 text-gray-300">
-          {/* Usage Instructions
-          <div>
-            <h3 className="text-lg font-medium text-cyan-400 mb-2">Usage Instructions</h3>
-            <div className="bg-[#404040] rounded-lg p-4">
-              <ul className="list-disc pl-5 space-y-2">
-                <li>Type your query in the input box and press Enter or click the send button.</li>
-                <li>Toggle between Quick Search and Deep Search modes using the explore icon.</li>
-                <li>Use voice input by clicking the microphone icon.</li>
-                <li>Access previous conversations from the sidebar.</li>
-                <li>Share your conversations using the share button in the header.</li>
-              </ul>
-            </div>
-          </div> */}
-
-          {/* Common Failures */}
-          <div>
-            <h3 className="text-lg font-medium text-amber-400 mb-2">Common Issues</h3>
-            <div className="bg-[#404040] rounded-lg p-4">
-              <ul className="list-disc pl-5 space-y-2">
-                <li>If responses seem irrelevant, try rephrasing your question.</li>
-                <li>Network issues may cause interruptions - check your connection if responses fail.</li>
-                <li>Session timeouts may require you to log in again.</li>
-              </ul>
-            </div>
-          </div>
+        {/* Body */}
+        <div className="space-y-6 text-sm text-gray-300">
+          {/* Common Issues */}
+          <Section title="Common Issues" color="amber-400" items={[
+            'If responses seem irrelevant, try rephrasing your question.',
+            'Network issues may cause interruptions - check your connection.',
+            'Session timeouts may require you to log in again.'
+          ]} />
 
           {/* Rate Limits */}
-          <div>
-            <h3 className="text-lg font-medium text-red-400 mb-2">Rate Limits</h3>
-            <div className="bg-[#404040] rounded-lg p-4">
-              <ul className="list-disc pl-5 space-y-2">
-                <li>Maximum 200 characters per query.</li>
-                <li>Excessive usage may result in temporary throttling.</li>
-              </ul>
-            </div>
-          </div>
+          <Section title="Rate Limits" color="red-400" items={[
+            'Maximum 200 characters per query.',
+            'Excessive usage may result in temporary throttling.'
+          ]} />
 
           {/* Additional Info */}
-          <div>
-            <h3 className="text-lg font-medium text-purple-400 mb-2">Additional Information</h3>
-            <div className="bg-[#404040] rounded-lg p-4">
-              <ul className="list-disc pl-5 space-y-2">
-                <li>Mimir uses AI to retrieve information from university documents.</li>
-                <li>Share your conversations using the share button in the header.</li>
-                <li>All responses are verified with official sources.</li>
-               
-                <li>For technical support, contact <span className="text-cyan-400">algorithmnsut@gmail.com</span></li>
-              </ul>
-            </div>
-          </div>
+          <Section title="Additional Information" color="purple-400" items={[
+            'Mimir uses AI to retrieve information from university documents.',
+            'Share your conversations using the share button in the header.',
+            'All responses are verified with official sources.',
+            <>
+              For technical support, contact <span className="text-cyan-400">algorithmnsut@gmail.com</span>.
+            </>
+          ]} />
         </div>
 
-        <div className="mt-6 flex justify-end">
+        {/* Footer */}
+        <div className="mt-8 flex justify-end">
           <button
             onClick={onClose}
-            className="px-4 py-2 rounded-lg bg-cyan-600 text-white
-              hover:bg-cyan-700 transition-colors"
+            className="px-5 py-2.5 rounded-lg bg-cyan-600 text-white hover:bg-cyan-700 transition-colors text-sm font-medium"
           >
             Got it
           </button>
@@ -102,4 +90,15 @@ const HelpModal = ({ onClose }) => {
   );
 };
 
-export default HelpModal; 
+const Section = ({ title, color, items }) => (
+  <div>
+    <h3 className={`text-base font-semibold text-${color} mb-2`}>{title}</h3>
+    <ul className="bg-[#2a2a2a] rounded-lg p-4 list-disc pl-5 space-y-2">
+      {items.map((item, idx) => (
+        <li key={idx}>{item}</li>
+      ))}
+    </ul>
+  </div>
+);
+
+export default HelpModal;

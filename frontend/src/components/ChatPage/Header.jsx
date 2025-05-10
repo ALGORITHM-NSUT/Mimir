@@ -34,7 +34,7 @@ const Header = ({ toggleSidebar, setAlert }) => {
   };
 
   return (
-    <header className="w-full text-white py-4 px-6 grid grid-cols-3 items-center shadow-md bg-[#1b1c1d]">
+    <header className="sticky w-full text-white py-4 px-6 grid grid-cols-3 items-center shadow-md bg-[#1b1c1d] z-100">
       {/* Left Section */}
       <div className="flex items-center gap-3 sm:gap-5">
         <button onClick={toggleSidebar} className="text-white focus:outline-none">
@@ -58,11 +58,15 @@ const Header = ({ toggleSidebar, setAlert }) => {
       
       {/* Right Section - Profile and Share */}
       <div className="flex items-center justify-end gap-2">
-        <div className="px-3 py-2 flex items-center gap-2 hover:bg-gray-700 cursor-pointer rounded-md transition-all"
-          onClick={handleShareChat}>
-          <FaShareAlt className="text-lg" />
+       <div
+          className="px-4 py-2 flex items-center gap-2 bg-[#1b1c1d] hover:bg-gray-700 text-white rounded-full cursor-pointer transition-all sm:border border-gray-600"
+          onClick={handleShareChat}
+        >
+          <FaShareAlt className="text-base" />
+          <span className="text-sm font-medium hidden sm:inline">Share</span>
         </div>
-        <ProfileMenu />
+
+              <ProfileMenu />
       </div>
       
       <ShareChatModal

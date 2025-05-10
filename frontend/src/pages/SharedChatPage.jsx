@@ -85,7 +85,7 @@ const SharedChatPage = () => {
         </button>
       </header>
 
-      <div className="flex justify-center">
+      <div className="flex justify-center px-4">
         <ChatHistory chatHistory={chatHistory} />
       </div>
 

@@ -250,9 +250,11 @@ const ChatPage = () => {
         setAlert={setAlert}
       />
 
+      <Header toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)} setAlert={setAlert} />
+
+
       <div className="flex flex-col flex-grow ">
-        {/* Header Section */}
-        <Header toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)} setAlert={setAlert} />
+   
 
         {/* Chat History Section */}
         <div
@@ -409,20 +411,25 @@ const ChatPage = () => {
         <ScrollCue showScrollButton={showScrollButton} chatContainerRef={chatContainerRef} />
       </div>
 
-      <div className="flex justify-center relative bottom-0 left-1/2 -translate-x-1/2 mb-2 text-gray-400 text-xs font-extralight text-center whitespace-nowrap max-w-[90%]">
-        <span>Mimir can make mistakes. Check important info. <span className="hidden sm:inline">(Knowlege cutoff: 1 Jan 2024)</span></span>
+     <div className="relative flex justify-center items-center text-center text-xs font-extralight text-gray-400 mb-2 whitespace-nowrap">
+        <span>
+          Mimir can make mistakes. Check important info.
+          <span className="hidden sm:inline"> (Knowledge cutoff: 1 Jan 2024)</span>
+        </span>
+
+        {/* Help Icon Button */}
+        <motion.button
+          className="fixed right-4 text-gray-400 hover:text-cyan-400 transition-colors z-10"
+          whileHover={{ scale: 0.8, rotate: 5 }}
+          whileTap={{ scale: 0.85 }}
+          onClick={() => setShowHelpModal(true)}
+          aria-label="Help and Information"
+        >
+          <FaQuestionCircle size={17} />
+        </motion.button>
       </div>
 
-      {/* Help Icon Button */}
-      <motion.button
-        className="fixed bottom-2 right-4 text-gray-400 hover:text-cyan-400 transition-colors z-10"
-        whileHover={{ scale: 0.8, rotate: 5 }}
-        whileTap={{ scale: 0.85 }}
-        onClick={() => setShowHelpModal(true)}
-        aria-label="Help and Information"
-      >
-        <FaQuestionCircle size={17} />
-      </motion.button>
+
 
       {/* Help Modal */}
       <AnimatePresence>
