@@ -61,21 +61,35 @@ const ShareChatModal = ({ isOpen, onClose, chatId, userId, setAlertMessage }) =>
   };
 
   return isOpen ? (
-    <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
-      <div ref={modalRef} className="bg-[#2a2a2a] text-gray-100 rounded-lg p-6 w-[90%] max-w-md shadow-lg">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-lg font-semibold">Share Chat</h2>
-          <FaTimes className="cursor-pointer text-xl" onClick={onClose} />
-        </div>
-        <p className="text-sm text-gray-300 mb-4">Copy and share this link:</p>
+  <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-[50]">
+    <div
+      ref={modalRef}
+      className="bg-[#2a2a2a] text-gray-100 rounded-lg p-6 w-[90%] max-w-md shadow-lg"
+    >
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-lg font-semibold">Share Chat</h2>
+        <FaTimes className="cursor-pointer text-xl" onClick={onClose} />
+      </div>
 
-        <div className="flex items-center justify-between bg-gray-800 p-2 rounded-md cursor-pointer transition-all duration-200 hover:bg-gray-700" onClick={copyToClipboard}>
-          <span className="truncate text-gray-300 px-2 w-full">{copied ? "Copied!" : shareableLink}</span>
-          {copied ? <FaCheck className="text-green-400" /> : <FaCopy className="text-gray-400 hover:text-white transition" />}
-        </div>
+      <p className="text-sm text-gray-300 mb-4">Copy and share this link:</p>
+
+      <div
+        className="flex items-center justify-between bg-gray-800 p-2 rounded-md cursor-pointer transition-all duration-200 hover:bg-gray-700"
+        onClick={copyToClipboard}
+      >
+        <span className="truncate text-gray-300 px-2 w-full">
+          {copied ? "Copied!" : shareableLink}
+        </span>
+        {copied ? (
+          <FaCheck className="text-green-400" />
+        ) : (
+          <FaCopy className="text-gray-400 hover:text-white transition" />
+        )}
       </div>
     </div>
-  ) : null;
+  </div>
+) : null;
+
 };
 
 export default ShareChatModal;

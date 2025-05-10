@@ -18,7 +18,7 @@ const TableCell = ({ children, isHeader }) => {
   const baseStyle = "border border-gray-500 px-4 py-2";
   const headerStyle = "bg-gray-700 text-white";
   return isHeader ? (
-    <th className={`${baseStyle} ${headerStyle} sticky top-0`}>{children}</th>
+    <th className={`${baseStyle} ${headerStyle} `}>{children}</th>
   ) : (
     <td className={baseStyle}>{children}</td>
   );
@@ -27,20 +27,16 @@ const TableCell = ({ children, isHeader }) => {
 const Response = ({ text, timestamp, onFeedback }) => {
 
   return (
-    <div className="mt-2 ">
+    <div className="mt-2 max-w-full w-full">
       <FaMagic className="mb-4 text-gray-200 text-md" />
-      <div className="text-gray-300 text-sm md:text-base font-sans antialiased leading-relaxed break-words whitespace-pre-wrap ">
+      <div className="text-gray-300 text-sm md:text-base font-sans antialiased leading-relaxed break-words whitespace-pre-wrap w-full max-w-full">
         <div className="overflow-auto">
           <div className="prose prose-invert max-w-none break-words whitespace-pre-wrap">
             <ReactMarkdown
               remarkPlugins={[remarkGfm]}
               rehypePlugins={[rehypeSanitize]}
               components={{
-                table: ({ children }) => (
-                  <div className="overflow-x-auto w-full">
-                    <table className="table-auto w-full">{children}</table>
-                  </div>
-                ),
+                table: Table,
                 tr: TableRow,
                 th: (props) => <TableCell {...props} isHeader />,
                 td: TableCell,
@@ -48,7 +44,6 @@ const Response = ({ text, timestamp, onFeedback }) => {
             >
               {text}
             </ReactMarkdown>
-
           </div>
         </div>
       </div>
