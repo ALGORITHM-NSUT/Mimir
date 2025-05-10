@@ -34,7 +34,7 @@ const Header = ({ toggleSidebar, setAlert }) => {
   };
 
   return (
-    <header className="sticky w-full text-white py-4 px-6 grid grid-cols-3 items-center shadow-md bg-[#1b1c1d] z-100">
+    <header className="sticky top-0 left-0 w-full text-gray-50 py-4 px-6 grid grid-cols-3 items-center shadow-md bg-transparent z-100">
       {/* Left Section */}
       <div className="flex items-center gap-3 sm:gap-5">
         <button onClick={toggleSidebar} className="text-white focus:outline-none">

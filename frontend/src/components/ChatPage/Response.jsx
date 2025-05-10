@@ -27,16 +27,20 @@ const TableCell = ({ children, isHeader }) => {
 const Response = ({ text, timestamp, onFeedback }) => {
 
   return (
-    <div className="mt-2 max-w-full w-full">
+    <div className="mt-2 ">
       <FaMagic className="mb-4 text-gray-200 text-md" />
-      <div className="text-gray-300 text-sm md:text-base font-sans antialiased leading-relaxed break-words whitespace-pre-wrap w-full max-w-full">
+      <div className="text-gray-300 text-sm md:text-base font-sans antialiased leading-relaxed break-words whitespace-pre-wrap ">
         <div className="overflow-auto">
           <div className="prose prose-invert max-w-none break-words whitespace-pre-wrap">
             <ReactMarkdown
               remarkPlugins={[remarkGfm]}
               rehypePlugins={[rehypeSanitize]}
               components={{
-                table: Table,
+                table: ({ children }) => (
+                  <div className="overflow-x-auto w-full">
+                    <table className="table-auto w-full">{children}</table>
+                  </div>
+                ),
                 tr: TableRow,
                 th: (props) => <TableCell {...props} isHeader />,
                 td: TableCell,
@@ -44,6 +48,7 @@ const Response = ({ text, timestamp, onFeedback }) => {
             >
               {text}
             </ReactMarkdown>
+
           </div>
         </div>
       </div>

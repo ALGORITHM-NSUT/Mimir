@@ -11,16 +11,16 @@ const ChatMessage = ({ query, response, references,timestamp, messageId, upvote 
         </div>
       </div>
 
-      <div className="bg-[#2A2A2A] p-6 rounded-3xl rounded-tl-none shadow-[0px_5px_5px_rgba(0,0,0,0.3)] flex flex-col gap-6">
-      <div className="bg-transparent rounded-3xl rounded-tl-none flex flex-col gap-6">
-        <div className="flex-1 min-w-0">
-          <Response text={response} timestamp={timestamp} messageId={messageId} upvote= {upvote}/>
+      <div className="bg-[#2A2A2A] p-6 rounded-3xl rounded-tl-none shadow-[0px_5px_5px_rgba(0,0,0,0.3)] flex flex-col justify-start gap-6 w-full">
+        <div className="bg-transparent rounded-3xl rounded-tl-none flex flex-col gap-6">
+          <div className="flex-1 min-w-0">
+            <Response text={response} timestamp={timestamp} messageId={messageId} upvote= {upvote}/>
+          </div>
+
+      
+          <References references={references} />
+
         </div>
-
-     
-        <References references={references} />
-
-      </div>
     </div>
     </div>
   );

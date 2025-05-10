@@ -242,7 +242,7 @@ const ChatPage = () => {
   };
 
   return (
-    <div className={`relative h-screen w-full text-[16px] bg-[#1b1c1d] flex flex-col overflow-hidden`}>
+    <div className={`relative w-full text-[16px] bg-[#1b1c1d] flex flex-col h-screen`}>
       <Sidebar
         isOpen={isSidebarOpen}
         toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
@@ -251,9 +251,6 @@ const ChatPage = () => {
       />
 
       <Header toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)} setAlert={setAlert} />
-
-
-      <div className="flex flex-col flex-grow ">
    
 
         {/* Chat History Section */}
@@ -385,11 +382,10 @@ const ChatPage = () => {
             </>
           )}
         </div>
-      </div>
 
-      {/*  */}
+
       <motion.div
-        className={`fixed left-0 bottom-6 right-0 z-10`}
+        className={`fixed left-0 bottom-0 right-0 z-10 `}
         initial="initial"
         animate="animate"
         exit="exit"
@@ -398,7 +394,26 @@ const ChatPage = () => {
         <div className={`mx-auto my-2 px-4 flex justify-center`}>
           <InputBox onSendMessage={handleSendMessage} setAlert={setAlert} />
         </div>
+        
+        <div className="relative flex justify-center items-center">
+          <span className="ext-center text-xs font-extralight text-gray-400 mb-2 whitespace-nowrap">
+            Mimir can make mistakes. Check important info.
+            <span className="hidden sm:inline"> (Knowledge cutoff: 1 Jan 2024)</span>
+          </span>
+
+          <motion.button
+            className="fixed right-4 text-gray-400 hover:text-cyan-400 transition-colors z-10"
+            whileHover={{ scale: 0.8, rotate: 5 }}
+            whileTap={{ scale: 0.85 }}
+            onClick={() => setShowHelpModal(true)}
+            aria-label="Help and Information"
+          >
+            <FaQuestionCircle size={17} />
+          </motion.button>
+        </div>
+
       </motion.div>
+
 
       {alert && (
         <div className="fixed top-4 left-1/2 transform -translate-x-1/2 w-96 z-50">
@@ -406,32 +421,15 @@ const ChatPage = () => {
         </div>
       )}
 
-      {/* Scroll to Bottom Button */}
+      
+    
       <div>
         <ScrollCue showScrollButton={showScrollButton} chatContainerRef={chatContainerRef} />
       </div>
 
-     <div className="relative flex justify-center items-center text-center text-xs font-extralight text-gray-400 mb-2 whitespace-nowrap">
-        <span>
-          Mimir can make mistakes. Check important info.
-          <span className="hidden sm:inline"> (Knowledge cutoff: 1 Jan 2024)</span>
-        </span>
-
-        {/* Help Icon Button */}
-        <motion.button
-          className="fixed right-4 text-gray-400 hover:text-cyan-400 transition-colors z-10"
-          whileHover={{ scale: 0.8, rotate: 5 }}
-          whileTap={{ scale: 0.85 }}
-          onClick={() => setShowHelpModal(true)}
-          aria-label="Help and Information"
-        >
-          <FaQuestionCircle size={17} />
-        </motion.button>
-      </div>
 
 
-
-      {/* Help Modal */}
+  
       <AnimatePresence>
         {showHelpModal && (
           <HelpModal onClose={() => setShowHelpModal(false)} />
