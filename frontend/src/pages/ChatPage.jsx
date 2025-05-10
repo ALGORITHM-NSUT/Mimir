@@ -395,21 +395,21 @@ const ChatPage = () => {
           <InputBox onSendMessage={handleSendMessage} setAlert={setAlert} />
         </div>
         
-        <div className="relative flex justify-center items-center">
-          <span className="ext-center text-xs font-extralight text-gray-400 mb-2 whitespace-nowrap">
+        <div className="relative flex justify-center items-center bg-[#1b1c1d] mb-2">
+          <span className="text-center text-xs font-extralight text-gray-400 whitespace-nowrap">
             Mimir can make mistakes. Check important info.
             <span className="hidden sm:inline"> (Knowledge cutoff: 1 Jan 2024)</span>
           </span>
 
-          <motion.button
-            className="fixed right-4 text-gray-400 hover:text-cyan-400 transition-colors z-10"
-            whileHover={{ scale: 0.8, rotate: 5 }}
-            whileTap={{ scale: 0.85 }}
+          <div
             onClick={() => setShowHelpModal(true)}
-            aria-label="Help and Information"
+            className="fixed right-4 z-50 text-gray-400 hover:text-white cursor-pointer transition-colors duration-200"
           >
-            <FaQuestionCircle size={17} />
-          </motion.button>
+            <FaQuestionCircle size={20} />
+          </div>
+ 
+
+
         </div>
 
       </motion.div>
