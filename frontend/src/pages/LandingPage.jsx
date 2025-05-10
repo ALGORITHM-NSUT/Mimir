@@ -32,7 +32,7 @@ const LandingPage = () => {
         <GetStarted />
       </section>
 
-      <section ref={featuresRef}>
+      <section ref={featuresRef} className="z-100">
         <Features />
       </section>
 
