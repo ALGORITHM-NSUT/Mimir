@@ -19,9 +19,25 @@ module.exports = {
           },
         },
       },
+       animation: {
+          slide: 'slide 1.2s ease-in-out infinite',
+        },
+        keyframes: {
+          slide: {
+            '0%': {
+              transform: 'translateX(-100%)',
+              width: '20%',
+            },
+            '50%': {
+              width: '40%',
+            },
+            '100%': {
+              transform: 'translateX(100vw)',
+              width: '30%',
+            },
+          },
+        },
     },
   },
-  plugins: [
-    
-  ],
+  plugins: [],
 }

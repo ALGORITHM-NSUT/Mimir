@@ -1,6 +1,6 @@
 import React from "react";
 import { FaMagic } from "react-icons/fa";
-import ChatLoader from "../Utility/ChatLoader";
+import Loader from "../Utility/ChatLoader";
 
 const LoadingMessage = ({ query }) => {
   return (
@@ -16,8 +16,10 @@ const LoadingMessage = ({ query }) => {
         <div className="mt-2 max-w-full w-full">
 
           <FaMagic className="mb-4 text-gray-200 text-md" />
-
-          <ChatLoader />
+          <div className="flex flex-row items-center gap-4 text-gray-100 ml-3">
+          <Loader />
+          <span className="text-sm font-extralight">Loading...</span>
+          </div>
         </div>
       </div>
     </div>

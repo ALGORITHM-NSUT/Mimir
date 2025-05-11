@@ -29,6 +29,8 @@ const ChatPage = () => {
   const [showScrollButton, setShowScrollButton] = useState(false);
   const [showHelpModal, setShowHelpModal] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(isNewChat);
+  const [chatLoading, setChatLoading] = useState(false);
+
 
   // Suggestion examples
   const suggestions = [
@@ -95,8 +97,9 @@ const ChatPage = () => {
     }
   }, [urlChatId]);
 
-  const fetchChatHistory = async (chatId) => {
+ const fetchChatHistory = async (chatId) => {
     try {
+      setChatLoading(true);
       const response = await axios.post(
         `${import.meta.env.VITE_BACKEND_URL}/api/chat/${chatId}`,
         { userId, messageId }
@@ -108,8 +111,11 @@ const ChatPage = () => {
       }
     } catch (error) {
       navigate("/new");
+    } finally {
+      setChatLoading(false);
     }
   };
+
 
   const handleSendMessage = async (message, isDeepSearch = false) => {
     // Hide suggestions when a message is sent
@@ -250,7 +256,7 @@ const ChatPage = () => {
         setAlert={setAlert}
       />
 
-      <Header toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)} setAlert={setAlert} />
+      <Header toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)} setAlert={setAlert} chatLoading = {chatLoading} />
    
 
         {/* Chat History Section */}
