@@ -112,7 +112,9 @@ const ChatPage = () => {
     } catch (error) {
       navigate("/new");
     } finally {
-      setChatLoading(false);
+      setTimeout(() => {
+        setChatLoading(false);
+      }, 1200);
     }
   };
 
