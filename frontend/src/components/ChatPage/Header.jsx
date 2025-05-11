@@ -30,7 +30,7 @@ const Header = ({ toggleSidebar, setAlert, chatLoading }) => {
   };
 
   return (
-    <header className="sticky top-0 left-0 w-full text-gray-50 py-2 px-6 grid grid-cols-3 items-center shadow-md bg-[#1b1c1d] z-100">
+    <header className="sticky top-0 left-0 w-full text-gray-50 py-3 px-6 grid grid-cols-3 items-center shadow-md bg-[#1b1c1d] z-100">
       {/* Left Section */}
       <div className="flex items-center gap-3 sm:gap-5">
         <button onClick={toggleSidebar} className="text-white focus:outline-none">
@@ -43,14 +43,15 @@ const Header = ({ toggleSidebar, setAlert, chatLoading }) => {
       </div>
 
       {/* Center Section */}
-      <div className="flex items-center justify-center">
-        <span className="text-xl sm:text-2xl font-semibold bg-gradient-to-r from-blue-400 to-pink-400 text-transparent bg-clip-text text-center">
+      <div className="flex items-center justify-center group">
+        <span className="text-xl sm:text-2xl font-semibold bg-gradient-to-r from-blue-400 to-pink-400 text-transparent bg-clip-text text-center transition-all duration-300 group-hover:drop-shadow-[0_0_6px_rgba(147,197,253,0.2)]">
           Mimir
         </span>
         <span className="ml-2 text-xs border border-gray-500 text-gray-300 px-1.5 py-0.5 rounded-md">
           Beta
         </span>
       </div>
+
 
       {/* Right Section */}
       <div className="flex items-center justify-end gap-2">

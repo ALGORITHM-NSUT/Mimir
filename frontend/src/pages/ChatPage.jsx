@@ -391,7 +391,7 @@ const ChatPage = () => {
 
 
       <motion.div
-        className={`fixed left-0 bottom-0 right-0 z-10 `}
+        className={`fixed left-0 bottom-0 right-0 z-10 bg-[#1b1c1d] `}
         initial="initial"
         animate="animate"
         exit="exit"
@@ -409,7 +409,7 @@ const ChatPage = () => {
 
           <div
             onClick={() => setShowHelpModal(true)}
-            className="fixed right-4 z-50 text-gray-400 hover:text-white cursor-pointer transition-colors duration-200"
+            className="fixed right-4 text-gray-400 hover:text-white cursor-pointer transition-colors duration-200"
           >
             <FaQuestionCircle size={20} />
           </div>
