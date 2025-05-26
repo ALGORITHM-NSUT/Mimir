@@ -411,7 +411,7 @@ const ChatPage = () => {
 
           <div
             onClick={() => setShowHelpModal(true)}
-            className="fixed right-4 text-gray-400 hover:text-white cursor-pointer transition-colors duration-200"
+            className="absolute right-4 text-gray-400 hover:text-white cursor-pointer transition-colors duration-200"
           >
             <FaQuestionCircle size={20} />
           </div>
