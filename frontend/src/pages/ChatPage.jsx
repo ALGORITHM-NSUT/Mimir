@@ -282,7 +282,7 @@ const ChatPage = () => {
                       whileTap={{ scale: 0.95 }}
                     >
                       <p className="text-sm ">Try asking about these topics</p>
-                      <p className="text-gray-500 text-xs">⚠️I know a lot... as long as it happened After Jan 1, 2024. Before that? Radio silence!</p>
+                      <p className="text-gray-500 text-xs">⚠️ I know a lot... as long as it happened After Jan 1, 2024. Before that? Radio silence!</p>
 
                     </motion.div>
 
