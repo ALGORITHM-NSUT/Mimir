@@ -282,7 +282,8 @@ const ChatPage = () => {
                       whileTap={{ scale: 0.95 }}
                     >
                       <p className="text-sm ">Try asking about these topics</p>
-                      <p className="text-gray-500 text-xs"> (Knowlege cutoff: 1 Jan 2024) </p>
+                      <p className="text-gray-500 text-xs">⚠️ Everything I know is ancient history — nothing beyond Jan 1, 2024 made it into my brain!</p>
+
                     </motion.div>
 
               {/* Redesigned Suggestion Section */}
