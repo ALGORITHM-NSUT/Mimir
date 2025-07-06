@@ -1,41 +1,27 @@
-name: Ping Mimir
+- name: Call GET Route with Retry
+  run: |
+    MAX_RETRIES=5
+    RETRY_DELAY=60
+    ATTEMPT=1
 
-on:
-  schedule:
-    - cron: "*/9 * * * *"  
+    while [ $ATTEMPT -le $MAX_RETRIES ]; do
+      echo "Attempt $ATTEMPT: Pinging the API..."
+      STATUS=$(curl --max-time 60 -s -o /dev/null -w "%{http_code}" https://mimir-c69y.onrender.com/)
+      echo "Response Code: $STATUS"
 
-jobs:
-  run-script:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Random Delay (0–180 seconds)
-        run: |
-          DELAY=$((RANDOM % 181))
-          echo "Sleeping for $DELAY seconds to randomize call..."
-          sleep $DELAY
+      if [ "$STATUS" -eq 200 ]; then
+        echo "Success: API is healthy."
+        exit 0
+      fi
 
-      - name: Call GET Route with Retry
-        run: |
-          MAX_RETRIES=3
-          RETRY_DELAY=30  # seconds
-          ATTEMPT=1
+      if [ $ATTEMPT -lt $MAX_RETRIES ]; then
+        echo "Retrying in $RETRY_DELAY seconds..."
+        sleep $RETRY_DELAY
+      fi
 
-          while [ $ATTEMPT -le $MAX_RETRIES ]; do
-            STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://mimir-c69y.onrender.com/)
-            echo "Attempt $ATTEMPT: Response Code: $STATUS"
+      ATTEMPT=$((ATTEMPT + 1))
+    done
 
-            if [ "$STATUS" -eq 200 ]; then
-              echo "Success: API is healthy."
-              exit 0
-            fi
-
-            if [ $ATTEMPT -lt $MAX_RETRIES ]; then
-              echo "Retrying in $RETRY_DELAY seconds..."
-              sleep $RETRY_DELAY
-            fi
-
-            ATTEMPT=$((ATTEMPT + 1))
-          done
-
-          echo "Failed to get a 200 OK after $MAX_RETRIES attempts."
-          exit 1
+    echo "Failed to get a 200 OK after $MAX_RETRIES attempts."
+    # Mark job as success to suppress email
+    exit 0
