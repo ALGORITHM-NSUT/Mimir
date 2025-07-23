@@ -74,9 +74,9 @@ mongoDb_client = AsyncIOMotorClient(MONGO_URI_MIMIIR)
 
 # Thinking Model
 
-llm2 = "gemini-2.5-flash-preview-04-17"
+llm2 = "gemini-2.5-flash"
 # Action Model for quick search
-llm = "gemini-2.5-flash-preview-04-17"
+llm = "gemini-2.5-flash"
 
 
 MAX_RETRIES = 3
