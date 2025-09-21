@@ -1,5 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";  
 import { FaTimes, FaCopy, FaCheck } from "react-icons/fa";
+import { motion, AnimatePresence } from "framer-motion"; 
 import axios from "axios";
 
 const ShareChatModal = ({ isOpen, onClose, chatId, userId, setAlertMessage }) => {
@@ -8,7 +10,10 @@ const ShareChatModal = ({ isOpen, onClose, chatId, userId, setAlertMessage }) =>
   const modalRef = useRef(null);
 
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen) {
+      setShareableLink("");
+      return;
+    }
 
     const fetchShareableLink = async () => {
       const cachedLink = sessionStorage.getItem(`shareableLink_${chatId}`);
@@ -28,11 +33,12 @@ const ShareChatModal = ({ isOpen, onClose, chatId, userId, setAlertMessage }) =>
       } catch (error) {
         console.error("Error making chat shareable:", error);
         setAlertMessage({ type: "error", text: "Failed to generate shareable link." });
+        onClose(); 
       }
     };
 
     fetchShareableLink();
-  }, [isOpen, chatId, userId, setAlertMessage]);
+  }, [isOpen, chatId, userId, setAlertMessage, onClose]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -40,11 +46,16 @@ const ShareChatModal = ({ isOpen, onClose, chatId, userId, setAlertMessage }) =>
         onClose();
       }
     };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [onClose]);
+    if (isOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isOpen, onClose]);
 
   const copyToClipboard = async () => {
+    if (!shareableLink) return;
     try {
       await navigator.clipboard.writeText(shareableLink);
       setCopied(true);
@@ -60,36 +71,47 @@ const ShareChatModal = ({ isOpen, onClose, chatId, userId, setAlertMessage }) =>
     }
   };
 
-  return isOpen ? (
-  <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-[50]">
-    <div
-      ref={modalRef}
-      className="bg-[#2a2a2a] text-gray-100 rounded-lg p-6 w-[90%] max-w-md shadow-lg"
-    >
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-lg font-semibold">Share Chat</h2>
-        <FaTimes className="cursor-pointer text-xl" onClick={onClose} />
-      </div>
+  return createPortal(
+    <AnimatePresence>
+      {isOpen && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[9999] flex items-center justify-center p-4"
+        >
+          <div
+            ref={modalRef}
+            className="bg-[#2a2a2a] text-gray-100 rounded-lg p-6 w-[90%] max-w-md shadow-lg"
+          >
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-lg font-semibold">Share Chat</h2>
+              <FaTimes className="cursor-pointer text-xl" onClick={onClose} />
+            </div>
 
-      <p className="text-sm text-gray-300 mb-4">Copy and share this link:</p>
+            <p className="text-sm text-gray-300 mb-4">
+              Anyone with the link can view this chat.
+            </p>
 
-      <div
-        className="flex items-center justify-between bg-gray-800 p-2 rounded-md cursor-pointer transition-all duration-200 hover:bg-gray-700"
-        onClick={copyToClipboard}
-      >
-        <span className="truncate text-gray-300 px-2 w-full">
-          {copied ? "Copied!" : shareableLink}
-        </span>
-        {copied ? (
-          <FaCheck className="text-green-400" />
-        ) : (
-          <FaCopy className="text-gray-400 hover:text-white transition" />
-        )}
-      </div>
-    </div>
-  </div>
-) : null;
-
+            <div
+              className="flex items-center justify-between bg-gray-800 p-2 rounded-md cursor-pointer transition-all duration-200 hover:bg-gray-700"
+              onClick={copyToClipboard}
+            >
+              <span className="truncate text-gray-300 px-2 w-full">
+                {shareableLink ? (copied ? 'Copied!' : shareableLink) : 'Generating link...'}
+              </span>
+              {shareableLink && (copied ? (
+                <FaCheck className="text-green-400" />
+              ) : (
+                <FaCopy className="text-gray-400 hover:text-white transition" />
+              ))}
+            </div>
+          </div>
+        </motion.div>
+      )}
+    </AnimatePresence>,
+    document.getElementById("portal-root") || document.body
+  );
 };
 
 export default ShareChatModal;
