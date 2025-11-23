@@ -2,7 +2,7 @@ name: Ping Mimir
 
 on:
   schedule:
-    - cron: "*/9 * * * *"  # Every 9 minutes
+    - cron: "*/7 * * * *"  # Every 9 minutes
   workflow_dispatch:       # Allow manual triggering
 
 jobs:
@@ -12,7 +12,7 @@ jobs:
     steps:
       - name: Random delay (0–180 seconds)
         run: |
-          DELAY=$(( RANDOM % 181 ))
+          DELAY=$(( RANDOM % 152 ))
           echo "Sleeping for $DELAY seconds to randomize ping interval."
           sleep $DELAY
 
