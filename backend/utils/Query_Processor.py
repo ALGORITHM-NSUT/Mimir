@@ -74,9 +74,9 @@ mongoDb_client = AsyncIOMotorClient(MONGO_URI_MIMIIR)
 
 # Thinking Model
 
-llm2 = "gemini-2.5-flash"
+llm2 = "gemma-4-31b-it"
 # Action Model for quick search
-llm = "gemini-2.5-flash"
+llm = "gemma-4-31b-it"
 
 
 MAX_RETRIES = 3
@@ -266,7 +266,10 @@ class QueryProcessor:
                     "path": "summary_embedding",
                     "numCandidates": 500,
                     "limit": limit,
-                    "index": "vector_index"
+                    "index": "vector_index",
+                    "filter": {
+                        "valid" : True
+                    }
                 }
             },
             {"$addFields": {"vs_score": {"$meta": "vectorSearchScore"}}},
@@ -326,7 +329,10 @@ class QueryProcessor:
                     "path": "embedding",
                     "numCandidates": 5000,
                     "limit": 25,
-                    "index": "vector_index"
+                    "index": "vector_index",
+                    "filter": {
+                        "valid" : True
+                    }
                 }
             },
             {"$addFields": {"vector_score": {"$meta": "vectorSearchScore"}}},
@@ -373,6 +379,11 @@ class QueryProcessor:
                         {
                             "$search": {
                                 "index": "text",
+                            }
+                        },
+                        {
+                            "$match": {
+                                "valid": True
                             }
                         },
                         {
@@ -684,29 +695,45 @@ class QueryProcessor:
         if not texts:
             logging.error("Empty texts list provided for embedding")
             raise Exception("Internal Server Error: requests must not be empty")
+            
+        # 1. Safely load and parse the API keys outside the retry loop
+        raw_api_keys = os.getenv("GOOGLE_API_KEY")
+        if not raw_api_keys:
+            raise Exception("Configuration Error: GOOGLE_API_KEY environment variable is missing.")
+            
+        api_keys = [key.strip() for key in raw_api_keys.split(" | ") if key.strip()]
+        if not api_keys:
+            raise Exception("Configuration Error: No valid API keys found.")
+
         for attempt in range(MAX_RETRIES):
             try:
-                GEMINI_API_KEY = os.getenv("GOOGLE_API_KEY").split(" | ")[(index + attempt) % 2].strip()
-                client = genai.Client(api_key=GEMINI_API_KEY)
+                # 2. Cycle safely through however many keys you have based on the attempt number
+                current_key = api_keys[attempt % len(api_keys)]
+                client = genai.Client(api_key=current_key)
+                
                 response = client.models.embed_content(
-                        model="text-embedding-004",
+                        model="gemini-embedding-001",
                         contents=texts,
-                        config=EmbedContentConfig(task_type="RETRIEVAL_DOCUMENT")
+                        config=EmbedContentConfig(task_type="RETRIEVAL_DOCUMENT", output_dimensionality=768)
                     )
                 return [embedding.values for embedding in response.embeddings]
+                
             except ResourceExhausted:
-                logging.warning(f"Quota exceeded, retrying after delay...")
+                logging.warning(f"Quota exceeded on attempt {attempt + 1}, retrying after delay...")
                 if attempt == MAX_RETRIES - 1:
                     raise ModelAPIError(f"Resource exhausted response after {MAX_RETRIES} retries")
                 await asyncio.sleep(2 ** attempt + random.uniform(0, 1))
+                
             except ServerError:
-                logging.warning(f"Server error, retrying...")
+                logging.warning(f"Server error on attempt {attempt + 1}, retrying...")
                 if attempt == MAX_RETRIES - 1:
                     raise ModelAPIError(f"API server error response after {MAX_RETRIES} retries")
                 await asyncio.sleep(2 ** attempt + random.uniform(0, 1))
+                
             except Exception as e:
                 logging.error(f"Google API error: {e}")
-                raise ModelAPIError("Unexpected error occurred while generating embeddings")
+                # 3. Stop masking the error! Include the actual exception string.
+                raise ModelAPIError(f"Embedding generation failed: {str(e)}")
                 
         # If all attempts fail, raise an exception
 

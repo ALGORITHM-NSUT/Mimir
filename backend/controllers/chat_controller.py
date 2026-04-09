@@ -71,7 +71,7 @@ async def handle_chat_request(data: dict):
     client = genai.Client(api_key=GEMINI_API_KEY)
     # new route (query string , chats)
     chats = client.chats.create(
-        model="gemini-2.5-flash",
+        model="gemma-4-31b-it",
         config=types.GenerateContentConfig(
         system_instruction=Semantic_cache_prompt,
         # response_mime_type='application/json',
@@ -337,7 +337,7 @@ async def qa_endpoint(query : str):
     try:
             # new route (query string , chats)
         chats = client.chats.create(
-            model="gemini-2.5-flash",
+            model="gemma-4-31b-it",
             config=types.GenerateContentConfig(
             system_instruction=Semantic_cache_prompt,
             # response_mime_type='application/json',

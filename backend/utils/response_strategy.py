@@ -78,8 +78,9 @@ async def response_strategy(message: str, chat, is_deep_search=False):
         }
     except Exception as e:
         detailed_error = traceback.format_exc()
+        print(f"--- HIDDEN ERROR TRACEBACK ---\n{detailed_error}\n------------------------------")
         return {
-            "response": "The server is currently experiencing High demand. Please wait before trying again.",
+            "response": f"Actual Error Caught: {str(e)}", 
             "references": [],
             "code": 400
         }
