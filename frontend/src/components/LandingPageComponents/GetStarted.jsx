@@ -37,12 +37,12 @@ const GetStarted = () => {
 
       <motion.h1
         className="text-[70px] sm:text-[80px] md:text-[100px] font-bold leading-tight mt-10"
-        initial={{ opacity: 0, y: 30 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.8, ease: "easeOut" }}
+        // initial={{ opacity: 0, y: 30 }}
+        // animate={{ opacity: 1, y: 0 }}
+        // transition={{ duration: 0.8, ease: "easeOut" }}
       >
         Search Made <br />
-        <span className="bg-gradient-to-r from-[#5973fa] via-[#de23e8] to-[#ff00f2] text-transparent bg-clip-text transition-all duration-200 hover:drop-shadow-xl">
+        <span className="bg-gradient-to-r from-[#5973fa] via-[#de23e8] to-[#ff00f2] text-transparent bg-clip-text transition-all">
           Simple
         </span>
       </motion.h1>
