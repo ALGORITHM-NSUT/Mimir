@@ -110,7 +110,7 @@ async def get_current_user(request: Request):
             "userId": str(user["_id"]),
             "name": user["name"],
             "email": user["email"],
-            "profileImage": user.get("profile_image", "")  # Include profile image
+            "picture": user.get("picture", "")
         }
 
     except pyjwt.ExpiredSignatureError:
